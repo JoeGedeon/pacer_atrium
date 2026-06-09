@@ -14,7 +14,6 @@ export default function ObservationStream({
   onSubmit,
   activeObservation,
   onSelectObservation,
-  activeSection,
 }) {
   const [text, setText] = useState('')
   const [type, setType] = useState('text')
@@ -37,29 +36,12 @@ export default function ObservationStream({
     setConstellation('')
   }
 
-  const showLanding = activeSection === 'notice' || activeSection === 'atrium'
-
   return (
     <main className="flex flex-col flex-1 min-w-0" style={{ background: '#090c14' }}>
       <div
-        className="px-10 pt-10 pb-6 border-b shrink-0"
+        className="px-10 pt-8 pb-6 border-b shrink-0"
         style={{ borderColor: '#0f1520' }}
       >
-        {showLanding && (
-          <div className="text-center mb-8">
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🍍</div>
-            <h1
-              className="font-bold tracking-widest uppercase"
-              style={{ fontSize: '18px', color: '#c9d3e8', letterSpacing: '0.2em' }}
-            >
-              PACER ATRIUM
-            </h1>
-            <p className="mt-2 text-sm" style={{ color: '#2d3a50' }}>
-              There is room. Come in.
-            </p>
-          </div>
-        )}
-
         <p className="text-xs mb-4" style={{ color: '#4b5563' }}>
           What have you noticed?
         </p>
@@ -124,9 +106,7 @@ export default function ObservationStream({
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs" style={{ color: '#1f2937' }}>
-              ⌘↵ to submit
-            </span>
+            <span className="text-xs" style={{ color: '#1f2937' }}>⌘↵ to submit</span>
             <button
               type="submit"
               disabled={!text.trim()}
@@ -178,7 +158,9 @@ export default function ObservationStream({
         {displayed.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-xs" style={{ color: '#141c2e' }}>
-              {activeConstellation ? `No observations in ${activeConstellation}.` : 'The stream is empty.'}
+              {activeConstellation
+                ? `No observations in ${activeConstellation}.`
+                : 'The stream is empty.'}
             </p>
           </div>
         ) : (

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import LeftNav from './components/LeftNav'
+import PACERHome from './components/PACERHome'
 import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
+import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 
@@ -17,7 +19,7 @@ function loadObservations() {
 }
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState('notice')
+  const [currentRoom, setCurrentRoom] = useState('home')
   const [observations, setObservations] = useState(loadObservations)
   const [activeObservation, setActiveObservation] = useState(null)
   const [apiKey] = useState(() => localStorage.getItem('pacer_api_key') || null)
@@ -50,7 +52,6 @@ export default function App() {
       claude: null,
       claudeError: null,
     }
-
     setObservations(prev => [entry, ...prev])
     setActiveObservation(entry)
 
@@ -80,28 +81,53 @@ export default function App() {
     }
   }
 
+  function enterAtrium() {
+    setCurrentRoom('atrium')
+  }
+
+  const isHome = currentRoom === 'home'
+  const isAtrium = currentRoom === 'atrium'
+
   return (
     <div
       className="flex h-screen overflow-hidden"
       style={{ background: '#07090f', color: '#dde3f0' }}
     >
       {showKeyGate && <APIKeyGate onKey={handleApiKey} />}
-      <LeftNav activeSection={activeSection} onSelect={setActiveSection} />
-      <ObservationStream
-        observations={observations}
-        onSubmit={submitObservation}
-        activeObservation={activeObservation}
-        onSelectObservation={setActiveObservation}
-        activeSection={activeSection}
-      />
-      <PACERProcessing
-        observation={activeObservation}
-        observations={observations}
-        onRoute={routeObservation}
-        onAcceptConstellation={acceptConstellation}
-        hasApiKey={!!apiKey}
-        onRequestApiKey={() => setShowKeyGate(true)}
-      />
+
+      {!isHome && (
+        <LeftNav currentRoom={currentRoom} onSelect={setCurrentRoom} />
+      )}
+
+      {isHome && (
+        <PACERHome
+          onEnter={room => { setCurrentRoom(room) }}
+          observationCount={observations.length}
+        />
+      )}
+
+      {isAtrium && (
+        <>
+          <ObservationStream
+            observations={observations}
+            onSubmit={submitObservation}
+            activeObservation={activeObservation}
+            onSelectObservation={setActiveObservation}
+          />
+          <PACERProcessing
+            observation={activeObservation}
+            observations={observations}
+            onRoute={routeObservation}
+            onAcceptConstellation={acceptConstellation}
+            hasApiKey={!!apiKey}
+            onRequestApiKey={() => setShowKeyGate(true)}
+          />
+        </>
+      )}
+
+      {!isHome && !isAtrium && (
+        <PlaceholderRoom room={currentRoom} />
+      )}
     </div>
   )
 }
