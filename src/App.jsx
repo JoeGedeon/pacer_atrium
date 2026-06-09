@@ -1,12 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LeftNav from './components/LeftNav'
 import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
 
+function loadObservations() {
+  try {
+    return JSON.parse(localStorage.getItem('pacer_observations') || '[]').map(o => ({
+      ...o,
+      timestamp: new Date(o.timestamp),
+    }))
+  } catch {
+    return []
+  }
+}
+
 export default function App() {
   const [activeSection, setActiveSection] = useState('notice')
-  const [observations, setObservations] = useState([])
+  const [observations, setObservations] = useState(loadObservations)
   const [activeObservation, setActiveObservation] = useState(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pacer_observations', JSON.stringify(observations))
+    } catch { /* storage full */ }
+  }, [observations])
 
   function submitObservation(obs) {
     const entry = {

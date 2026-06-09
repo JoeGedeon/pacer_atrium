@@ -2,21 +2,12 @@ import { useState } from 'react'
 import ObservationCard from './ObservationCard'
 
 const OBS_TYPES = [
-  { id: 'observation', label: 'Observation', icon: '👁' },
-  { id: 'idea',        label: 'Idea',        icon: '💡' },
-  { id: 'jobsite',     label: 'Jobsite',     icon: '🏗️' },
-  { id: 'business',    label: 'Business',    icon: '💼' },
-  { id: 'vision',      label: 'Vision',      icon: '🌙' },
-  { id: 'comment',     label: 'Comment',     icon: '💬' },
+  { id: 'text',     label: 'Text',     icon: '✍️' },
+  { id: 'voice',    label: 'Voice',    icon: '🎤' },
+  { id: 'image',    label: 'Image',    icon: '📸' },
+  { id: 'document', label: 'Document', icon: '📄' },
+  { id: 'idea',     label: 'Idea',     icon: '💡' },
 ]
-
-const SECTION_META = {
-  atrium:       { title: 'Atrium',       sub: 'The entrance room of the PACER ecosystem.' },
-  notice:       { title: 'Notice',       sub: 'Receive and record what enters the system.' },
-  preserve:     { title: 'Preserve',     sub: 'Protect what matters before it evaporates.' },
-  translate:    { title: 'Translate',    sub: 'Transform raw observation into structured meaning.' },
-  'pass-forward': { title: 'Pass Forward', sub: 'Route observations to where they belong.' },
-}
 
 export default function ObservationStream({
   observations,
@@ -26,7 +17,7 @@ export default function ObservationStream({
   activeSection,
 }) {
   const [text, setText] = useState('')
-  const [type, setType] = useState('observation')
+  const [type, setType] = useState('text')
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -35,29 +26,29 @@ export default function ObservationStream({
     setText('')
   }
 
-  const meta = SECTION_META[activeSection] || SECTION_META.atrium
+  const showLanding = activeSection === 'notice' || activeSection === 'atrium'
 
   return (
     <main className="flex flex-col flex-1 min-w-0" style={{ background: '#090c14' }}>
       <div
-        className="px-8 py-5 border-b shrink-0"
-        style={{ borderColor: '#111827' }}
-      >
-        <h1
-          className="text-base font-semibold tracking-tight"
-          style={{ color: '#c9d3e8' }}
-        >
-          {meta.title}
-        </h1>
-        <p className="text-xs mt-0.5" style={{ color: '#374151' }}>
-          {meta.sub}
-        </p>
-      </div>
-
-      <div
-        className="px-8 pt-6 pb-5 border-b shrink-0"
+        className="px-10 pt-10 pb-6 border-b shrink-0"
         style={{ borderColor: '#0f1520' }}
       >
+        {showLanding && (
+          <div className="text-center mb-8">
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🍍</div>
+            <h1
+              className="font-bold tracking-widest uppercase"
+              style={{ fontSize: '18px', color: '#c9d3e8', letterSpacing: '0.2em' }}
+            >
+              PACER ATRIUM
+            </h1>
+            <p className="mt-2 text-sm" style={{ color: '#2d3a50' }}>
+              There is room. Come in.
+            </p>
+          </div>
+        )}
+
         <p className="text-xs mb-4" style={{ color: '#4b5563' }}>
           What have you noticed?
         </p>
@@ -120,11 +111,11 @@ export default function ObservationStream({
         </form>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-5">
+      <div className="flex-1 overflow-y-auto px-10 py-5">
         {observations.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-xs" style={{ color: '#1a2233' }}>
-              The stream is empty. No observations have entered the system.
+            <p className="text-xs" style={{ color: '#141c2e' }}>
+              The stream is empty.
             </p>
           </div>
         ) : (
