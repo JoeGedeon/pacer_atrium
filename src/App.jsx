@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import LeftNav from './components/LeftNav'
 import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
+import APIKeyGate from './components/APIKeyGate'
+import { analyzeObservation } from './lib/claudeRouting'
 
 function loadObservations() {
   try {
@@ -18,6 +20,10 @@ export default function App() {
   const [activeSection, setActiveSection] = useState('notice')
   const [observations, setObservations] = useState(loadObservations)
   const [activeObservation, setActiveObservation] = useState(null)
+  const [apiKey] = useState(() => localStorage.getItem('pacer_api_key') || null)
+  const [showKeyGate, setShowKeyGate] = useState(
+    () => !localStorage.getItem('pacer_api_key') && !localStorage.getItem('pacer_key_skipped')
+  )
 
   useEffect(() => {
     try {
@@ -25,27 +31,53 @@ export default function App() {
     } catch { /* storage full */ }
   }, [observations])
 
-  function submitObservation(obs) {
+  function patchObservation(id, patch) {
+    setObservations(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o))
+    setActiveObservation(prev => prev?.id === id ? { ...prev, ...patch } : prev)
+  }
+
+  async function submitObservation(obs) {
+    const id = Date.now()
     const entry = {
-      id: Date.now(),
+      id,
       text: obs.text,
       type: obs.type,
       constellation: obs.constellation || null,
       timestamp: new Date(),
       status: 'received',
       destination: null,
+      analyzing: !!apiKey,
+      claude: null,
+      claudeError: null,
     }
+
     setObservations(prev => [entry, ...prev])
     setActiveObservation(entry)
+
+    if (apiKey) {
+      try {
+        const result = await analyzeObservation(obs.text, apiKey)
+        patchObservation(id, { analyzing: false, claude: result })
+      } catch (e) {
+        patchObservation(id, { analyzing: false, claudeError: e.message })
+      }
+    }
   }
 
   function routeObservation(id, destination) {
-    setObservations(prev =>
-      prev.map(obs => obs.id === id ? { ...obs, destination, status: 'routed' } : obs)
-    )
-    setActiveObservation(prev =>
-      prev?.id === id ? { ...prev, destination, status: 'routed' } : prev
-    )
+    patchObservation(id, { destination, status: 'routed' })
+  }
+
+  function acceptConstellation(id, constellation) {
+    patchObservation(id, { constellation })
+  }
+
+  function handleApiKey(key) {
+    setShowKeyGate(false)
+    if (key) {
+      localStorage.setItem('pacer_api_key', key)
+      window.location.reload()
+    }
   }
 
   return (
@@ -53,6 +85,7 @@ export default function App() {
       className="flex h-screen overflow-hidden"
       style={{ background: '#07090f', color: '#dde3f0' }}
     >
+      {showKeyGate && <APIKeyGate onKey={handleApiKey} />}
       <LeftNav activeSection={activeSection} onSelect={setActiveSection} />
       <ObservationStream
         observations={observations}
@@ -65,6 +98,9 @@ export default function App() {
         observation={activeObservation}
         observations={observations}
         onRoute={routeObservation}
+        onAcceptConstellation={acceptConstellation}
+        hasApiKey={!!apiKey}
+        onRequestApiKey={() => setShowKeyGate(true)}
       />
     </div>
   )
