@@ -19,7 +19,7 @@ function formatTime(date) {
 }
 
 export default function ObservationCard({ observation, isActive, onClick }) {
-  const { text, type, timestamp, destination } = observation
+  const { text, type, timestamp, destination, constellation } = observation
 
   return (
     <div
@@ -41,10 +41,22 @@ export default function ObservationCard({ observation, isActive, onClick }) {
           >
             {text.length > 110 ? text.slice(0, 110) + '…' : text}
           </p>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center flex-wrap gap-2 mt-2">
             <span className="text-xs" style={{ color: '#1f2937' }}>
               {formatTime(timestamp)}
             </span>
+            {constellation && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full"
+                style={{
+                  background: '#1e120818',
+                  color: '#7a5c20',
+                  border: '1px solid #3d2a0a35',
+                }}
+              >
+                {constellation}
+              </span>
+            )}
             {destination && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full"

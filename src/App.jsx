@@ -30,6 +30,7 @@ export default function App() {
       id: Date.now(),
       text: obs.text,
       type: obs.type,
+      constellation: obs.constellation || null,
       timestamp: new Date(),
       status: 'received',
       destination: null,
@@ -62,6 +63,7 @@ export default function App() {
       />
       <PACERProcessing
         observation={activeObservation}
+        observations={observations}
         onRoute={routeObservation}
       />
     </div>

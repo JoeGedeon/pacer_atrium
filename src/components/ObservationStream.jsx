@@ -18,12 +18,23 @@ export default function ObservationStream({
 }) {
   const [text, setText] = useState('')
   const [type, setType] = useState('text')
+  const [constellation, setConstellation] = useState('')
+  const [activeConstellation, setActiveConstellation] = useState(null)
+
+  const constellations = [...new Set(
+    observations.filter(o => o.constellation).map(o => o.constellation)
+  )]
+
+  const displayed = activeConstellation
+    ? observations.filter(o => o.constellation === activeConstellation)
+    : observations
 
   function handleSubmit(e) {
     e.preventDefault()
     if (!text.trim()) return
-    onSubmit({ text: text.trim(), type })
+    onSubmit({ text: text.trim(), type, constellation: constellation.trim() || null })
     setText('')
+    setConstellation('')
   }
 
   const showLanding = activeSection === 'notice' || activeSection === 'atrium'
@@ -90,7 +101,29 @@ export default function ObservationStream({
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit(e)
             }}
           />
-          <div className="flex items-center justify-between mt-3">
+
+          <div className="mt-3 mb-3">
+            <input
+              type="text"
+              list="constellation-list"
+              value={constellation}
+              onChange={e => setConstellation(e.target.value)}
+              placeholder="Constellation (optional) — what pattern does this belong to?"
+              className="w-full rounded-lg px-3 py-2 text-xs outline-none transition-colors"
+              style={{
+                background: '#0a0f1a',
+                color: '#8899b8',
+                border: '1px solid #1a2236',
+              }}
+              onFocus={e => { e.target.style.borderColor = '#6b4e1a' }}
+              onBlur={e => { e.target.style.borderColor = '#1a2236' }}
+            />
+            <datalist id="constellation-list">
+              {constellations.map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+
+          <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: '#1f2937' }}>
               ⌘↵ to submit
             </span>
@@ -112,15 +145,45 @@ export default function ObservationStream({
       </div>
 
       <div className="flex-1 overflow-y-auto px-10 py-5">
-        {observations.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+        {constellations.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              onClick={() => setActiveConstellation(null)}
+              className="text-xs px-2.5 py-1 rounded-full transition-all"
+              style={{
+                background: !activeConstellation ? '#1a2236' : 'transparent',
+                color: !activeConstellation ? '#8899b8' : '#2d3a50',
+                border: `1px solid ${!activeConstellation ? '#2d3a50' : '#141c2e'}`,
+              }}
+            >
+              All
+            </button>
+            {constellations.map(c => (
+              <button
+                key={c}
+                onClick={() => setActiveConstellation(activeConstellation === c ? null : c)}
+                className="text-xs px-2.5 py-1 rounded-full transition-all"
+                style={{
+                  background: activeConstellation === c ? '#1e1208' : 'transparent',
+                  color: activeConstellation === c ? '#a07830' : '#2d3a50',
+                  border: `1px solid ${activeConstellation === c ? '#4a2e0a' : '#141c2e'}`,
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {displayed.length === 0 ? (
+          <div className="flex items-center justify-center h-32">
             <p className="text-xs" style={{ color: '#141c2e' }}>
-              The stream is empty.
+              {activeConstellation ? `No observations in ${activeConstellation}.` : 'The stream is empty.'}
             </p>
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
-            {observations.map(obs => (
+            {displayed.map(obs => (
               <ObservationCard
                 key={obs.id}
                 observation={obs}

@@ -69,7 +69,15 @@ const NEXT_OBSERVATIONS = {
   ],
 }
 
-export default function PACERProcessing({ observation, onRoute }) {
+const TYPE_ICONS = {
+  text:     '✍️',
+  voice:    '🎤',
+  image:    '📸',
+  document: '📄',
+  idea:     '💡',
+}
+
+export default function PACERProcessing({ observation, observations = [], onRoute }) {
   if (!observation) {
     return (
       <aside
@@ -102,6 +110,12 @@ export default function PACERProcessing({ observation, onRoute }) {
   const routed = observation.destination !== null
   const nextObs = routed ? NEXT_OBSERVATIONS[observation.destination] : null
 
+  const related = observation.constellation
+    ? observations.filter(o =>
+        o.constellation === observation.constellation && o.id !== observation.id
+      ).slice(0, 4)
+    : []
+
   return (
     <aside
       className="flex flex-col shrink-0 border-l overflow-y-auto"
@@ -122,6 +136,18 @@ export default function PACERProcessing({ observation, onRoute }) {
         </p>
       </div>
 
+      {observation.constellation && (
+        <div
+          className="px-6 py-3 border-b"
+          style={{ borderColor: '#0f1520' }}
+        >
+          <p className="text-xs mb-1" style={{ color: '#2d3a50' }}>constellation</p>
+          <p className="text-sm font-medium" style={{ color: '#a07830' }}>
+            {observation.constellation}
+          </p>
+        </div>
+      )}
+
       <div
         className="px-6 py-4 border-b"
         style={{ borderColor: '#0f1520' }}
@@ -138,6 +164,36 @@ export default function PACERProcessing({ observation, onRoute }) {
             : observation.text}
         </p>
       </div>
+
+      {related.length > 0 && (
+        <div
+          className="px-6 py-4 border-b"
+          style={{ borderColor: '#0f1520' }}
+        >
+          <p className="text-xs mb-3" style={{ color: '#2d3a50' }}>
+            In the same constellation:
+          </p>
+          <div className="flex flex-col gap-2">
+            {related.map(r => (
+              <div
+                key={r.id}
+                className="rounded-lg px-3 py-2"
+                style={{ background: '#0d1117', border: '1px solid #141c2e' }}
+              >
+                <p className="text-xs mb-1" style={{ color: '#4a3010' }}>
+                  {TYPE_ICONS[r.type] || '✍️'} {r.type}
+                  {r.destination && (
+                    <span style={{ marginLeft: '6px', color: '#2d3a50' }}>→ {r.destination}</span>
+                  )}
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: '#374151' }}>
+                  {r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-5">
         <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
