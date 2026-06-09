@@ -13,6 +13,7 @@ export default function LeftNav({ activeSection, onSelect }) {
       style={{ width: '200px', background: '#0a0d16', borderColor: '#111827' }}
     >
       <div className="mb-8 px-3">
+        <div style={{ fontSize: '22px', lineHeight: 1, marginBottom: '6px' }}>🍍</div>
         <p
           className="text-xs font-bold tracking-widest uppercase"
           style={{ color: '#1d4ed8', letterSpacing: '0.2em' }}

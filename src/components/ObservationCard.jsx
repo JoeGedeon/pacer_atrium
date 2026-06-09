@@ -1,10 +1,9 @@
 const TYPE_ICONS = {
-  observation: '👁',
-  idea:        '💡',
-  jobsite:     '🏗️',
-  business:    '💼',
-  vision:      '🌙',
-  comment:     '💬',
+  text:     '✍️',
+  voice:    '🎤',
+  image:    '📸',
+  document: '📄',
+  idea:     '💡',
 }
 
 const DEST_COLORS = {
@@ -33,7 +32,7 @@ export default function ObservationCard({ observation, isActive, onClick }) {
     >
       <div className="flex items-start gap-3">
         <span className="text-sm mt-0.5 shrink-0 opacity-70">
-          {TYPE_ICONS[type] || '👁'}
+          {TYPE_ICONS[type] || '✍️'}
         </span>
         <div className="flex-1 min-w-0">
           <p

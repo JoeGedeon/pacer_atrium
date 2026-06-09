@@ -41,6 +41,34 @@ const ROUTES = [
   },
 ]
 
+const NEXT_OBSERVATIONS = {
+  FleetFlow: [
+    'Is this pattern repeating?',
+    'Who else sees this?',
+    'What is the cost of ignoring it?',
+  ],
+  Isles: [
+    'What character embodies this?',
+    'Where does this fit the mythology?',
+    'What emotion does this carry?',
+  ],
+  Doctrine: [
+    'Is this a principle or an exception?',
+    'What rule would prevent this?',
+    'Who needs to know this?',
+  ],
+  Content: [
+    'What is the headline?',
+    'Who is the audience?',
+    'What format fits this best?',
+  ],
+  Archive: [
+    'When should this resurface?',
+    'What would make this relevant again?',
+    'Who should find this?',
+  ],
+}
+
 export default function PACERProcessing({ observation, onRoute }) {
   if (!observation) {
     return (
@@ -72,6 +100,7 @@ export default function PACERProcessing({ observation, onRoute }) {
   }
 
   const routed = observation.destination !== null
+  const nextObs = routed ? NEXT_OBSERVATIONS[observation.destination] : null
 
   return (
     <aside
@@ -150,13 +179,23 @@ export default function PACERProcessing({ observation, onRoute }) {
           })}
         </div>
 
-        {routed && (
-          <p
-            className="text-xs mt-5 text-center"
-            style={{ color: '#1d4ed8' }}
-          >
-            Observation passed forward.
-          </p>
+        {routed && nextObs && (
+          <div className="mt-6">
+            <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
+              Possible next observations:
+            </p>
+            <div className="flex flex-col gap-2">
+              {nextObs.map((q, i) => (
+                <p
+                  key={i}
+                  className="text-xs leading-relaxed"
+                  style={{ color: '#2d3a50' }}
+                >
+                  • {q}
+                </p>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </aside>
