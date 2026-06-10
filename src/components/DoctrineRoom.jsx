@@ -30,17 +30,17 @@ const CANONIZATIONS = [
     realm: 'PACER University',
   },
   {
-    id: ‘aiziano-canon’,
-    title: ‘Canon Record 002 — Aiziano’,
+    id: 'aiziano-canon',
+    title: 'Canon Record 002 — Aiziano',
     fields: [
-      { label: ‘Character’,      value: ‘Aiziano’ },
-      { label: ‘Status’,         value: ‘Confirmed’ },
-      { label: ‘Classification’, value: ‘Foundational Character’ },
-      { label: ‘Kodex’,          value: ‘Blue · Natural’ },
+      { label: 'Character',      value: 'Aiziano' },
+      { label: 'Status',         value: 'Confirmed' },
+      { label: 'Classification', value: 'Foundational Character' },
+      { label: 'Kodex',          value: 'Blue · Natural' },
     ],
-    note: ‘Aiziano is a foundational character within Isles of the Awakening. He carries the blue Kodex resonance — natural, originary, deeply connected to the mythology of the Isles. His identity is complete within the world.’,
-    closing: [‘Aiziano is the canonical identity.’],
-    realm: ‘Isles of the Awakening’,
+    note: 'Aiziano is a foundational character within Isles of the Awakening. He carries the blue Kodex resonance — natural, originary, deeply connected to the mythology of the Isles. His identity is complete within the world.',
+    closing: ['Aiziano is the canonical identity.'],
+    realm: 'Isles of the Awakening',
   },
 ]
 
