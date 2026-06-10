@@ -116,10 +116,10 @@ export default function PACERProcessing({
         <p className="text-xs" style={{ color: 'var(--text-5)' }}>Observation received</p>
       </div>
 
-      {observation.imageUrl && (
+      {observation.storageUrl && (
         <div style={{ borderBottom: '1px solid var(--border-1)' }}>
           <img
-            src={observation.imageUrl}
+            src={observation.storageUrl}
             alt={observation.text || 'observation'}
             style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }}
           />

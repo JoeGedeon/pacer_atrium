@@ -19,7 +19,7 @@ function formatTime(date) {
 }
 
 export default function ObservationCard({ observation, isActive, onClick }) {
-  const { text, type, imageUrl, timestamp, destination, constellation } = observation
+  const { text, type, storageUrl, timestamp, destination, constellation } = observation
 
   return (
     <div
@@ -30,9 +30,9 @@ export default function ObservationCard({ observation, isActive, onClick }) {
         border: `1px solid ${isActive ? '#1d4ed8' : 'var(--border-1)'}`,
       }}
     >
-      {imageUrl && (
+      {storageUrl && (
         <img
-          src={imageUrl}
+          src={storageUrl}
           alt={text || 'observation'}
           style={{
             width: '100%', maxHeight: '140px', objectFit: 'cover',
