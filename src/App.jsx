@@ -7,6 +7,7 @@ import PACERProcessing from './components/PACERProcessing'
 import AtriumDashboard from './components/AtriumDashboard'
 import DoctrineRoom from './components/DoctrineRoom'
 import TheaterRoom from './components/TheaterRoom'
+import MuseRoom from './components/MuseRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
@@ -91,6 +92,7 @@ export default function App() {
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
   const isTheater  = currentRoom === 'content'
+  const isMuse     = currentRoom === 'muse'
 
   return (
     <div
@@ -144,10 +146,11 @@ export default function App() {
         </>
       )}
 
+      {isMuse     && <MuseRoom observations={observations} />}
       {isDoctrine && <DoctrineRoom />}
       {isTheater  && <TheaterRoom />}
 
-      {!isHome && !isAtrium && !isDoctrine && !isTheater && (
+      {!isHome && !isAtrium && !isMuse && !isDoctrine && !isTheater && (
         <PlaceholderRoom room={currentRoom} />
       )}
     </div>
