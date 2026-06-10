@@ -7,8 +7,9 @@ const PRINCIPLES = [
   { id: 6,  text: 'Reality outranks assumptions.',                               tag: 'Epistemology' },
   { id: 7,  text: 'Patterns require evidence.',                                  tag: 'Epistemology' },
   { id: 8,  text: 'Transparency creates trust.',                                 tag: 'Foundation'   },
-  { id: 9,  text: 'Consequences teach systems.',                                 tag: 'Architecture' },
-  { id: 10, text: 'Understanding precedes optimization.',                        tag: 'Architecture' },
+  { id: 9,  text: 'History is preserved. Canon is promoted.',                   tag: 'Preservation' },
+  { id: 10, text: 'Consequences teach systems.',                                 tag: 'Architecture' },
+  { id: 11, text: 'Understanding precedes optimization.',                        tag: 'Architecture' },
 ]
 
 const CANONIZATIONS = [
@@ -32,6 +33,7 @@ const TAG_COLORS = {
   Governance:   '#3b82f6',
   Epistemology: '#10b981',
   Architecture: '#8b5cf6',
+  Preservation: '#06b6d4',
 }
 
 export default function DoctrineRoom() {
@@ -55,7 +57,7 @@ export default function DoctrineRoom() {
           DOCTRINE
         </h2>
         <p className="text-xs" style={{ color: '#2d3a50' }}>
-          Principles that became permanent. {PRINCIPLES.length} principles · {CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}.
+          Principles that became permanent. {PRINCIPLES.length} principles · {CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}.
         </p>
       </div>
 
