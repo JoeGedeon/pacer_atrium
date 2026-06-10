@@ -10,6 +10,7 @@ const PRINCIPLES = [
   { id: 9,  text: 'History is preserved. Canon is promoted.',                   tag: 'Preservation' },
   { id: 10, text: 'Consequences teach systems.',                                 tag: 'Architecture' },
   { id: 11, text: 'Understanding precedes optimization.',                        tag: 'Architecture' },
+  { id: 12, text: 'Doctrine determines what is possible, not what is required.', tag: 'Governance'   },
 ]
 
 const CANONIZATIONS = [
