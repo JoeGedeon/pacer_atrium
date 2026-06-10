@@ -33,7 +33,7 @@ const PANEL_HEADER = {
   marginBottom: '16px',
 }
 
-export default function VERARoom({ observations = [], apiKey }) {
+export default function VERARoom({ observations = [], apiKey, onConnectClaude, isMobile }) {
   const [patterns,  setPatterns]  = useState(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState(null)
@@ -72,15 +72,15 @@ export default function VERARoom({ observations = [], apiKey }) {
         </div>
       </div>
 
-      {/* Four panels — 2 × 2 grid */}
+      {/* Four panels — 2×2 on desktop, single column on mobile */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gridTemplateRows: isMobile ? 'auto' : '1fr 1fr',
         gap: '1px',
         background: 'var(--border-0)',
         flex: 1,
-        overflow: 'hidden',
+        overflow: isMobile ? 'auto' : 'hidden',
         minHeight: 0,
       }}>
 
@@ -205,9 +205,16 @@ export default function VERARoom({ observations = [], apiKey }) {
           <p style={PANEL_HEADER}>Emerging Patterns — VERA suggests</p>
 
           {!apiKey && (
-            <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7, fontStyle: 'italic' }}>
-              Add an Anthropic key in Atrium<br />to enable pattern detection.
-            </p>
+            <div>
+              <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7,
+                fontStyle: 'italic', marginBottom: '10px' }}>
+                Pattern detection requires Claude.
+              </p>
+              <button onClick={onConnectClaude} style={{ background: 'none', border: 'none',
+                color: '#60a5fa', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                ✦ Connect Claude →
+              </button>
+            </div>
           )}
 
           {apiKey && observations.length < 3 && (
@@ -262,9 +269,16 @@ export default function VERARoom({ observations = [], apiKey }) {
           <p style={PANEL_HEADER}>Unnamed Relationships — VERA notices</p>
 
           {!apiKey && (
-            <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7, fontStyle: 'italic' }}>
-              Add an Anthropic key to enable<br />relationship discovery.
-            </p>
+            <div>
+              <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7,
+                fontStyle: 'italic', marginBottom: '10px' }}>
+                Relationship discovery requires Claude.
+              </p>
+              <button onClick={onConnectClaude} style={{ background: 'none', border: 'none',
+                color: '#60a5fa', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                ✦ Connect Claude →
+              </button>
+            </div>
           )}
 
           {apiKey && analyzing && (
