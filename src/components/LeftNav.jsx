@@ -1,12 +1,12 @@
 const PACER_ROOMS = [
-  { id: 'atrium',    label: 'Atrium',    icon: '🍍' },
-  { id: 'veyra',     label: 'Veyra',     icon: '🧠' },
-  { id: 'kel',       label: 'KEL',       icon: '✨' },
-  { id: 'fleetflow', label: 'FleetFlow', icon: '🚚' },
-  { id: 'isles',     label: 'Isles',     icon: '🏕' },
-  { id: 'archive',   label: 'Archive',   icon: '📚' },
-  { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
-  { id: 'content',   label: 'Content',   icon: '🎥' },
+  { id: 'atrium',    label: 'Atrium',                 icon: '🍍' },
+  { id: 'veyra',     label: 'Veyra',                  icon: '🧠' },
+  { id: 'kel',       label: 'KEL',                    icon: '✨' },
+  { id: 'fleetflow', label: 'FleetFlow',               icon: '🚚' },
+  { id: 'isles',     label: 'Isles of the Awakening',  icon: '🏕' },
+  { id: 'archive',   label: 'Archive',                icon: '📚' },
+  { id: 'doctrine',  label: 'Doctrine',               icon: '📜' },
+  { id: 'content',   label: 'Content',                icon: '🎥' },
 ]
 
 export default function LeftNav({ currentRoom, onSelect }) {
@@ -44,7 +44,7 @@ export default function LeftNav({ currentRoom, onSelect }) {
                 }}
               >
                 <span className="text-base leading-none">{room.icon}</span>
-                <span className="font-medium">{room.label}</span>
+                <span className="font-medium text-xs leading-tight">{room.label}</span>
               </button>
             </li>
           )

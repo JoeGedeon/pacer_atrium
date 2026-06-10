@@ -19,9 +19,9 @@ const ROOM_META = {
   },
   isles: {
     icon: '🏕',
-    name: 'Isles',
+    name: 'Isles of the Awakening',
     layer: 'Execution Layer',
-    description: 'Isles of the Awakened. World-building, characters, mythology, and Kodex lore.',
+    description: 'Worlds · Lore · Characters. The mythology, universe, and creative IP of Isles of the Awakening.',
   },
   archive: {
     icon: '📚',
@@ -39,7 +39,7 @@ const ROOM_META = {
     icon: '🎥',
     name: 'Content',
     layer: 'Publishing Layer',
-    description: 'Creative assets and audience-facing work. Observations that became output.',
+    description: 'Media · Assets · Publishing. Creative work ready for audience.',
   },
 }
 
@@ -67,8 +67,8 @@ export default function PlaceholderRoom({ room }) {
         )}
 
         <h2
-          className="font-bold tracking-widest uppercase"
-          style={{ fontSize: '16px', color: '#c9d3e8', letterSpacing: '0.2em', marginBottom: '14px' }}
+          className="font-bold tracking-wide uppercase"
+          style={{ fontSize: '14px', color: '#c9d3e8', letterSpacing: '0.12em', marginBottom: '14px' }}
         >
           {meta.name}
         </h2>
