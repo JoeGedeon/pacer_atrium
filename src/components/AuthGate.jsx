@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { auth } from '../lib/firebase'
+import { useTheme } from '../hooks/useTheme'
+import ThemeToggle from './ThemeToggle'
 
 function friendlyError(code) {
   switch (code) {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
-    case 'auth/invalid-credential':  return 'Email or password is incorrect.'
+    case 'auth/invalid-credential':   return 'Email or password is incorrect.'
     case 'auth/email-already-in-use': return 'An account with this email already exists.'
     case 'auth/weak-password':        return 'Password must be at least 6 characters.'
     case 'auth/invalid-email':        return 'Please enter a valid email address.'
@@ -14,11 +18,13 @@ function friendlyError(code) {
 }
 
 export default function AuthGate({ onSignIn, onSignUp }) {
+  const { theme, setTheme } = useTheme()
   const [mode, setMode]         = useState('signin')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [working, setWorking]   = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   async function submit() {
     const e = email.trim()
@@ -36,6 +42,28 @@ export default function AuthGate({ onSignIn, onSignUp }) {
     }
   }
 
+  async function forgotPassword() {
+    const e = email.trim()
+    if (!e) { setError('Enter your email address first.'); return }
+    setWorking(true)
+    setError('')
+    try {
+      await sendPasswordResetEmail(auth, e)
+      setResetSent(true)
+    } catch (err) {
+      setError(friendlyError(err.code))
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  function switchMode(next) {
+    setMode(next)
+    setPassword('')
+    setError('')
+    setResetSent(false)
+  }
+
   const inputStyle = {
     width: '100%',
     background: 'var(--bg-input)',
@@ -48,6 +76,8 @@ export default function AuthGate({ onSignIn, onSignUp }) {
     marginBottom: '8px',
     boxSizing: 'border-box',
   }
+
+  const canSubmit = !working && !!email.trim() && !!password
 
   return (
     <div style={{
@@ -76,7 +106,7 @@ export default function AuthGate({ onSignIn, onSignUp }) {
           <input
             type="email"
             value={email}
-            onChange={e => { setEmail(e.target.value); setError('') }}
+            onChange={e => { setEmail(e.target.value); setError(''); setResetSent(false) }}
             placeholder="Email"
             autoFocus
             onKeyDown={e => { if (e.key === 'Enter') submit() }}
@@ -96,39 +126,58 @@ export default function AuthGate({ onSignIn, onSignUp }) {
           />
 
           {error && (
-            <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '10px',
-              marginTop: '-2px' }}
+            <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '10px', marginTop: '-2px' }}
             >{error}</p>
+          )}
+
+          {resetSent && (
+            <p style={{ color: '#22c55e', fontSize: '11px', marginBottom: '10px', marginTop: '-2px' }}
+            >Reset email sent. Check your inbox.</p>
           )}
 
           <button
             onClick={submit}
-            disabled={working || !email.trim() || !password}
+            disabled={!canSubmit}
             style={{
               width: '100%', padding: '10px', borderRadius: '8px', fontSize: '13px',
-              fontWeight: 500, border: 'none', marginBottom: '10px', marginTop: '4px',
-              background: (working || !email.trim() || !password) ? 'var(--bg-3)' : '#1d4ed8',
-              color:      (working || !email.trim() || !password) ? 'var(--text-4)' : '#e0eaff',
-              cursor:     (working || !email.trim() || !password) ? 'not-allowed' : 'pointer',
+              fontWeight: 500, border: 'none', marginBottom: '8px', marginTop: '4px',
+              background: canSubmit ? '#1d4ed8' : 'var(--bg-3)',
+              color:      canSubmit ? '#e0eaff' : 'var(--text-4)',
+              cursor:     canSubmit ? 'pointer'  : 'not-allowed',
             }}
           >
             {working ? '…' : mode === 'signin' ? 'Enter the Atrium' : 'Create Account'}
           </button>
 
-          <button
-            onClick={() => { setMode(m => m === 'signin' ? 'signup' : 'signin'); setError('') }}
-            style={{ width: '100%', background: 'none', border: 'none', fontSize: '11px',
-              color: 'var(--text-4)', cursor: 'pointer', padding: '4px' }}
-          >
-            {mode === 'signin'
-              ? 'New here? Create an account →'
-              : '← Back to sign in'}
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button
+              onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+              style={{ background: 'none', border: 'none', fontSize: '11px',
+                color: 'var(--text-4)', cursor: 'pointer', padding: '4px 0' }}
+            >
+              {mode === 'signin' ? 'New here? Create an account →' : '← Back to sign in'}
+            </button>
+
+            {mode === 'signin' && (
+              <button
+                onClick={forgotPassword}
+                disabled={working}
+                style={{ background: 'none', border: 'none', fontSize: '11px',
+                  color: 'var(--text-5)', cursor: 'pointer', padding: '4px 0' }}
+              >
+                Forgot password?
+              </button>
+            )}
+          </div>
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-6)',
-          marginTop: '16px' }}
-        >Your data lives in your account. Nobody else can see it.</p>
+        <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+          <ThemeToggle theme={theme} onThemeChange={setTheme} />
+        </div>
+
+        <p style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-6)', marginTop: '12px' }}>
+          Your data lives in your account. Nobody else can see it.
+        </p>
       </div>
     </div>
   )
