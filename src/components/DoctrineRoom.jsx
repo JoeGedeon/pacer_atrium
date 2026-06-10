@@ -16,13 +16,13 @@ const CANONIZATIONS = [
     id: 'aiziano-naming',
     title: 'The Naming of Aiziano',
     fields: [
-      { label: 'Former Designation',    value: 'Yanu' },
-      { label: 'Canonical Designation', value: 'Aiziano' },
-      { label: 'Status',                value: 'Confirmed' },
-      { label: 'Classification',        value: 'Living Echo Fragment' },
+      { label: 'Origin Reference',    value: 'Yanu' },
+      { label: 'Canonical Character', value: 'Aiziano' },
+      { label: 'Status',              value: 'Confirmed' },
+      { label: 'Classification',      value: 'Foundational Character' },
     ],
-    note: 'The name Yanu remains preserved within historical records and awakening-era documentation. Following codification, the designation Aiziano becomes the recognized canonical identity across all future doctrine, world records, character archives, and narrative systems.',
-    closing: ['Yanu is remembered.', 'Aiziano is recognized.'],
+    note: 'Aiziano was created in honor of Yanu. While Aiziano exists as a canonical character within Isles of the Awakening, the character’s origin remains rooted in the observations, personality, imagination, and influence of Yanu. The two are connected. One exists in reality. One exists in the mythology. Neither replaces the other.',
+    closing: ['Yanu inspired.', 'Aiziano emerged.'],
     realm: 'Isles of the Awakening',
   },
 ]
@@ -55,7 +55,7 @@ export default function DoctrineRoom() {
           DOCTRINE
         </h2>
         <p className="text-xs" style={{ color: '#2d3a50' }}>
-          Principles that became permanent. {PRINCIPLES.length} principles · {CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}.
+          Principles that became permanent. {PRINCIPLES.length} principles · {CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}.
         </p>
       </div>
 
@@ -152,7 +152,7 @@ export default function DoctrineRoom() {
                   marginBottom: '12px',
                 }}
               >
-                <p className="text-xs" style={{ color: '#1a2d4a', marginBottom: '4px' }}>Doctrine Note</p>
+                <p className="text-xs" style={{ color: '#1a2d4a', marginBottom: '6px' }}>Doctrine Note</p>
                 <p className="text-sm leading-relaxed" style={{ color: '#4b5563' }}>
                   {entry.note}
                 </p>
@@ -162,16 +162,13 @@ export default function DoctrineRoom() {
                 <p
                   key={i}
                   className="text-xs"
-                  style={{ color: '#10b981' + (i === 0 ? '60' : 'aa'), marginTop: '4px' }}
+                  style={{ color: i === 0 ? '#10b98160' : '#10b981aa', marginTop: '4px' }}
                 >
                   {line}
                 </p>
               ))}
 
-              <p
-                className="text-xs"
-                style={{ color: '#141c2e', marginTop: '12px' }}
-              >
+              <p className="text-xs" style={{ color: '#141c2e', marginTop: '12px' }}>
                 {entry.realm}
               </p>
             </div>
@@ -182,7 +179,6 @@ export default function DoctrineRoom() {
       {/* Footer */}
       <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid #0d1117' }}>
         <p className="text-xs" style={{ color: '#141c2e' }}>
-          Doctrine entries are permanent. Observations become doctrine through deliberate promotion.
           History is preserved. Canon is promoted.
         </p>
       </div>
