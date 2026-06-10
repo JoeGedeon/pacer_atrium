@@ -2,11 +2,8 @@ import { useState } from 'react'
 import ObservationCard from './ObservationCard'
 
 const OBS_TYPES = [
-  { id: 'text',     label: 'Text',     icon: '✍️' },
-  { id: 'voice',    label: 'Voice',    icon: '🎤' },
-  { id: 'image',    label: 'Image',    icon: '📸' },
-  { id: 'document', label: 'Document', icon: '📄' },
-  { id: 'idea',     label: 'Idea',     icon: '💡' },
+  { id: 'text',  label: 'Text',  icon: '✍️' },
+  { id: 'voice', label: 'Voice', icon: '🎤' },
 ]
 
 export default function ObservationStream({

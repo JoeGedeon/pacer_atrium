@@ -1,15 +1,15 @@
 const ROOM_META = {
   vera: {
-    icon: '🧠',
+    icon: '🌸',
     name: 'VERA',
-    layer: 'Recognition Layer',
-    description: 'Pattern detection, constellation mapping, and routing intelligence. Finds signal in the stream.',
+    layer: 'Recognition Infrastructure',
+    description: 'Pattern detection and routing intelligence. Not a destination — a service. VERA reads every observation and finds signal in the stream.',
   },
   kel: {
     icon: '✨',
     name: 'KEL',
-    layer: 'Exploration Layer',
-    description: 'Navigate constellations. Find connections across observations, media, and destinations.',
+    layer: 'Exploration Infrastructure',
+    description: 'Constellation navigation and connection mapping. Not a destination — a service. KEL links observations across the campus.',
   },
   fleetflow: {
     icon: '🚚',
@@ -18,7 +18,7 @@ const ROOM_META = {
     description: 'Moving industry operations. Fleet management, labor productivity, claims defense.',
   },
   isles: {
-    icon: '🏕',
+    icon: '🏝',
     name: 'Isles of the Awakening',
     layer: 'World Layer',
     description: 'Worlds · Lore · Characters. The mythology, universe, and creative IP of Isles of the Awakening.',

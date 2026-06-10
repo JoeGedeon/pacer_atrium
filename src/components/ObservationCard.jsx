@@ -26,8 +26,8 @@ export default function ObservationCard({ observation, isActive, onClick }) {
       onClick={onClick}
       className="rounded-lg px-4 py-3 cursor-pointer transition-all"
       style={{
-        background: isActive ? '#0d1a2e' : '#0d1117',
-        border: `1px solid ${isActive ? '#1d4ed8' : '#141c2e'}`,
+        background: isActive ? '#0d1a2e' : 'var(--bg-2)',
+        border: `1px solid ${isActive ? '#1d4ed8' : 'var(--border-1)'}`,
       }}
     >
       <div className="flex items-start gap-3">
@@ -37,12 +37,12 @@ export default function ObservationCard({ observation, isActive, onClick }) {
         <div className="flex-1 min-w-0">
           <p
             className="text-sm leading-relaxed"
-            style={{ color: isActive ? '#b0bdd4' : '#4b5563' }}
+            style={{ color: isActive ? 'var(--text-1)' : 'var(--text-2)' }}
           >
             {text.length > 110 ? text.slice(0, 110) + '…' : text}
           </p>
           <div className="flex items-center flex-wrap gap-2 mt-2">
-            <span className="text-xs" style={{ color: '#1f2937' }}>
+            <span className="text-xs" style={{ color: 'var(--text-5)' }}>
               {formatTime(timestamp)}
             </span>
             {constellation && (
@@ -70,7 +70,7 @@ export default function ObservationCard({ observation, isActive, onClick }) {
               </span>
             )}
             {!destination && (
-              <span className="text-xs" style={{ color: '#1a2d4a' }}>
+              <span className="text-xs" style={{ color: 'var(--text-4)' }}>
                 received
               </span>
             )}
