@@ -26,20 +26,20 @@ export default function APIKeyGate({ onKey }) {
     >
       <div
         className="rounded-xl px-8 py-8 w-full"
-        style={{ maxWidth: '400px', background: '#0a0d16', border: '1px solid #1f2937' }}
+        style={{ maxWidth: '400px', background: 'var(--bg-1)', border: '1px solid var(--border-2)' }}
       >
         <div className="text-center mb-6">
           <div style={{ fontSize: '26px', marginBottom: '8px' }}>🍍</div>
           <h2
             className="font-bold tracking-widest uppercase"
-            style={{ fontSize: '14px', color: '#c9d3e8', letterSpacing: '0.2em' }}
+            style={{ fontSize: '14px', color: 'var(--text-0)', letterSpacing: '0.2em' }}
           >
             PACER ATRIUM
           </h2>
-          <p className="mt-2 text-xs" style={{ color: '#374151' }}>
+          <p className="mt-2 text-xs" style={{ color: 'var(--text-2)' }}>
             Claude routing requires an Anthropic API key.
           </p>
-          <p className="mt-1 text-xs" style={{ color: '#1f2937' }}>
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-5)' }}>
             Stored locally. Never sent anywhere except Anthropic.
           </p>
         </div>
@@ -52,9 +52,9 @@ export default function APIKeyGate({ onKey }) {
           autoFocus
           className="w-full rounded-lg px-4 py-3 text-sm outline-none mb-2"
           style={{
-            background: '#0d1520',
-            color: '#c9d3e8',
-            border: '1px solid #1f2937',
+            background: 'var(--bg-input)',
+            color: 'var(--text-0)',
+            border: '1px solid var(--border-2)',
           }}
           onFocus={e => { e.target.style.borderColor = '#2563eb' }}
           onBlur={e => { e.target.style.borderColor = '#1f2937' }}
@@ -84,7 +84,7 @@ export default function APIKeyGate({ onKey }) {
           style={{
             background: 'none',
             border: 'none',
-            color: '#2d3a50',
+            color: 'var(--text-3)',
             cursor: 'pointer',
             padding: '4px',
           }}

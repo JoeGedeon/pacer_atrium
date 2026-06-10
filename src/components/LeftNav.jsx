@@ -1,14 +1,15 @@
 import ThemeToggle from './ThemeToggle'
 
 const PACER_ROOMS = [
-  { id: 'atrium',    label: 'Atrium',                icon: '🍍' },
-  { id: 'vera',      label: 'VERA',                  icon: '🧠' },
-  { id: 'kel',       label: 'KEL',                   icon: '✨' },
-  { id: 'fleetflow', label: 'FleetFlow',              icon: '🚚' },
-  { id: 'isles',     label: 'Isles of the Awakening', icon: '🏕' },
-  { id: 'archive',   label: 'Archive',               icon: '📚' },
-  { id: 'doctrine',  label: 'Doctrine',              icon: '📜' },
-  { id: 'content',   label: 'Theater',               icon: '🃏' },
+  { id: 'atrium',    label: 'Atrium',    icon: '🍍' },
+  { id: 'vera',      label: 'VERA',      icon: '🌸', infra: true },
+  { id: 'kel',       label: 'KEL',       icon: '✨', infra: true },
+  { id: 'muse',      label: 'Muse',      icon: '🎭' },
+  { id: 'content',   label: 'Theater',   icon: '🎬' },
+  { id: 'fleetflow', label: 'FleetFlow', icon: '🚚' },
+  { id: 'isles',     label: 'Isles',     icon: '🏝' },
+  { id: 'archive',   label: 'Archive',   icon: '📚' },
+  { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
 ]
 
 export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange }) {
@@ -41,11 +42,11 @@ export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange })
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
                 style={{
                   background: isActive ? 'var(--bg-3)' : 'transparent',
-                  color: isActive ? 'var(--text-0)' : 'var(--text-2)',
+                  color: isActive ? 'var(--text-0)' : room.infra ? 'var(--text-3)' : 'var(--text-2)',
                   borderLeft: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
                 }}
               >
-                <span className="text-base leading-none">{room.icon}</span>
+                <span className="text-base leading-none" style={{ opacity: room.infra ? 0.6 : 1 }}>{room.icon}</span>
                 <span className="font-medium text-xs leading-tight">{room.label}</span>
               </button>
             </li>
