@@ -33,10 +33,11 @@ const CANONIZATIONS = [
     id: 'aiziano-naming',
     title: 'The Naming of Aiziano',
     fields: [
-      { label: 'Origin Reference',    value: 'Yanu' },
+      { label: 'Origin Reference',    value: 'Yanu (real-world individual)' },
       { label: 'Canonical Character', value: 'Aiziano' },
       { label: 'Status',              value: 'Confirmed' },
       { label: 'Classification',      value: 'Foundational Character' },
+      { label: 'Canon Rule',          value: 'The Isles character formerly referenced as Yanu is canonically known as Aiziano. References to Yanu within Isles narrative materials should be interpreted as Aiziano unless explicitly referring to the real-world individual.' },
     ],
     note: 'Aiziano was created in honor of Yanu. While Aiziano exists as a canonical character within Isles of the Awakening, the character’s origin remains rooted in the observations, personality, imagination, and influence of Yanu. The two are connected. One exists in reality. One exists in the mythology. Neither replaces the other.',
     closing: ['Yanu inspired.', 'Aiziano emerged.'],

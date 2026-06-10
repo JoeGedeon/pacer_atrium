@@ -34,7 +34,6 @@ const STATUS_GLYPHS  = {
 }
 
 const CONSTELLATIONS = [
-  { a: 'Yanu',                b: 'Aiziano',   note: 'origin' },
   { a: 'FleetFlow',           b: 'Isles',     note: 'movement as narrative' },
   { a: 'PACER',               b: 'Doctrine',  note: 'intelligence requires governance' },
   { a: 'Blue Pineapple',      b: 'Atrium',    note: 'brand as entry point' },
