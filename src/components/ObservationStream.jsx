@@ -68,11 +68,11 @@ export default function ObservationStream({
       setUploading(true)
       setUploadError(null)
       try {
-        const imageUrl = await uploadObservationImage(imageFile, uid)
+        const storageUrl = await uploadObservationImage(imageFile, uid)
         onSubmit({
           text: text.trim() || imageFile.name,
           type: 'image',
-          imageUrl,
+          storageUrl,
           constellation: constellation.trim() || null,
         })
         setText('')

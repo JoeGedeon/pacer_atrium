@@ -56,7 +56,7 @@ export default function App() {
       id,
       text: obs.text,
       type: obs.type,
-      imageUrl: obs.imageUrl || null,
+      storageUrl: obs.storageUrl || null,
       constellation: obs.constellation || null,
       source: obs.source || null,
       timestamp: new Date(),
