@@ -17,9 +17,7 @@ const ROUTE_COLORS = {
   'Archive':                '#6b7280',
 }
 
-function destColor(dest) {
-  return ROUTE_COLORS[dest] || '#4b5563'
-}
+function destColor(dest) { return ROUTE_COLORS[dest] || '#4b5563' }
 
 const STATIC_NEXT = {
   FleetFlow:                ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
@@ -32,12 +30,7 @@ const STATIC_NEXT = {
 const TYPE_ICONS = { text: '✍️', voice: '🎤', image: '📸', document: '📄', idea: '💡' }
 
 export default function PACERProcessing({
-  observation,
-  observations = [],
-  onRoute,
-  onAcceptConstellation,
-  hasApiKey,
-  onRequestApiKey,
+  observation, observations = [], onRoute, onAcceptConstellation, hasApiKey, onRequestApiKey,
 }) {
   const [sending, setSending] = useState(false)
   const [sentIds, setSentIds] = useState(new Set())
@@ -59,46 +52,36 @@ export default function PACERProcessing({
 
   if (!observation) {
     return (
-      <aside
-        className="flex flex-col shrink-0 border-l"
-        style={{ width: '288px', background: '#080b13', borderColor: '#111827' }}
+      <aside className="flex flex-col shrink-0 border-l"
+        style={{ width: '288px', background: 'var(--bg-1)', borderColor: 'var(--border-0)' }}
       >
-        <div className="px-6 py-5 border-b" style={{ borderColor: '#111827' }}>
-          <p
-            className="text-xs font-semibold tracking-widest uppercase"
-            style={{ color: '#1f2937', letterSpacing: '0.15em' }}
-          >
-            PACER Processing
-          </p>
+        <div className="px-6 py-5 border-b" style={{ borderColor: 'var(--border-0)' }}>
+          <p className="text-xs font-semibold tracking-widest uppercase"
+            style={{ color: 'var(--text-5)', letterSpacing: '0.15em' }}
+          >PACER Processing</p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4">
-          <p className="text-xs text-center leading-relaxed" style={{ color: '#151d2e' }}>
+          <p className="text-xs text-center leading-relaxed" style={{ color: 'var(--text-6)' }}>
             Waiting for an observation to enter the system.
           </p>
           {!hasApiKey && (
-            <button
-              onClick={onRequestApiKey}
-              className="text-xs"
-              style={{ background: 'none', border: 'none', color: '#1a2d4a', cursor: 'pointer' }}
-            >
-              + Enable Claude routing
-            </button>
+            <button onClick={onRequestApiKey} className="text-xs"
+              style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer' }}
+            >+ Enable Claude routing</button>
           )}
         </div>
       </aside>
     )
   }
 
-  const routed = observation.destination !== null
-  const claude = observation.claude
+  const routed    = observation.destination !== null
+  const claude    = observation.claude
   const analyzing = observation.analyzing || false
   const claudeError = observation.claudeError || null
-  const isSent = sentIds.has(observation.id)
+  const isSent    = sentIds.has(observation.id)
 
   const related = observation.constellation
-    ? observations
-        .filter(o => o.constellation === observation.constellation && o.id !== observation.id)
-        .slice(0, 3)
+    ? observations.filter(o => o.constellation === observation.constellation && o.id !== observation.id).slice(0, 3)
     : []
 
   const nextObs = claude?.suggestions || (routed ? STATIC_NEXT[observation.destination] : null)
@@ -110,170 +93,108 @@ export default function PACERProcessing({
       observation.constellation.toLowerCase() !== claudeSuggestsConstellation.toLowerCase())
 
   return (
-    <aside
-      className="flex flex-col shrink-0 border-l overflow-y-auto"
-      style={{ width: '288px', background: '#080b13', borderColor: '#111827' }}
+    <aside className="flex flex-col shrink-0 border-l overflow-y-auto"
+      style={{ width: '288px', background: 'var(--bg-1)', borderColor: 'var(--border-0)' }}
     >
-      {/* Header */}
-      <div className="px-6 py-5 border-b shrink-0" style={{ borderColor: '#111827' }}>
-        <p
-          className="text-xs font-semibold tracking-widest uppercase mb-1"
+      <div className="px-6 py-5 border-b shrink-0" style={{ borderColor: 'var(--border-0)' }}>
+        <p className="text-xs font-semibold tracking-widest uppercase mb-1"
           style={{ color: '#1d4ed8', letterSpacing: '0.15em' }}
-        >
-          PACER Processing
-        </p>
-        <p className="text-xs" style={{ color: '#1f2937' }}>Observation received</p>
+        >PACER Processing</p>
+        <p className="text-xs" style={{ color: 'var(--text-5)' }}>Observation received</p>
       </div>
 
-      {/* User constellation */}
       {observation.constellation && (
-        <div className="px-6 py-3 border-b" style={{ borderColor: '#0f1520' }}>
-          <p className="text-xs mb-1" style={{ color: '#2d3a50' }}>constellation</p>
-          <p className="text-sm font-medium" style={{ color: '#a07830' }}>
-            {observation.constellation}
-          </p>
+        <div className="px-6 py-3 border-b" style={{ borderColor: 'var(--border-1)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>constellation</p>
+          <p className="text-sm font-medium" style={{ color: '#a07830' }}>{observation.constellation}</p>
         </div>
       )}
 
-      {/* Observation preview */}
-      <div className="px-6 py-4 border-b" style={{ borderColor: '#0f1520' }}>
-        <p className="text-xs mb-2 capitalize" style={{ color: '#374151' }}>
+      <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border-1)' }}>
+        <p className="text-xs mb-2 capitalize" style={{ color: 'var(--text-2)' }}>
           {TYPE_ICONS[observation.type] || '✍️'} {observation.type}
         </p>
-        <p className="text-sm leading-relaxed" style={{ color: '#4b6080' }}>
-          {observation.text.length > 100
-            ? observation.text.slice(0, 100) + '…'
-            : observation.text}
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
+          {observation.text.length > 100 ? observation.text.slice(0, 100) + '…' : observation.text}
         </p>
       </div>
 
-      {/* Claude analysis */}
       {(analyzing || claude || claudeError) && (
-        <div className="px-6 py-4 border-b" style={{ borderColor: '#0f1520' }}>
+        <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border-1)' }}>
           {analyzing && (
             <div className="flex items-center gap-2">
-              <div
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#1d4ed8',
-                  animation: 'pulse-fade 1.5s infinite',
-                }}
-              />
-              <p className="text-xs" style={{ color: '#2d3a50' }}>Claude is reading…</p>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#1d4ed8', animation: 'pulse-fade 1.5s infinite' }} />
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Claude is reading…</p>
             </div>
           )}
-
           {!analyzing && claudeError && (
-            <p className="text-xs" style={{ color: '#3d1515' }}>
-              Claude unavailable — routing manually.
-            </p>
+            <p className="text-xs" style={{ color: '#3d1515' }}>Claude unavailable — routing manually.</p>
           )}
-
           {!analyzing && claude && (
             <div>
-              <p
-                className="text-xs font-semibold tracking-widest uppercase mb-3"
-                style={{ color: '#1a2d4a', letterSpacing: '0.15em' }}
-              >
-                Claude Suggests
-              </p>
+              <p className="text-xs font-semibold tracking-widest uppercase mb-3"
+                style={{ color: 'var(--text-4)', letterSpacing: '0.15em' }}
+              >Claude Suggests</p>
 
-              {/* Constellation suggestion */}
               {constellationDiffers && (
-                <div
-                  className="rounded-lg px-3 py-2.5 mb-3 flex items-start justify-between gap-3"
+                <div className="rounded-lg px-3 py-2.5 mb-3 flex items-start justify-between gap-3"
                   style={{ background: '#0e0c06', border: '1px solid #2d1e08' }}
                 >
                   <div>
                     <p className="text-xs mb-0.5" style={{ color: '#3a2808' }}>constellation</p>
-                    <p className="text-sm font-medium" style={{ color: '#a07830' }}>
-                      {claudeSuggestsConstellation}
-                    </p>
+                    <p className="text-sm font-medium" style={{ color: '#a07830' }}>{claudeSuggestsConstellation}</p>
                   </div>
-                  <button
-                    onClick={() => onAcceptConstellation(observation.id, claudeSuggestsConstellation)}
+                  <button onClick={() => onAcceptConstellation(observation.id, claudeSuggestsConstellation)}
                     className="text-xs px-2.5 py-1.5 rounded-lg shrink-0"
-                    style={{
-                      background: '#1a1008',
-                      color: '#8b6620',
-                      border: '1px solid #4a3010',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {observation.constellation ? 'Override' : 'Accept'}
-                  </button>
+                    style={{ background: '#1a1008', color: '#8b6620', border: '1px solid #4a3010', cursor: 'pointer' }}
+                  >{observation.constellation ? 'Override' : 'Accept'}</button>
                 </div>
               )}
 
-              {/* Primary destination */}
-              <div
-                className="rounded-lg px-3 py-2.5 mb-2"
-                style={{
-                  background: '#0a0f1a',
-                  border: `1px solid ${destColor(claude.destination)}30`,
-                }}
+              <div className="rounded-lg px-3 py-2.5 mb-2"
+                style={{ background: 'var(--bg-0)', border: `1px solid ${destColor(claude.destination)}30` }}
               >
-                <p className="text-xs mb-1.5" style={{ color: '#1f2937' }}>Primary Destination</p>
+                <p className="text-xs mb-1.5" style={{ color: 'var(--text-5)' }}>Primary Destination</p>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium" style={{ color: destColor(claude.destination) }}>
-                    {claude.destination}
-                  </p>
+                  <p className="text-sm font-medium" style={{ color: destColor(claude.destination) }}>{claude.destination}</p>
                   <span className="text-xs" style={{ color: destColor(claude.destination) + '99' }}>
                     {Math.round((claude.confidence || 0) * 100)}%
                   </span>
                 </div>
-                <div className="rounded-full overflow-hidden" style={{ height: '2px', background: '#141c2e' }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.round((claude.confidence || 0) * 100)}%`,
-                      background: destColor(claude.destination),
-                    }}
+                <div className="rounded-full overflow-hidden" style={{ height: '2px', background: 'var(--border-1)' }}>
+                  <div className="h-full rounded-full"
+                    style={{ width: `${Math.round((claude.confidence || 0) * 100)}%`, background: destColor(claude.destination) }}
                   />
                 </div>
               </div>
 
-              {/* Secondary destination */}
               {claude.secondaryDestination && claude.secondaryDestination !== 'null' && (
-                <div
-                  className="rounded-lg px-3 py-2.5 mb-3"
-                  style={{ background: '#0a0f1a', border: '1px solid #141c2e' }}
+                <div className="rounded-lg px-3 py-2.5 mb-3"
+                  style={{ background: 'var(--bg-0)', border: '1px solid var(--border-1)' }}
                 >
-                  <p className="text-xs mb-1.5" style={{ color: '#1f2937' }}>Also consider</p>
+                  <p className="text-xs mb-1.5" style={{ color: 'var(--text-5)' }}>Also consider</p>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm" style={{ color: destColor(claude.secondaryDestination) + 'cc' }}>
                       {claude.secondaryDestination}
                     </p>
-                    <span className="text-xs" style={{ color: '#2d3a50' }}>
+                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>
                       {Math.round((claude.secondaryConfidence || 0) * 100)}%
                     </span>
                   </div>
-                  <div className="rounded-full overflow-hidden" style={{ height: '2px', background: '#141c2e' }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.round((claude.secondaryConfidence || 0) * 100)}%`,
-                        background: destColor(claude.secondaryDestination) + '60',
-                      }}
+                  <div className="rounded-full overflow-hidden" style={{ height: '2px', background: 'var(--border-1)' }}>
+                    <div className="h-full rounded-full"
+                      style={{ width: `${Math.round((claude.secondaryConfidence || 0) * 100)}%`, background: destColor(claude.secondaryDestination) + '60' }}
                     />
                   </div>
                 </div>
               )}
 
-              {/* Why */}
               {claude.reason && (
                 <div>
-                  <p
-                    className="text-xs font-semibold uppercase mb-1"
-                    style={{ color: '#1a2d4a', letterSpacing: '0.12em', fontSize: '10px' }}
-                  >
-                    Why
-                  </p>
-                  <p className="text-xs leading-relaxed" style={{ color: '#2d3a50' }}>
-                    {claude.reason}
-                  </p>
+                  <p className="text-xs font-semibold uppercase mb-1"
+                    style={{ color: 'var(--text-4)', letterSpacing: '0.12em', fontSize: '10px' }}
+                  >Why</p>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>{claude.reason}</p>
                 </div>
               )}
             </div>
@@ -281,24 +202,19 @@ export default function PACERProcessing({
         </div>
       )}
 
-      {/* Related observations */}
       {related.length > 0 && (
-        <div className="px-6 py-4 border-b" style={{ borderColor: '#0f1520' }}>
-          <p className="text-xs mb-3" style={{ color: '#2d3a50' }}>In the same constellation:</p>
+        <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border-1)' }}>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>In the same constellation:</p>
           <div className="flex flex-col gap-2">
             {related.map(r => (
-              <div
-                key={r.id}
-                className="rounded-lg px-3 py-2"
-                style={{ background: '#0d1117', border: '1px solid #141c2e' }}
+              <div key={r.id} className="rounded-lg px-3 py-2"
+                style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)' }}
               >
                 <p className="text-xs mb-1" style={{ color: '#3a2808' }}>
                   {TYPE_ICONS[r.type] || '✍️'} {r.type}
-                  {r.destination && (
-                    <span style={{ marginLeft: '6px', color: '#1a2d4a' }}>→ {r.destination}</span>
-                  )}
+                  {r.destination && <span style={{ marginLeft: '6px', color: 'var(--text-4)' }}>→ {r.destination}</span>}
                 </p>
-                <p className="text-xs leading-relaxed" style={{ color: '#374151' }}>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-2)' }}>
                   {r.text.length > 70 ? r.text.slice(0, 70) + '…' : r.text}
                 </p>
               </div>
@@ -307,72 +223,47 @@ export default function PACERProcessing({
         </div>
       )}
 
-      {/* Routing */}
-      <div className="px-6 py-5 border-b" style={{ borderColor: '#0f1520' }}>
-        <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
+      <div className="px-6 py-5 border-b" style={{ borderColor: 'var(--border-1)' }}>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-5)' }}>
           {routed ? 'Routed to:' : claude ? 'Confirm or route manually:' : 'Where does this belong?'}
         </p>
-
         <div className="flex flex-col gap-2">
           {ROUTES.map(route => {
-            const isSelected = observation.destination === route.id
-            const isClaudePrimary = !routed && claude?.destination === route.id
+            const isSelected       = observation.destination === route.id
+            const isClaudePrimary  = !routed && claude?.destination === route.id
             const isClaudeSecondary = !routed && claude?.secondaryDestination === route.id
-            const isDisabled = routed && !isSelected
-
+            const isDisabled       = routed && !isSelected
             return (
-              <button
-                key={route.id}
+              <button key={route.id}
                 onClick={() => !routed && onRoute(observation.id, route.id)}
                 disabled={isDisabled}
                 className="text-left rounded-lg px-4 py-3 transition-all"
                 style={{
-                  background: isSelected ? route.activeBg : '#0d1117',
+                  background: isSelected ? route.activeBg : 'var(--bg-2)',
                   border: `1px solid ${
-                    isSelected
-                      ? route.activeBorder
-                      : isClaudePrimary
-                      ? route.color + '55'
-                      : isClaudeSecondary
-                      ? route.color + '30'
-                      : '#141c2e'
+                    isSelected ? route.activeBorder
+                    : isClaudePrimary ? route.color + '55'
+                    : isClaudeSecondary ? route.color + '30'
+                    : 'var(--border-1)'
                   }`,
                   opacity: isDisabled ? 0.25 : 1,
-                  cursor: isDisabled ? 'not-allowed' : routed ? 'default' : 'pointer',
+                  cursor:  isDisabled ? 'not-allowed' : routed ? 'default' : 'pointer',
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <p
-                    className="text-sm font-medium"
-                    style={{
-                      color: isSelected
-                        ? route.color
-                        : isClaudePrimary
-                        ? route.color + 'cc'
-                        : isClaudeSecondary
-                        ? route.color + '88'
-                        : '#374151',
-                    }}
-                  >
-                    {route.label}
-                  </p>
+                  <p className="text-sm font-medium"
+                    style={{ color: isSelected ? route.color : isClaudePrimary ? route.color + 'cc' : isClaudeSecondary ? route.color + '88' : 'var(--text-2)' }}
+                  >{route.label}</p>
                   {isClaudePrimary && !isSelected && (
-                    <span style={{ fontSize: '9px', color: route.color + '70', letterSpacing: '0.05em' }}>
-                      primary
-                    </span>
+                    <span style={{ fontSize: '9px', color: route.color + '70', letterSpacing: '0.05em' }}>primary</span>
                   )}
                   {isClaudeSecondary && !isSelected && (
-                    <span style={{ fontSize: '9px', color: route.color + '50', letterSpacing: '0.05em' }}>
-                      secondary
-                    </span>
+                    <span style={{ fontSize: '9px', color: route.color + '50', letterSpacing: '0.05em' }}>secondary</span>
                   )}
                 </div>
-                <p
-                  className="text-xs mt-0.5"
-                  style={{ color: isSelected ? route.color + '99' : '#1f2937' }}
-                >
-                  {route.description}
-                </p>
+                <p className="text-xs mt-0.5"
+                  style={{ color: isSelected ? route.color + '99' : 'var(--text-5)' }}
+                >{route.description}</p>
               </button>
             )
           })}
@@ -380,62 +271,40 @@ export default function PACERProcessing({
 
         {routed && nextObs && (
           <div className="mt-6">
-            <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
-              Possible next observations:
-            </p>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-5)' }}>Possible next observations:</p>
             <div className="flex flex-col gap-2">
               {nextObs.map((q, i) => (
-                <p key={i} className="text-xs leading-relaxed" style={{ color: '#2d3a50' }}>
-                  • {q}
-                </p>
+                <p key={i} className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>• {q}</p>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Send to PACER */}
       <div className="px-6 py-5">
-        <p className="text-xs mb-3" style={{ color: '#1f2937' }}>Send to campus:</p>
-        <button
-          onClick={handleSendToPACER}
-          disabled={sending || isSent}
+        <p className="text-xs mb-3" style={{ color: 'var(--text-5)' }}>Send to campus:</p>
+        <button onClick={handleSendToPACER} disabled={sending || isSent}
           className="w-full text-left rounded-lg px-4 py-3"
           style={{
-            background: isSent ? '#041208' : '#0a0f1a',
-            border: `1px solid ${isSent ? '#0a3018' : '#141c2e'}`,
-            cursor: sending || isSent ? 'default' : 'pointer',
-            opacity: sending ? 0.6 : 1,
+            background: isSent ? '#041208' : 'var(--bg-0)',
+            border:    `1px solid ${isSent ? '#0a3018' : 'var(--border-1)'}`,
+            cursor:     sending || isSent ? 'default' : 'pointer',
+            opacity:    sending ? 0.6 : 1,
           }}
         >
-          <p
-            className="text-sm font-medium"
-            style={{ color: isSent ? '#1a7a40' : '#2d3a50' }}
-          >
+          <p className="text-sm font-medium" style={{ color: isSent ? '#1a7a40' : 'var(--text-3)' }}>
             {isSent ? '✓ Sent to PACER' : sending ? 'Sending…' : 'Send to PACER'}
           </p>
-          <p className="text-xs mt-0.5" style={{ color: isSent ? '#0f4a28' : '#151d2e' }}>
+          <p className="text-xs mt-0.5" style={{ color: isSent ? '#0f4a28' : 'var(--text-6)' }}>
             {isSent ? 'Pending review — awaiting approval' : 'Enters as pending_review'}
           </p>
         </button>
-
-        {sendError && (
-          <p className="text-xs mt-2" style={{ color: '#5a1a1a' }}>{sendError}</p>
-        )}
-
+        {sendError && <p className="text-xs mt-2" style={{ color: '#5a1a1a' }}>{sendError}</p>}
         {!hasApiKey && (
-          <button
-            onClick={onRequestApiKey}
+          <button onClick={onRequestApiKey}
             className="w-full text-xs mt-4 py-2 rounded-lg"
-            style={{
-              background: 'transparent',
-              border: '1px solid #141c2e',
-              color: '#1f2937',
-              cursor: 'pointer',
-            }}
-          >
-            + Enable Claude routing
-          </button>
+            style={{ background: 'transparent', border: '1px solid var(--border-1)', color: 'var(--text-5)', cursor: 'pointer' }}
+          >+ Enable Claude routing</button>
         )}
       </div>
     </aside>
