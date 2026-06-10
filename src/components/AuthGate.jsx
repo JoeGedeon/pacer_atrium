@@ -8,8 +8,7 @@ function friendlyError(code) {
   switch (code) {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
-    case 'auth/invalid-credential':   return 'Email or password is incorrect.'
-    case 'auth/email-already-in-use': return 'An account with this email already exists.'
+    case 'auth/invalid-credential':   return 'Email or password is incorrect. Use "Forgot password?" to reset.'
     case 'auth/weak-password':        return 'Password must be at least 6 characters.'
     case 'auth/invalid-email':        return 'Please enter a valid email address.'
     case 'auth/too-many-requests':    return 'Too many attempts. Wait a moment and try again.'
@@ -36,7 +35,8 @@ export default function AuthGate({ onSignIn, onSignUp }) {
       if (mode === 'signin') await onSignIn(e, p)
       else                   await onSignUp(e, p)
     } catch (err) {
-      setError(friendlyError(err.code))
+      if (err.code === 'auth/email-already-in-use') setError('__already_exists__')
+      else setError(friendlyError(err.code))
     } finally {
       setWorking(false)
     }
@@ -94,8 +94,8 @@ export default function AuthGate({ onSignIn, onSignUp }) {
           >PACER ATRIUM</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-5)' }}>
             {mode === 'signin'
-              ? 'Sign in to enter the campus.'
-              : 'Create an account to join the campus.'}
+              ? 'Sign in to enter the campus. First time? Create an account below.'
+              : 'New here? Create your account. Already have one? Sign in below.'}
           </p>
         </div>
 
@@ -125,7 +125,16 @@ export default function AuthGate({ onSignIn, onSignUp }) {
             onBlur={e  => { e.target.style.borderColor = 'var(--border-2)' }}
           />
 
-          {error && (
+          {error === '__already_exists__' ? (
+            <p style={{ fontSize: '11px', marginBottom: '10px', marginTop: '-2px', color: '#ef4444' }}>
+              That email already has an account.{' '}
+              <button
+                onClick={() => switchMode('signin')}
+                style={{ background: 'none', border: 'none', padding: 0, color: '#60a5fa',
+                  cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+              >Sign in instead →</button>
+            </p>
+          ) : error && (
             <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '10px', marginTop: '-2px' }}
             >{error}</p>
           )}
