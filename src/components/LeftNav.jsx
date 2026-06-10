@@ -12,7 +12,51 @@ const PACER_ROOMS = [
   { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
 ]
 
-export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange, user, onSignOut }) {
+export default function LeftNav({
+  currentRoom, onSelect, theme, onThemeChange,
+  user, onSignOut, hasApiKey, onConnectClaude, isMobile,
+}) {
+  if (isMobile) {
+    return (
+      <nav
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+          display: 'flex', flexDirection: 'row', alignItems: 'stretch',
+          background: 'var(--bg-1)', borderTop: '1px solid var(--border-0)',
+          height: '60px',
+        }}
+      >
+        {PACER_ROOMS.map(room => {
+          const isActive = currentRoom === room.id
+          return (
+            <button
+              key={room.id}
+              onClick={() => onSelect(room.id)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '2px',
+                background: isActive ? 'var(--bg-3)' : 'none',
+                border: 'none', cursor: 'pointer',
+                borderTop: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
+                padding: '4px 2px 6px',
+              }}
+            >
+              <span style={{ fontSize: '15px', lineHeight: 1, opacity: room.infra ? 0.6 : 1 }}>
+                {room.icon}
+              </span>
+              <span style={{
+                fontSize: '8px', lineHeight: 1, whiteSpace: 'nowrap',
+                color: isActive ? 'var(--text-0)' : 'var(--text-4)',
+              }}>
+                {room.label}
+              </span>
+            </button>
+          )
+        })}
+      </nav>
+    )
+  }
+
   return (
     <nav
       className="flex flex-col py-8 px-3 shrink-0 border-r"
@@ -63,6 +107,15 @@ export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange, u
         >
           ⌂ Command Center
         </button>
+        {!hasApiKey && (
+          <button
+            onClick={onConnectClaude}
+            className="text-xs text-left"
+            style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0 }}
+          >
+            ✦ Connect Claude
+          </button>
+        )}
         {user && (
           <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '10px' }}>
             <p className="text-xs" style={{ color: 'var(--text-6)', marginBottom: '4px',
@@ -77,7 +130,7 @@ export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange, u
           </div>
         )}
         <p className="text-xs" style={{ color: 'var(--text-6)' }}>
-          v0.6 · Atrium
+          v0.7 · Atrium
         </p>
       </div>
     </nav>

@@ -31,6 +31,7 @@ const TYPE_ICONS = { text: '✍️', voice: '🎤', image: '📸', document: '�
 
 export default function PACERProcessing({
   observation, observations = [], onRoute, onAcceptConstellation, hasApiKey, onRequestApiKey, uid,
+  isMobile, onBack,
 }) {
   const [sending, setSending] = useState(false)
   const [sentIds, setSentIds] = useState(new Set())
@@ -93,10 +94,22 @@ export default function PACERProcessing({
       observation.constellation.toLowerCase() !== claudeSuggestsConstellation.toLowerCase())
 
   return (
-    <aside className="flex flex-col shrink-0 border-l overflow-y-auto"
-      style={{ width: '288px', background: 'var(--bg-1)', borderColor: 'var(--border-0)' }}
+    <aside className="flex flex-col overflow-y-auto"
+      style={{
+        width: isMobile ? '100%' : '288px',
+        flexShrink: isMobile ? 0 : 0,
+        borderLeft: isMobile ? 'none' : '1px solid var(--border-0)',
+        borderTop: isMobile ? '1px solid var(--border-0)' : 'none',
+        background: 'var(--bg-1)',
+      }}
     >
       <div className="px-6 py-5 border-b shrink-0" style={{ borderColor: 'var(--border-0)' }}>
+        {isMobile && onBack && (
+          <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-4)',
+            fontSize: '11px', cursor: 'pointer', padding: 0, marginBottom: '10px', display: 'block' }}>
+            ← Back to observations
+          </button>
+        )}
         <p className="text-xs font-semibold tracking-widest uppercase mb-1"
           style={{ color: '#1d4ed8', letterSpacing: '0.15em' }}
         >PACER Processing</p>

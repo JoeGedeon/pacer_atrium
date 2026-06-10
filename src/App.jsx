@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
 import { useAuth } from './hooks/useAuth'
+import { useIsMobile } from './hooks/useIsMobile'
 import LeftNav from './components/LeftNav'
 import AuthGate from './components/AuthGate'
 import PACERHome from './components/PACERHome'
@@ -30,14 +31,13 @@ function loadObservations() {
 export default function App() {
   const { theme, setTheme } = useTheme()
   const { user, loading, signIn, signUp, signOut } = useAuth()
+  const isMobile = useIsMobile()
 
   const [currentRoom, setCurrentRoom] = useState('home')
   const [observations, setObservations] = useState(loadObservations)
   const [activeObservation, setActiveObservation] = useState(null)
   const [apiKey] = useState(() => localStorage.getItem('pacer_api_key') || null)
-  const [showKeyGate, setShowKeyGate] = useState(
-    () => !localStorage.getItem('pacer_api_key') && !localStorage.getItem('pacer_key_skipped')
-  )
+  const [showKeyGate, setShowKeyGate] = useState(false)
 
   useEffect(() => {
     try {
@@ -98,11 +98,10 @@ export default function App() {
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
   const isTheater  = currentRoom === 'content'
-  const isMuse    = currentRoom === 'muse'
-  const isVERA    = currentRoom === 'vera'
-  const isArchive = currentRoom === 'archive'
+  const isMuse     = currentRoom === 'muse'
+  const isVERA     = currentRoom === 'vera'
+  const isArchive  = currentRoom === 'archive'
 
-  // Auth loading — blank screen while Firebase resolves session
   if (loading) {
     return (
       <div style={{ background: 'var(--bg-0)', height: '100vh', display: 'flex',
@@ -113,15 +112,20 @@ export default function App() {
     )
   }
 
-  // Not authenticated — show login/signup
   if (!user) {
     return <AuthGate onSignIn={signIn} onSignUp={signUp} />
   }
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
-      style={{ background: 'var(--bg-0)', color: 'var(--text-0)' }}
+      style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        height: '100vh',
+        overflow: 'hidden',
+        background: 'var(--bg-0)',
+        color: 'var(--text-0)',
+      }}
     >
       {showKeyGate && <APIKeyGate onKey={handleApiKey} />}
 
@@ -133,55 +137,74 @@ export default function App() {
           onThemeChange={setTheme}
           user={user}
           onSignOut={signOut}
+          hasApiKey={!!apiKey}
+          onConnectClaude={() => setShowKeyGate(true)}
+          isMobile={isMobile}
         />
       )}
 
-      {isHome && (
-        <PACERHome
-          onEnter={room => setCurrentRoom(room)}
-          observationCount={observations.length}
-        />
-      )}
-
-      {isAtrium && (
-        <>
-          <ObservationStream
-            observations={observations}
-            onSubmit={submitObservation}
-            activeObservation={activeObservation}
-            onSelectObservation={setActiveObservation}
+      {/* Room area — on mobile, sits above the fixed bottom nav */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden',
+        paddingBottom: isMobile && !isHome ? '60px' : 0,
+      }}>
+        {isHome && (
+          <PACERHome
+            onEnter={room => setCurrentRoom(room)}
+            observationCount={observations.length}
           />
-          {activeObservation
-            ? (
-              <PACERProcessing
-                observation={activeObservation}
+        )}
+
+        {isAtrium && (
+          <>
+            {/* On mobile: show stream OR detail, not both side-by-side */}
+            {(!isMobile || !activeObservation) && (
+              <ObservationStream
                 observations={observations}
-                onRoute={routeObservation}
-                onAcceptConstellation={acceptConstellation}
-                hasApiKey={!!apiKey}
-                onRequestApiKey={() => setShowKeyGate(true)}
-                uid={user?.uid}
-              />
-            )
-            : (
-              <AtriumDashboard
-                observations={observations}
+                onSubmit={submitObservation}
+                activeObservation={activeObservation}
                 onSelectObservation={setActiveObservation}
+                isMobile={isMobile}
               />
-            )
-          }
-        </>
-      )}
+            )}
+            {activeObservation
+              ? (
+                <PACERProcessing
+                  observation={activeObservation}
+                  observations={observations}
+                  onRoute={routeObservation}
+                  onAcceptConstellation={acceptConstellation}
+                  hasApiKey={!!apiKey}
+                  onRequestApiKey={() => setShowKeyGate(true)}
+                  uid={user?.uid}
+                  isMobile={isMobile}
+                  onBack={isMobile ? () => setActiveObservation(null) : null}
+                />
+              )
+              : (
+                !isMobile && (
+                  <AtriumDashboard
+                    observations={observations}
+                    onSelectObservation={setActiveObservation}
+                  />
+                )
+              )
+            }
+          </>
+        )}
 
-      {isMuse     && <MuseRoom observations={observations} onSurface={submitObservation} />}
-      {isVERA     && <VERARoom observations={observations} apiKey={apiKey} />}
-      {isArchive  && <ArchiveRoom observations={observations} />}
-      {isDoctrine && <DoctrineRoom />}
-      {isTheater  && <TheaterRoom />}
+        {isMuse     && <MuseRoom observations={observations} onSurface={submitObservation} isMobile={isMobile} />}
+        {isVERA     && <VERARoom observations={observations} apiKey={apiKey} onConnectClaude={() => setShowKeyGate(true)} isMobile={isMobile} />}
+        {isArchive  && <ArchiveRoom observations={observations} />}
+        {isDoctrine && <DoctrineRoom />}
+        {isTheater  && <TheaterRoom />}
 
-      {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && (
-        <PlaceholderRoom room={currentRoom} />
-      )}
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && (
+          <PlaceholderRoom room={currentRoom} />
+        )}
+      </div>
     </div>
   )
 }
