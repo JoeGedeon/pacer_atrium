@@ -6,7 +6,7 @@ const PACER_ROOMS = [
   { id: 'isles',     label: 'Isles of the Awakening',  icon: '🏕' },
   { id: 'archive',   label: 'Archive',                icon: '📚' },
   { id: 'doctrine',  label: 'Doctrine',               icon: '📜' },
-  { id: 'content',   label: 'Content',                icon: '🎥' },
+  { id: 'content',   label: 'Theater',                icon: '🃏' },
 ]
 
 export default function LeftNav({ currentRoom, onSelect }) {
@@ -60,7 +60,7 @@ export default function LeftNav({ currentRoom, onSelect }) {
           ⌂ Command Center
         </button>
         <p className="text-xs" style={{ color: '#1f2937' }}>
-          v0.4 · Atrium
+          v0.5 · Atrium
         </p>
       </div>
     </nav>
