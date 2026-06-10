@@ -79,7 +79,9 @@ export default function ObservationStream({
         setConstellation('')
         clearImage()
       } catch (err) {
-        setUploadError('Upload failed. Check your connection and try again.')
+        // Surface the real Firebase error so we can diagnose it
+        const msg = err?.code || err?.message || 'Unknown error'
+        setUploadError(`Upload failed: ${msg}`)
       } finally {
         setUploading(false)
       }
