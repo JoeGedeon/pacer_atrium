@@ -1,20 +1,44 @@
 import { useState, useEffect } from 'react'
 
 const CATEGORIES = [
-  { id: 'music',         label: 'Music',         icon: '🎵' },
-  { id: 'visual',        label: 'Visual Art',     icon: '🎨' },
-  { id: 'lore',          label: 'Lore',           icon: '📖' },
-  { id: 'worldbuilding', label: 'Worldbuilding',  icon: '🌎' },
-  { id: 'characters',    label: 'Characters',     icon: '🎭' },
-  { id: 'productions',   label: 'Productions',    icon: '🎬' },
+  { id: 'music',         label: 'Music',        icon: '🎵' },
+  { id: 'visual',        label: 'Visual Art',    icon: '🎨' },
+  { id: 'lore',          label: 'Lore',          icon: '📖' },
+  { id: 'worldbuilding', label: 'Worldbuilding', icon: '🌎' },
+  { id: 'characters',    label: 'Characters',    icon: '🎭' },
+  { id: 'productions',   label: 'Productions',   icon: '🎬' },
 ]
 
+const LIFECYCLE = [
+  { id: 'shaping',          label: 'Shaping',          action: null },
+  { id: 'structured',       label: 'Structured',        action: 'Mark Structured' },
+  { id: 'premiere_ready',   label: 'Premiere Ready',    action: 'Declare Ready' },
+  { id: 'opening_night',    label: 'Opening Night',     action: 'Open the Curtain' },
+  { id: 'published_memory', label: 'Published Memory',  action: 'Send to Archive' },
+]
+
+const LIFECYCLE_IDS  = LIFECYCLE.map(s => s.id)
+const STATUS_COLORS  = {
+  shaping:          'var(--text-4)',
+  structured:       'var(--text-2)',
+  premiere_ready:   '#f59e0b',
+  opening_night:    '#10b981',
+  published_memory: '#06b6d4',
+}
+const STATUS_GLYPHS  = {
+  shaping:          '',
+  structured:       '',
+  premiere_ready:   '◈ ',
+  opening_night:    '✦ ',
+  published_memory: '◉ ',
+}
+
 const CONSTELLATIONS = [
-  { a: 'Yanu',              b: 'Aiziano',   note: 'origin' },
-  { a: 'FleetFlow',         b: 'Isles',     note: 'movement as narrative' },
-  { a: 'PACER',             b: 'Doctrine',  note: 'intelligence requires governance' },
-  { a: 'Blue Pineapple',    b: 'Atrium',    note: 'brand as entry point' },
-  { a: 'Crossing the Bridge', b: 'Theater', note: 'story finds its stage' },
+  { a: 'Yanu',                b: 'Aiziano',   note: 'origin' },
+  { a: 'FleetFlow',           b: 'Isles',     note: 'movement as narrative' },
+  { a: 'PACER',               b: 'Doctrine',  note: 'intelligence requires governance' },
+  { a: 'Blue Pineapple',      b: 'Atrium',    note: 'brand as entry point' },
+  { a: 'Crossing the Bridge', b: 'Theater',   note: 'story finds its stage' },
 ]
 
 function loadWorks() {
@@ -22,18 +46,25 @@ function loadWorks() {
     return JSON.parse(localStorage.getItem('muse_works') || '[]').map(w => ({
       ...w,
       createdAt: new Date(w.createdAt),
+      // migrate old premiered boolean to status string
+      status: w.status || (w.premiered ? 'opening_night' : 'shaping'),
     }))
   } catch { return [] }
 }
 
 function tilt(seed, i) {
-  return ((( seed + i) % 7) - 3) * 0.55
+  return (((seed + i) % 7) - 3) * 0.55
+}
+
+function nextStatus(current) {
+  const idx = LIFECYCLE_IDS.indexOf(current)
+  return idx < LIFECYCLE_IDS.length - 1 ? LIFECYCLE_IDS[idx + 1] : current
 }
 
 export default function MuseRoom({ observations = [] }) {
   const [works, setWorks]           = useState(loadWorks)
   const [activeWork, setActiveWork] = useState(null)
-  const [draft, setDraft]           = useState({ title: '', category: 'characters', notes: '' })
+  const [draft, setDraft]           = useState({ title: '', category: 'characters' })
   const [adding, setAdding]         = useState(false)
 
   useEffect(() => {
@@ -52,13 +83,13 @@ export default function MuseRoom({ observations = [] }) {
       id: Date.now(),
       title: draft.title.trim(),
       category: draft.category,
-      notes: draft.notes.trim(),
-      premiered: false,
+      notes: '',
+      status: 'shaping',
       createdAt: new Date(),
     }
     setWorks(prev => [w, ...prev])
     setActiveWork(w)
-    setDraft({ title: '', category: 'characters', notes: '' })
+    setDraft({ title: '', category: 'characters' })
     setAdding(false)
   }
 
@@ -66,22 +97,26 @@ export default function MuseRoom({ observations = [] }) {
     setWorks(prev => prev.map(w => w.id === id ? { ...w, notes } : w))
   }
 
-  function premiere(id) {
-    setWorks(prev => prev.map(w => w.id === id ? { ...w, premiered: true } : w))
+  function advance(id) {
+    setWorks(prev => prev.map(w =>
+      w.id === id ? { ...w, status: nextStatus(w.status) } : w
+    ))
   }
 
   const signals   = observations.slice(0, 14)
   const activeCat = CATEGORIES.find(c => c.id === activeWork?.category)
+  const activeIdx = activeWork ? LIFECYCLE_IDS.indexOf(activeWork.status) : -1
+  const nextStage = activeWork ? LIFECYCLE[activeIdx + 1] : null
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
-      {/* ── Three panels ─────────────────────────────── */}
+      {/* ── Three panels ─────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* LEFT WING — arriving signals, intentionally messy */}
         <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
-          style={{ width: '210px', background: 'var(--bg-0)', borderRight: '1px solid var(--border-0)' }}
+          style={{ width: '210px', borderRight: '1px solid var(--border-0)' }}
         >
           <div className="flex items-center gap-2 mb-4 px-2">
             <span className="animate-pulse shrink-0" style={{
@@ -93,7 +128,7 @@ export default function MuseRoom({ observations = [] }) {
           </div>
 
           {signals.length === 0 ? (
-            <p className="text-xs px-2" style={{ color: 'var(--text-6)', lineHeight: '1.6' }}>
+            <p className="px-2" style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.7 }}>
               Signals from Atrium will appear here.
             </p>
           ) : (
@@ -106,7 +141,7 @@ export default function MuseRoom({ observations = [] }) {
                   borderRadius: '6px',
                   padding: '8px 10px',
                 }}>
-                  <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: '1.5' }}>
+                  <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
                     {obs.text.length > 65 ? obs.text.slice(0, 65) + '…' : obs.text}
                   </p>
                   {obs.constellation && (
@@ -126,7 +161,9 @@ export default function MuseRoom({ observations = [] }) {
         >
           {activeWork ? (
             <div className="flex flex-col flex-1 px-12 py-10 overflow-y-auto">
-              <div className="flex items-start justify-between mb-8">
+
+              {/* Work header */}
+              <div className="flex items-start justify-between mb-6">
                 <div>
                   <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                     textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}
@@ -135,18 +172,58 @@ export default function MuseRoom({ observations = [] }) {
                     letterSpacing: '-0.025em', lineHeight: 1.15 }}
                   >{activeWork.title}</h2>
                 </div>
-                {activeWork.premiered ? (
-                  <span style={{ fontSize: '11px', padding: '5px 14px', borderRadius: '999px',
-                    background: '#10b98112', color: '#10b981', border: '1px solid #10b98128' }}
-                  >Premiered</span>
+
+                {/* Lifecycle action button */}
+                {nextStage ? (
+                  <button onClick={() => advance(activeWork.id)} style={{
+                    fontSize: '11px', padding: '7px 16px', borderRadius: '8px', fontWeight: 500,
+                    background: activeWork.status === 'premiere_ready' ? '#1d4ed8' : 'var(--bg-3)',
+                    color: activeWork.status === 'premiere_ready' ? '#e0eaff' : 'var(--text-2)',
+                    border: `1px solid ${activeWork.status === 'premiere_ready' ? '#2563eb' : 'var(--border-1)'}`,
+                    cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}>
+                    {activeWork.status === 'premiere_ready' ? 'Opening Night →' : nextStage.action}
+                  </button>
                 ) : (
-                  <button onClick={() => premiere(activeWork.id)} style={{
-                    fontSize: '12px', padding: '7px 18px', borderRadius: '8px', fontWeight: 500,
-                    background: '#1d4ed8', color: '#e0eaff', border: 'none', cursor: 'pointer',
-                  }}>Opening Night →</button>
+                  <span style={{ fontSize: '11px', padding: '5px 14px', borderRadius: '999px',
+                    background: '#06b6d415', color: '#06b6d4', border: '1px solid #06b6d430' }}
+                  >In Archive</span>
                 )}
               </div>
 
+              {/* Lifecycle strip */}
+              <div className="flex items-center gap-0 mb-10" style={{ overflowX: 'auto' }}>
+                {LIFECYCLE.map((stage, i) => {
+                  const past    = i < activeIdx
+                  const current = i === activeIdx
+                  const color   = STATUS_COLORS[stage.id]
+                  return (
+                    <div key={stage.id} className="flex items-center">
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          width: '8px', height: '8px', borderRadius: '50%',
+                          background: current ? color : past ? 'var(--border-2)' : 'var(--border-0)',
+                          border: current ? `2px solid ${color}` : '2px solid transparent',
+                          margin: '0 auto 4px',
+                        }} />
+                        <p style={{
+                          fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase',
+                          color: current ? color : past ? 'var(--text-4)' : 'var(--text-6)',
+                          whiteSpace: 'nowrap',
+                        }}>{stage.label}</p>
+                      </div>
+                      {i < LIFECYCLE.length - 1 && (
+                        <div style={{
+                          width: '32px', height: '1px', flexShrink: 0, margin: '-10px 4px 0',
+                          background: past ? 'var(--border-2)' : 'var(--border-0)',
+                        }} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Studio notes */}
               <div style={{ flex: 1 }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', marginBottom: '12px' }}
@@ -157,13 +234,9 @@ export default function MuseRoom({ observations = [] }) {
                   placeholder="What's taking shape here?"
                   className="w-full resize-none outline-none"
                   style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-1)',
-                    fontSize: '15px',
-                    lineHeight: '1.85',
-                    minHeight: '280px',
-                    width: '100%',
+                    background: 'transparent', border: 'none',
+                    color: 'var(--text-1)', fontSize: '15px',
+                    lineHeight: 1.85, minHeight: '260px', width: '100%',
                   }}
                 />
               </div>
@@ -245,18 +318,24 @@ export default function MuseRoom({ observations = [] }) {
                   textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' }}
                 >{cat.icon} {cat.label}</p>
                 <div className="flex flex-col gap-0.5">
-                  {catWorks.map(w => (
-                    <button key={w.id} onClick={() => setActiveWork(w)}
-                      style={{
-                        textAlign: 'left', borderRadius: '6px', padding: '7px 10px',
-                        fontSize: '12px', transition: 'all 0.15s',
-                        background: activeWork?.id === w.id ? 'var(--bg-3)' : 'transparent',
-                        border: `1px solid ${activeWork?.id === w.id ? 'var(--border-1)' : 'transparent'}`,
-                        color: w.premiered ? '#10b981' : activeWork?.id === w.id ? 'var(--text-0)' : 'var(--text-2)',
-                        cursor: 'pointer',
-                      }}
-                    >{w.premiered ? '✦ ' : ''}{w.title}</button>
-                  ))}
+                  {catWorks.map(w => {
+                    const glyph = STATUS_GLYPHS[w.status] || ''
+                    const color = STATUS_COLORS[w.status] || 'var(--text-2)'
+                    const isActive = activeWork?.id === w.id
+                    return (
+                      <button key={w.id} onClick={() => setActiveWork(w)}
+                        style={{
+                          textAlign: 'left', borderRadius: '6px', padding: '7px 10px',
+                          fontSize: '12px', transition: 'all 0.15s', cursor: 'pointer',
+                          background: isActive ? 'var(--bg-3)' : 'transparent',
+                          border: `1px solid ${isActive ? 'var(--border-1)' : 'transparent'}`,
+                          color: (w.status === 'shaping' || w.status === 'structured')
+                            ? (isActive ? 'var(--text-0)' : 'var(--text-2)')
+                            : color,
+                        }}
+                      >{glyph}{w.title}</button>
+                    )
+                  })}
                 </div>
               </div>
             )
@@ -295,7 +374,6 @@ export default function MuseRoom({ observations = [] }) {
       <div className="shrink-0" style={{
         borderTop: '1px solid var(--border-0)',
         padding: '14px 28px',
-        background: 'var(--bg-0)',
       }}>
         <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
           letterSpacing: '0.02em' }}
