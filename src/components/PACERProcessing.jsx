@@ -44,8 +44,10 @@ export default function PACERProcessing({
     try {
       await sendToPACER(observation, uid)
       setSentIds(prev => new Set([...prev, observation.id]))
-    } catch {
-      setSendError('Could not reach PACER. Try again.')
+    } catch (err) {
+      const msg = err?.code || err?.message || 'Unknown error'
+      console.error('[PACER bridge] sendToPACER failed:', err)
+      setSendError(`Send failed: ${msg}`)
     } finally {
       setSending(false)
     }
@@ -158,7 +160,9 @@ export default function PACERProcessing({
             </div>
           )}
           {!analyzing && claudeError && (
-            <p className="text-xs" style={{ color: '#3d1515' }}>Claude unavailable — routing manually.</p>
+            <p className="text-xs" style={{ color: '#ef4444' }}>
+              Claude unavailable: {claudeError || 'routing manually'}
+            </p>
           )}
           {!analyzing && claude && (
             <div>
@@ -329,7 +333,7 @@ export default function PACERProcessing({
             {isSent ? 'Pending review — awaiting approval' : 'Enters as pending_review'}
           </p>
         </button>
-        {sendError && <p className="text-xs mt-2" style={{ color: '#5a1a1a' }}>{sendError}</p>}
+        {sendError && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{sendError}</p>}
         {!hasApiKey && (
           <button onClick={onRequestApiKey}
             className="w-full text-xs mt-4 py-2 rounded-lg"
