@@ -108,13 +108,19 @@ export default function LeftNav({
           ⌂ Command Center
         </button>
         {!hasApiKey && (
-          <button
-            onClick={onConnectClaude}
-            className="text-xs text-left"
-            style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0 }}
-          >
-            ✦ Connect Claude
-          </button>
+          <div>
+            <button
+              onClick={onConnectClaude}
+              className="text-xs text-left"
+              style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0,
+                display: 'block', marginBottom: '2px' }}
+            >
+              ✦ Connect Claude
+            </button>
+            <p className="text-xs" style={{ color: 'var(--text-6)', fontSize: '9px' }}>
+              Stored only on this device.
+            </p>
+          </div>
         )}
         {user && (
           <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '10px' }}>
