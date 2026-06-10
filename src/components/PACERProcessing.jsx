@@ -44,8 +44,9 @@ export default function PACERProcessing({
     try {
       await sendToPACER(observation, uid)
       setSentIds(prev => new Set([...prev, observation.id]))
-    } catch {
-      setSendError('Could not reach PACER. Try again.')
+    } catch (err) {
+      const msg = err?.code || err?.message || 'Unknown error'
+      setSendError(`Send failed: ${msg}`)
     } finally {
       setSending(false)
     }
