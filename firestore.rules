@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each user owns their own data — no cross-account reads or writes
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Atrium intake: authenticated users may create their own entries and read them back
+    match /pacer_intake/{docId} {
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid;
+      allow read: if request.auth != null
+                  && resource.data.createdBy == request.auth.uid;
+      // Updates and deletes are reserved for PACER backend (admin SDK)
+      allow update, delete: if false;
+    }
+  }
+}

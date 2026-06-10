@@ -1,7 +1,7 @@
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase'
 
-export async function sendToPACER(observation, uid = 'anonymous') {
+export async function sendToPACER(observation, uid) {
   const ref = await addDoc(collection(db, 'pacer_intake'), {
     source: 'PACER_ATRIUM',
     type: 'creative_observation',
