@@ -30,18 +30,17 @@ const CANONIZATIONS = [
     realm: 'PACER University',
   },
   {
-    id: 'aiziano-naming',
-    title: 'The Naming of Aiziano',
+    id: ‘aiziano-canon’,
+    title: ‘Canon Record 002 — Aiziano’,
     fields: [
-      { label: 'Origin Reference',    value: 'Yanu (real-world individual)' },
-      { label: 'Canonical Character', value: 'Aiziano' },
-      { label: 'Status',              value: 'Confirmed' },
-      { label: 'Classification',      value: 'Foundational Character' },
-      { label: 'Canon Rule',          value: 'The Isles character formerly referenced as Yanu is canonically known as Aiziano. References to Yanu within Isles narrative materials should be interpreted as Aiziano unless explicitly referring to the real-world individual.' },
+      { label: ‘Character’,      value: ‘Aiziano’ },
+      { label: ‘Status’,         value: ‘Confirmed’ },
+      { label: ‘Classification’, value: ‘Foundational Character’ },
+      { label: ‘Kodex’,          value: ‘Blue · Natural’ },
     ],
-    note: 'Aiziano was created in honor of Yanu. While Aiziano exists as a canonical character within Isles of the Awakening, the character’s origin remains rooted in the observations, personality, imagination, and influence of Yanu. The two are connected. One exists in reality. One exists in the mythology. Neither replaces the other.',
-    closing: ['Yanu inspired.', 'Aiziano emerged.'],
-    realm: 'Isles of the Awakening',
+    note: ‘Aiziano is a foundational character within Isles of the Awakening. He carries the blue Kodex resonance — natural, originary, deeply connected to the mythology of the Isles. His identity is complete within the world.’,
+    closing: [‘Aiziano is the canonical identity.’],
+    realm: ‘Isles of the Awakening’,
   },
 ]
 
