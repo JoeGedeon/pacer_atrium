@@ -3,6 +3,7 @@ import LeftNav from './components/LeftNav'
 import PACERHome from './components/PACERHome'
 import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
+import AtriumDashboard from './components/AtriumDashboard'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
@@ -81,11 +82,7 @@ export default function App() {
     }
   }
 
-  function enterAtrium() {
-    setCurrentRoom('atrium')
-  }
-
-  const isHome = currentRoom === 'home'
+  const isHome   = currentRoom === 'home'
   const isAtrium = currentRoom === 'atrium'
 
   return (
@@ -101,7 +98,7 @@ export default function App() {
 
       {isHome && (
         <PACERHome
-          onEnter={room => { setCurrentRoom(room) }}
+          onEnter={room => setCurrentRoom(room)}
           observationCount={observations.length}
         />
       )}
@@ -114,14 +111,24 @@ export default function App() {
             activeObservation={activeObservation}
             onSelectObservation={setActiveObservation}
           />
-          <PACERProcessing
-            observation={activeObservation}
-            observations={observations}
-            onRoute={routeObservation}
-            onAcceptConstellation={acceptConstellation}
-            hasApiKey={!!apiKey}
-            onRequestApiKey={() => setShowKeyGate(true)}
-          />
+          {activeObservation
+            ? (
+              <PACERProcessing
+                observation={activeObservation}
+                observations={observations}
+                onRoute={routeObservation}
+                onAcceptConstellation={acceptConstellation}
+                hasApiKey={!!apiKey}
+                onRequestApiKey={() => setShowKeyGate(true)}
+              />
+            )
+            : (
+              <AtriumDashboard
+                observations={observations}
+                onSelectObservation={setActiveObservation}
+              />
+            )
+          }
         </>
       )}
 
