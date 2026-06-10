@@ -116,6 +116,16 @@ export default function PACERProcessing({
         <p className="text-xs" style={{ color: 'var(--text-5)' }}>Observation received</p>
       </div>
 
+      {observation.imageUrl && (
+        <div style={{ borderBottom: '1px solid var(--border-1)' }}>
+          <img
+            src={observation.imageUrl}
+            alt={observation.text || 'observation'}
+            style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      )}
+
       {observation.constellation && (
         <div className="px-6 py-3 border-b" style={{ borderColor: 'var(--border-1)' }}>
           <p className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>constellation</p>

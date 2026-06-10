@@ -19,18 +19,28 @@ function formatTime(date) {
 }
 
 export default function ObservationCard({ observation, isActive, onClick }) {
-  const { text, type, timestamp, destination, constellation } = observation
+  const { text, type, imageUrl, timestamp, destination, constellation } = observation
 
   return (
     <div
       onClick={onClick}
-      className="rounded-lg px-4 py-3 cursor-pointer transition-all"
+      className="rounded-lg cursor-pointer transition-all overflow-hidden"
       style={{
         background: isActive ? '#0d1a2e' : 'var(--bg-2)',
         border: `1px solid ${isActive ? '#1d4ed8' : 'var(--border-1)'}`,
       }}
     >
-      <div className="flex items-start gap-3">
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={text || 'observation'}
+          style={{
+            width: '100%', maxHeight: '140px', objectFit: 'cover',
+            display: 'block', borderBottom: '1px solid var(--border-1)',
+          }}
+        />
+      )}
+      <div className="flex items-start gap-3 px-4 py-3">
         <span className="text-sm mt-0.5 shrink-0 opacity-70">
           {TYPE_ICONS[type] || '✍️'}
         </span>

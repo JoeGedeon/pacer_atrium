@@ -56,12 +56,13 @@ export default function App() {
       id,
       text: obs.text,
       type: obs.type,
+      imageUrl: obs.imageUrl || null,
       constellation: obs.constellation || null,
       source: obs.source || null,
       timestamp: new Date(),
       status: 'received',
       destination: null,
-      analyzing: !!apiKey,
+      analyzing: !!apiKey && obs.type !== 'image',
       claude: null,
       claudeError: null,
     }
@@ -166,6 +167,7 @@ export default function App() {
                 onSubmit={submitObservation}
                 activeObservation={activeObservation}
                 onSelectObservation={setActiveObservation}
+                uid={user?.uid}
                 isMobile={isMobile}
               />
             )}
