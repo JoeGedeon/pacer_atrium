@@ -61,11 +61,12 @@ function nextStatus(current) {
   return idx < LIFECYCLE_IDS.length - 1 ? LIFECYCLE_IDS[idx + 1] : current
 }
 
-export default function MuseRoom({ observations = [] }) {
+export default function MuseRoom({ observations = [], onSurface }) {
   const [works, setWorks]           = useState(loadWorks)
   const [activeWork, setActiveWork] = useState(null)
   const [draft, setDraft]           = useState({ title: '', category: 'characters' })
   const [adding, setAdding]         = useState(false)
+  const [surfaced, setSurfaced]     = useState(new Set())
 
   useEffect(() => {
     try { localStorage.setItem('muse_works', JSON.stringify(works)) } catch {}
@@ -355,18 +356,48 @@ export default function MuseRoom({ observations = [] }) {
         background: 'var(--bg-0)',
         padding: '12px 28px',
       }}>
-        <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.15em',
-          textTransform: 'uppercase', marginBottom: '10px' }}
-        >Constellations Muse noticed</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 32px' }}>
-          {CONSTELLATIONS.map((c, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{c.a}</span>
-              <span style={{ color: 'var(--text-5)', fontSize: '11px' }}>⟷</span>
-              <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{c.b}</span>
-              <span style={{ color: 'var(--text-6)', fontSize: '9px', fontStyle: 'italic' }}>{c.note}</span>
-            </div>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '10px' }}>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.15em',
+            textTransform: 'uppercase' }}
+          >Constellations Muse noticed</p>
+          {onSurface && (
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', fontStyle: 'italic' }}>
+              — surface one to send it back to Atrium
+            </p>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 28px' }}>
+          {CONSTELLATIONS.map((c, i) => {
+            const key    = `${c.a}↔${c.b}`
+            const done   = surfaced.has(key)
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={{ color: done ? 'var(--text-5)' : 'var(--text-2)', fontSize: '11px' }}>{c.a}</span>
+                <span style={{ color: 'var(--text-6)', fontSize: '11px' }}>⟷</span>
+                <span style={{ color: done ? 'var(--text-5)' : 'var(--text-2)', fontSize: '11px' }}>{c.b}</span>
+                <span style={{ color: 'var(--text-6)', fontSize: '9px', fontStyle: 'italic' }}>{c.note}</span>
+                {onSurface && (
+                  done ? (
+                    <span style={{ fontSize: '9px', color: '#10b981' }}>↗ surfaced</span>
+                  ) : (
+                    <button onClick={() => {
+                      onSurface({
+                        text: `Connection noticed: ${c.a} ↔ ${c.b} — ${c.note}.`,
+                        type: 'text',
+                        constellation: null,
+                        source: 'Muse Back Wall',
+                      })
+                      setSurfaced(prev => new Set([...prev, key]))
+                    }} style={{
+                      fontSize: '9px', padding: '1px 7px', borderRadius: '4px',
+                      background: 'transparent', border: '1px solid var(--border-1)',
+                      color: 'var(--text-4)', cursor: 'pointer',
+                    }}>↗ surface</button>
+                  )
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 

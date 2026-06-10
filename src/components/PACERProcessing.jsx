@@ -111,9 +111,16 @@ export default function PACERProcessing({
       )}
 
       <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border-1)' }}>
-        <p className="text-xs mb-2 capitalize" style={{ color: 'var(--text-2)' }}>
-          {TYPE_ICONS[observation.type] || '✍️'} {observation.type}
-        </p>
+        <div className="flex items-center gap-3 mb-2">
+          <p className="text-xs capitalize" style={{ color: 'var(--text-2)' }}>
+            {TYPE_ICONS[observation.type] || '✍️'} {observation.type}
+          </p>
+          {observation.source && (
+            <p className="text-xs" style={{ color: 'var(--text-5)' }}>
+              · {observation.source}
+            </p>
+          )}
+        </div>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
           {observation.text.length > 100 ? observation.text.slice(0, 100) + '…' : observation.text}
         </p>

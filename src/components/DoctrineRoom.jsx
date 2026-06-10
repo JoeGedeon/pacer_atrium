@@ -10,9 +10,25 @@ const PRINCIPLES = [
   { id: 9,  text: 'History is preserved. Canon is promoted.',                   tag: 'Preservation' },
   { id: 10, text: 'Consequences teach systems.',                                 tag: 'Architecture' },
   { id: 11, text: 'Understanding precedes optimization.',                        tag: 'Architecture' },
+  { id: 12, text: 'Doctrine determines what is possible, not what is required.', tag: 'Governance'   },
 ]
 
 const CANONIZATIONS = [
+  {
+    id: 'pacer-lifecycle',
+    title: 'The Six States of a PACER Object',
+    fields: [
+      { label: 'State 01', value: 'Observed — noticed, received into the campus' },
+      { label: 'State 02', value: 'Shaping — being worked, not yet coherent' },
+      { label: 'State 03', value: 'Structured — coherent, category and form assigned' },
+      { label: 'State 04', value: 'Premiere Ready — creator declares it ready' },
+      { label: 'State 05', value: 'Opening Night — curtain opens, campus receives it' },
+      { label: 'State 06', value: 'Published Memory — institutionalized, Archive claims it' },
+    ],
+    note: 'A FleetFlow incident, an Isles character, a Doctrine principle, a song, a patent, a business strategy — all move through the same six states. The lifecycle is not navigation. It is evolution. No state may be skipped. No new states may be added without a canonization decision. These six are sufficient because each represents a fundamentally different condition of existence.',
+    closing: ['One lifecycle.', 'All content.'],
+    realm: 'PACER University',
+  },
   {
     id: 'aiziano-naming',
     title: 'The Naming of Aiziano',

@@ -8,6 +8,7 @@ import AtriumDashboard from './components/AtriumDashboard'
 import DoctrineRoom from './components/DoctrineRoom'
 import TheaterRoom from './components/TheaterRoom'
 import MuseRoom from './components/MuseRoom'
+import ArchiveRoom from './components/ArchiveRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
@@ -52,6 +53,7 @@ export default function App() {
       text: obs.text,
       type: obs.type,
       constellation: obs.constellation || null,
+      source: obs.source || null,
       timestamp: new Date(),
       status: 'received',
       destination: null,
@@ -92,7 +94,8 @@ export default function App() {
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
   const isTheater  = currentRoom === 'content'
-  const isMuse     = currentRoom === 'muse'
+  const isMuse    = currentRoom === 'muse'
+  const isArchive = currentRoom === 'archive'
 
   return (
     <div
@@ -146,11 +149,12 @@ export default function App() {
         </>
       )}
 
-      {isMuse     && <MuseRoom observations={observations} />}
+      {isMuse     && <MuseRoom observations={observations} onSurface={submitObservation} />}
+      {isArchive  && <ArchiveRoom observations={observations} />}
       {isDoctrine && <DoctrineRoom />}
       {isTheater  && <TheaterRoom />}
 
-      {!isHome && !isAtrium && !isMuse && !isDoctrine && !isTheater && (
+      {!isHome && !isAtrium && !isMuse && !isArchive && !isDoctrine && !isTheater && (
         <PlaceholderRoom room={currentRoom} />
       )}
     </div>
