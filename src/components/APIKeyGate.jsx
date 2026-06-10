@@ -40,7 +40,7 @@ export default function APIKeyGate({ onKey }) {
             Claude routing requires an Anthropic API key.
           </p>
           <p className="mt-1 text-xs" style={{ color: 'var(--text-5)' }}>
-            Stored locally. Never sent anywhere except Anthropic.
+            Stored only on this device. Never sent anywhere except Anthropic.
           </p>
         </div>
 
