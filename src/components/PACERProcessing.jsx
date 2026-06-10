@@ -30,7 +30,7 @@ const STATIC_NEXT = {
 const TYPE_ICONS = { text: '✍️', voice: '🎤', image: '📸', document: '📄', idea: '💡' }
 
 export default function PACERProcessing({
-  observation, observations = [], onRoute, onAcceptConstellation, hasApiKey, onRequestApiKey,
+  observation, observations = [], onRoute, onAcceptConstellation, hasApiKey, onRequestApiKey, uid,
 }) {
   const [sending, setSending] = useState(false)
   const [sentIds, setSentIds] = useState(new Set())
@@ -41,7 +41,7 @@ export default function PACERProcessing({
     setSending(true)
     setSendError(null)
     try {
-      await sendToPACER(observation)
+      await sendToPACER(observation, uid)
       setSentIds(prev => new Set([...prev, observation.id]))
     } catch {
       setSendError('Could not reach PACER. Try again.')

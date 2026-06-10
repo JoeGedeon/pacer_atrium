@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
+import { useAuth } from './hooks/useAuth'
 import LeftNav from './components/LeftNav'
+import AuthGate from './components/AuthGate'
 import PACERHome from './components/PACERHome'
 import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
@@ -27,6 +29,7 @@ function loadObservations() {
 
 export default function App() {
   const { theme, setTheme } = useTheme()
+  const { user, loading, signIn, signUp, signOut } = useAuth()
 
   const [currentRoom, setCurrentRoom] = useState('home')
   const [observations, setObservations] = useState(loadObservations)
@@ -99,6 +102,22 @@ export default function App() {
   const isVERA    = currentRoom === 'vera'
   const isArchive = currentRoom === 'archive'
 
+  // Auth loading — blank screen while Firebase resolves session
+  if (loading) {
+    return (
+      <div style={{ background: 'var(--bg-0)', height: '100vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center' }}
+      >
+        <p style={{ color: 'var(--text-6)', fontSize: '11px' }}>…</p>
+      </div>
+    )
+  }
+
+  // Not authenticated — show login/signup
+  if (!user) {
+    return <AuthGate onSignIn={signIn} onSignUp={signUp} />
+  }
+
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -112,6 +131,8 @@ export default function App() {
           onSelect={setCurrentRoom}
           theme={theme}
           onThemeChange={setTheme}
+          user={user}
+          onSignOut={signOut}
         />
       )}
 
@@ -139,6 +160,7 @@ export default function App() {
                 onAcceptConstellation={acceptConstellation}
                 hasApiKey={!!apiKey}
                 onRequestApiKey={() => setShowKeyGate(true)}
+                uid={user?.uid}
               />
             )
             : (

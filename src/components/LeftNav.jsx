@@ -12,7 +12,7 @@ const PACER_ROOMS = [
   { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
 ]
 
-export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange }) {
+export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange, user, onSignOut }) {
   return (
     <nav
       className="flex flex-col py-8 px-3 shrink-0 border-r"
@@ -63,8 +63,21 @@ export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange })
         >
           ⌂ Command Center
         </button>
+        {user && (
+          <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '10px' }}>
+            <p className="text-xs" style={{ color: 'var(--text-6)', marginBottom: '4px',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >{user.email}</p>
+            <button
+              onClick={onSignOut}
+              className="text-xs"
+              style={{ background: 'none', border: 'none', color: 'var(--text-4)',
+                cursor: 'pointer', padding: 0 }}
+            >Sign out</button>
+          </div>
+        )}
         <p className="text-xs" style={{ color: 'var(--text-6)' }}>
-          v0.5 · Atrium
+          v0.6 · Atrium
         </p>
       </div>
     </nav>
