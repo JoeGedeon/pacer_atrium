@@ -160,7 +160,9 @@ export default function PACERProcessing({
             </div>
           )}
           {!analyzing && claudeError && (
-            <p className="text-xs" style={{ color: '#3d1515' }}>Claude unavailable — routing manually.</p>
+            <p className="text-xs" style={{ color: '#ef4444' }}>
+              Claude unavailable: {claudeError || 'routing manually'}
+            </p>
           )}
           {!analyzing && claude && (
             <div>

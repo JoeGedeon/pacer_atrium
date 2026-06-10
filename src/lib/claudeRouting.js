@@ -49,16 +49,24 @@ export async function analyzeObservation(text, apiKey) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.error?.message || `HTTP ${res.status}`)
+    const msg = err.error?.message || `HTTP ${res.status}`
+    console.error('[PACER routing] Claude API error:', res.status, err)
+    throw new Error(msg)
   }
 
   const data = await res.json()
   const raw = data.content?.[0]?.text || '{}'
   const start = raw.indexOf('{')
   const end = raw.lastIndexOf('}')
-  if (start === -1) throw new Error('No JSON in response')
+  if (start === -1) {
+    console.error('[PACER routing] No JSON in response:', raw)
+    throw new Error('No JSON in response')
+  }
 
   const result = JSON.parse(raw.slice(start, end + 1))
-  if (!result.destination || !result.constellation) throw new Error('Incomplete response')
+  if (!result.destination || !result.constellation) {
+    console.error('[PACER routing] Incomplete response:', result)
+    throw new Error('Incomplete response')
+  }
   return result
 }

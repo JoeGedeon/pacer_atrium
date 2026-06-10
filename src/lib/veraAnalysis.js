@@ -98,10 +98,18 @@ Constraints: 2–4 emerging patterns, 1–3 unnamed relationships. Confidence re
     }),
   })
 
-  if (!response.ok) throw new Error(`${response.status}`)
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}))
+    const msg = errBody.error?.message || `HTTP ${response.status}`
+    console.error('[VERA] Claude API error:', response.status, errBody)
+    throw new Error(msg)
+  }
   const data = await response.json()
   const text = data.content?.[0]?.text || ''
   const match = text.match(/\{[\s\S]*\}/)
-  if (!match) throw new Error('parse failed')
+  if (!match) {
+    console.error('[VERA] No JSON in response:', text)
+    throw new Error('No JSON in Claude response')
+  }
   return JSON.parse(match[0])
 }
