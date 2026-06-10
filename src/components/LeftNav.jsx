@@ -1,19 +1,21 @@
+import ThemeToggle from './ThemeToggle'
+
 const PACER_ROOMS = [
-  { id: 'atrium',    label: 'Atrium',                 icon: '🍍' },
-  { id: 'vera',      label: 'VERA',                   icon: '🧠' },
-  { id: 'kel',       label: 'KEL',                    icon: '✨' },
-  { id: 'fleetflow', label: 'FleetFlow',               icon: '🚚' },
-  { id: 'isles',     label: 'Isles of the Awakening',  icon: '🏕' },
-  { id: 'archive',   label: 'Archive',                icon: '📚' },
-  { id: 'doctrine',  label: 'Doctrine',               icon: '📜' },
-  { id: 'content',   label: 'Theater',                icon: '🃏' },
+  { id: 'atrium',    label: 'Atrium',                icon: '🍍' },
+  { id: 'vera',      label: 'VERA',                  icon: '🧠' },
+  { id: 'kel',       label: 'KEL',                   icon: '✨' },
+  { id: 'fleetflow', label: 'FleetFlow',              icon: '🚚' },
+  { id: 'isles',     label: 'Isles of the Awakening', icon: '🏕' },
+  { id: 'archive',   label: 'Archive',               icon: '📚' },
+  { id: 'doctrine',  label: 'Doctrine',              icon: '📜' },
+  { id: 'content',   label: 'Theater',               icon: '🃏' },
 ]
 
-export default function LeftNav({ currentRoom, onSelect }) {
+export default function LeftNav({ currentRoom, onSelect, theme, onThemeChange }) {
   return (
     <nav
       className="flex flex-col py-8 px-3 shrink-0 border-r"
-      style={{ width: '200px', background: '#0a0d16', borderColor: '#111827' }}
+      style={{ width: '200px', background: 'var(--bg-1)', borderColor: 'var(--border-0)' }}
     >
       <div className="mb-8 px-3">
         <button
@@ -38,8 +40,8 @@ export default function LeftNav({ currentRoom, onSelect }) {
                 onClick={() => onSelect(room.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
                 style={{
-                  background: isActive ? '#111827' : 'transparent',
-                  color: isActive ? '#c9d3e8' : '#4b5563',
+                  background: isActive ? 'var(--bg-3)' : 'transparent',
+                  color: isActive ? 'var(--text-0)' : 'var(--text-2)',
                   borderLeft: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
                 }}
               >
@@ -52,14 +54,15 @@ export default function LeftNav({ currentRoom, onSelect }) {
       </ul>
 
       <div className="mt-auto px-3 flex flex-col gap-3">
+        <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
         <button
           onClick={() => onSelect('home')}
           className="text-xs text-left"
-          style={{ background: 'none', border: 'none', color: '#1a2d4a', cursor: 'pointer', padding: 0 }}
+          style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', padding: 0 }}
         >
           ⌂ Command Center
         </button>
-        <p className="text-xs" style={{ color: '#1f2937' }}>
+        <p className="text-xs" style={{ color: 'var(--text-6)' }}>
           v0.5 · Atrium
         </p>
       </div>

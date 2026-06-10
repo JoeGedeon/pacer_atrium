@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTheme } from './hooks/useTheme'
 import LeftNav from './components/LeftNav'
 import PACERHome from './components/PACERHome'
 import ObservationStream from './components/ObservationStream'
@@ -22,6 +23,8 @@ function loadObservations() {
 }
 
 export default function App() {
+  const { theme, setTheme } = useTheme()
+
   const [currentRoom, setCurrentRoom] = useState('home')
   const [observations, setObservations] = useState(loadObservations)
   const [activeObservation, setActiveObservation] = useState(null)
@@ -92,12 +95,17 @@ export default function App() {
   return (
     <div
       className="flex h-screen overflow-hidden"
-      style={{ background: '#07090f', color: '#dde3f0' }}
+      style={{ background: 'var(--bg-0)', color: 'var(--text-0)' }}
     >
       {showKeyGate && <APIKeyGate onKey={handleApiKey} />}
 
       {!isHome && (
-        <LeftNav currentRoom={currentRoom} onSelect={setCurrentRoom} />
+        <LeftNav
+          currentRoom={currentRoom}
+          onSelect={setCurrentRoom}
+          theme={theme}
+          onThemeChange={setTheme}
+        />
       )}
 
       {isHome && (
