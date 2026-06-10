@@ -30,17 +30,16 @@ const CANONIZATIONS = [
     realm: 'PACER University',
   },
   {
-    id: ‘aiziano-naming’,
-    title: ‘Aiziano — Canon Identity’,
+    id: ‘aiziano-canon’,
+    title: ‘Canon Record 002 — Aiziano’,
     fields: [
       { label: ‘Character’,      value: ‘Aiziano’ },
       { label: ‘Status’,         value: ‘Confirmed’ },
       { label: ‘Classification’, value: ‘Foundational Character’ },
       { label: ‘Kodex’,          value: ‘Blue · Natural’ },
-      { label: ‘Canon Rule’,     value: ‘The name Yanu is not part of Isles of the Awakening canon. Aiziano is the canonical character identity.’ },
     ],
     note: ‘Aiziano is a foundational character within Isles of the Awakening. He carries the blue Kodex resonance — natural, originary, deeply connected to the mythology of the Isles. His identity is complete within the world.’,
-    closing: [‘One character.’, ‘Aiziano.’],
+    closing: [‘Aiziano is the canonical identity.’],
     realm: ‘Isles of the Awakening’,
   },
 ]
