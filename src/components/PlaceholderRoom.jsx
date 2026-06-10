@@ -1,6 +1,6 @@
 const ROOM_META = {
   vera: {
-    icon: '🌸',
+    icon: '✨',
     name: 'VERA',
     layer: 'Recognition Infrastructure',
     description: 'Pattern detection and routing intelligence. Not a destination — a service. VERA reads every observation and finds signal in the stream.',

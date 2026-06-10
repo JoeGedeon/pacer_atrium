@@ -2,12 +2,12 @@ import ThemeToggle from './ThemeToggle'
 
 const PACER_ROOMS = [
   { id: 'atrium',    label: 'Atrium',    icon: '🍍' },
-  { id: 'vera',      label: 'VERA',      icon: '🌸', infra: true },
-  { id: 'kel',       label: 'KEL',       icon: '✨', infra: true },
   { id: 'muse',      label: 'Muse',      icon: '🎭' },
+  { id: 'vera',      label: 'VERA',      icon: '✨', infra: true },
+  { id: 'kel',       label: 'KEL',       icon: '⚙️', infra: true },
   { id: 'content',   label: 'Theater',   icon: '🎬' },
-  { id: 'fleetflow', label: 'FleetFlow', icon: '🚚' },
-  { id: 'isles',     label: 'Isles',     icon: '🏝' },
+  { id: 'fleetflow', label: 'FleetFlow', icon: '🚛' },
+  { id: 'isles',     label: 'Isles',     icon: '🏝️' },
   { id: 'archive',   label: 'Archive',   icon: '📚' },
   { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
 ]
