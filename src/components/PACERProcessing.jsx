@@ -9,12 +9,24 @@ const ROUTES = [
   { id: 'Archive',                label: 'Archive',                description: 'Preserve Without Routing',              color: '#6b7280', activeBg: '#0f1117', activeBorder: '#374151' },
 ]
 
+const ROUTE_COLORS = {
+  'FleetFlow':              '#3b82f6',
+  'Isles of the Awakening': '#10b981',
+  'Doctrine':               '#f59e0b',
+  'Content':                '#8b5cf6',
+  'Archive':                '#6b7280',
+}
+
+function destColor(dest) {
+  return ROUTE_COLORS[dest] || '#4b5563'
+}
+
 const STATIC_NEXT = {
-  FleetFlow:              ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
+  FleetFlow:                ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
   'Isles of the Awakening': ['What character embodies this?', 'Where does this fit the mythology?', 'What emotion does this carry?'],
-  Doctrine:               ['Is this a principle or an exception?', 'What rule would prevent this?', 'Who needs to know this?'],
-  Content:                ['What is the headline?', 'Who is the audience?', 'What format fits this best?'],
-  Archive:                ['When should this resurface?', 'What would make this relevant again?', 'Who should find this?'],
+  Doctrine:                 ['Is this a principle or an exception?', 'What rule would prevent this?', 'Who needs to know this?'],
+  Content:                  ['What is the headline?', 'Who is the audience?', 'What format fits this best?'],
+  Archive:                  ['When should this resurface?', 'What would make this relevant again?', 'Who should find this?'],
 }
 
 const TYPE_ICONS = { text: '✍️', voice: '🎤', image: '📸', document: '📄', idea: '💡' }
@@ -168,6 +180,7 @@ export default function PACERProcessing({
                 Claude Suggests
               </p>
 
+              {/* Constellation suggestion */}
               {constellationDiffers && (
                 <div
                   className="rounded-lg px-3 py-2.5 mb-3 flex items-start justify-between gap-3"
@@ -194,19 +207,74 @@ export default function PACERProcessing({
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: '#0a1020', color: '#2d4060', border: '1px solid #141c2e' }}
-                >
-                  {Math.round((claude.confidence || 0) * 100)}% confident
-                </span>
+              {/* Primary destination */}
+              <div
+                className="rounded-lg px-3 py-2.5 mb-2"
+                style={{
+                  background: '#0a0f1a',
+                  border: `1px solid ${destColor(claude.destination)}30`,
+                }}
+              >
+                <p className="text-xs mb-1.5" style={{ color: '#1f2937' }}>Primary Destination</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium" style={{ color: destColor(claude.destination) }}>
+                    {claude.destination}
+                  </p>
+                  <span className="text-xs" style={{ color: destColor(claude.destination) + '99' }}>
+                    {Math.round((claude.confidence || 0) * 100)}%
+                  </span>
+                </div>
+                <div className="rounded-full overflow-hidden" style={{ height: '2px', background: '#141c2e' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.round((claude.confidence || 0) * 100)}%`,
+                      background: destColor(claude.destination),
+                    }}
+                  />
+                </div>
               </div>
 
+              {/* Secondary destination */}
+              {claude.secondaryDestination && claude.secondaryDestination !== 'null' && (
+                <div
+                  className="rounded-lg px-3 py-2.5 mb-3"
+                  style={{ background: '#0a0f1a', border: '1px solid #141c2e' }}
+                >
+                  <p className="text-xs mb-1.5" style={{ color: '#1f2937' }}>Also consider</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm" style={{ color: destColor(claude.secondaryDestination) + 'cc' }}>
+                      {claude.secondaryDestination}
+                    </p>
+                    <span className="text-xs" style={{ color: '#2d3a50' }}>
+                      {Math.round((claude.secondaryConfidence || 0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="rounded-full overflow-hidden" style={{ height: '2px', background: '#141c2e' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.round((claude.secondaryConfidence || 0) * 100)}%`,
+                        background: destColor(claude.secondaryDestination) + '60',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Why */}
               {claude.reason && (
-                <p className="text-xs leading-relaxed" style={{ color: '#2d3a50' }}>
-                  {claude.reason}
-                </p>
+                <div>
+                  <p
+                    className="text-xs font-semibold uppercase mb-1"
+                    style={{ color: '#1a2d4a', letterSpacing: '0.12em', fontSize: '10px' }}
+                  >
+                    Why
+                  </p>
+                  <p className="text-xs leading-relaxed" style={{ color: '#2d3a50' }}>
+                    {claude.reason}
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -242,13 +310,14 @@ export default function PACERProcessing({
       {/* Routing */}
       <div className="px-6 py-5 border-b" style={{ borderColor: '#0f1520' }}>
         <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
-          {routed ? 'Routed to:' : 'Where does this belong?'}
+          {routed ? 'Routed to:' : claude ? 'Confirm or route manually:' : 'Where does this belong?'}
         </p>
 
         <div className="flex flex-col gap-2">
           {ROUTES.map(route => {
             const isSelected = observation.destination === route.id
-            const isClaudeSuggestion = !routed && claude?.destination === route.id
+            const isClaudePrimary = !routed && claude?.destination === route.id
+            const isClaudeSecondary = !routed && claude?.secondaryDestination === route.id
             const isDisabled = routed && !isSelected
 
             return (
@@ -262,8 +331,10 @@ export default function PACERProcessing({
                   border: `1px solid ${
                     isSelected
                       ? route.activeBorder
-                      : isClaudeSuggestion
+                      : isClaudePrimary
                       ? route.color + '55'
+                      : isClaudeSecondary
+                      ? route.color + '30'
                       : '#141c2e'
                   }`,
                   opacity: isDisabled ? 0.25 : 1,
@@ -276,16 +347,23 @@ export default function PACERProcessing({
                     style={{
                       color: isSelected
                         ? route.color
-                        : isClaudeSuggestion
+                        : isClaudePrimary
                         ? route.color + 'cc'
+                        : isClaudeSecondary
+                        ? route.color + '88'
                         : '#374151',
                     }}
                   >
                     {route.label}
                   </p>
-                  {isClaudeSuggestion && !isSelected && (
+                  {isClaudePrimary && !isSelected && (
                     <span style={{ fontSize: '9px', color: route.color + '70', letterSpacing: '0.05em' }}>
-                      suggested
+                      primary
+                    </span>
+                  )}
+                  {isClaudeSecondary && !isSelected && (
+                    <span style={{ fontSize: '9px', color: route.color + '50', letterSpacing: '0.05em' }}>
+                      secondary
                     </span>
                   )}
                 </div>
