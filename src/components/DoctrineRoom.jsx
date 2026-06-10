@@ -44,12 +44,15 @@ export default function DoctrineRoom() {
       <div style={{ marginBottom: '32px' }}>
         <p className="text-xs font-semibold tracking-widest uppercase"
           style={{ color: 'var(--text-4)', letterSpacing: '0.15em', marginBottom: '6px' }}
-        >Canon Layer</p>
+        >Governing Layer</p>
         <h2 className="font-bold"
           style={{ fontSize: '18px', color: 'var(--text-0)', marginBottom: '6px', letterSpacing: '0.08em' }}
         >DOCTRINE</h2>
-        <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-          Principles that became permanent. {PRINCIPLES.length} principles · {CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}.
+        <p className="text-xs" style={{ color: 'var(--text-3)', marginBottom: '4px' }}>
+          Every room on the campus operates beneath these principles.
+        </p>
+        <p className="text-xs" style={{ color: 'var(--text-5)' }}>
+          {PRINCIPLES.length} principles · {CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}
         </p>
       </div>
 
