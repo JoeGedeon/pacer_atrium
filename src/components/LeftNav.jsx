@@ -1,6 +1,6 @@
 const PACER_ROOMS = [
   { id: 'atrium',    label: 'Atrium',                 icon: '🍍' },
-  { id: 'veyra',     label: 'Veyra',                  icon: '🧠' },
+  { id: 'vera',      label: 'VERA',                   icon: '🧠' },
   { id: 'kel',       label: 'KEL',                    icon: '✨' },
   { id: 'fleetflow', label: 'FleetFlow',               icon: '🚚' },
   { id: 'isles',     label: 'Isles of the Awakening',  icon: '🏕' },

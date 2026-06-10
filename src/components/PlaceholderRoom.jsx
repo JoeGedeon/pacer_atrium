@@ -1,9 +1,9 @@
 const ROOM_META = {
-  veyra: {
+  vera: {
     icon: '🧠',
-    name: 'Veyra',
+    name: 'VERA',
     layer: 'Recognition Layer',
-    description: 'Pattern identification, constellation mapping, and routing intelligence.',
+    description: 'Pattern detection, constellation mapping, and routing intelligence. Finds signal in the stream.',
   },
   kel: {
     icon: '✨',
@@ -20,7 +20,7 @@ const ROOM_META = {
   isles: {
     icon: '🏕',
     name: 'Isles of the Awakening',
-    layer: 'Execution Layer',
+    layer: 'World Layer',
     description: 'Worlds · Lore · Characters. The mythology, universe, and creative IP of Isles of the Awakening.',
   },
   archive: {
@@ -32,7 +32,7 @@ const ROOM_META = {
   doctrine: {
     icon: '📜',
     name: 'Doctrine',
-    layer: 'Translation Layer',
+    layer: 'Canon Layer',
     description: 'Principles, frameworks, and institutional canon. Observations that became permanent.',
   },
   content: {
