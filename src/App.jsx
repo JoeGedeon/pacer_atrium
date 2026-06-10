@@ -148,7 +148,7 @@ export default function App() {
         </>
       )}
 
-      {isMuse     && <MuseRoom observations={observations} />}
+      {isMuse     && <MuseRoom observations={observations} onSurface={submitObservation} />}
       {isArchive  && <ArchiveRoom observations={observations} />}
       {isDoctrine && <DoctrineRoom />}
       {isTheater  && <TheaterRoom />}
