@@ -1,9 +1,12 @@
+import { useState } from 'react'
+import { sendToPACER } from '../lib/bridge'
+
 const ROUTES = [
-  { id: 'FleetFlow', label: 'FleetFlow', description: 'Operations, fleet, logistics',        color: '#3b82f6', activeBg: '#0d1f3c', activeBorder: '#1d3f6e' },
-  { id: 'Isles',     label: 'Isles',     description: 'World-building, lore, narrative',     color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
+  { id: 'FleetFlow', label: 'FleetFlow', description: 'Operations, fleet, logistics',         color: '#3b82f6', activeBg: '#0d1f3c', activeBorder: '#1d3f6e' },
+  { id: 'Isles',     label: 'Isles',     description: 'World-building, lore, narrative',      color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
   { id: 'Doctrine',  label: 'Doctrine',  description: 'Principles, frameworks, constitution', color: '#f59e0b', activeBg: '#1c1200', activeBorder: '#5c3a00' },
-  { id: 'Content',   label: 'Content',   description: 'Assets, posts, creative work',        color: '#8b5cf6', activeBg: '#130c24', activeBorder: '#3b1f7a' },
-  { id: 'Archive',   label: 'Archive',   description: 'Preserve without routing',            color: '#6b7280', activeBg: '#0f1117', activeBorder: '#374151' },
+  { id: 'Content',   label: 'Content',   description: 'Assets, posts, creative work',         color: '#8b5cf6', activeBg: '#130c24', activeBorder: '#3b1f7a' },
+  { id: 'Archive',   label: 'Archive',   description: 'Preserve without routing',             color: '#6b7280', activeBg: '#0f1117', activeBorder: '#374151' },
 ]
 
 const STATIC_NEXT = {
@@ -24,6 +27,24 @@ export default function PACERProcessing({
   hasApiKey,
   onRequestApiKey,
 }) {
+  const [sending, setSending] = useState(false)
+  const [sentIds, setSentIds] = useState(new Set())
+  const [sendError, setSendError] = useState(null)
+
+  async function handleSendToPACER() {
+    if (!observation || sending || sentIds.has(observation.id)) return
+    setSending(true)
+    setSendError(null)
+    try {
+      await sendToPACER(observation)
+      setSentIds(prev => new Set([...prev, observation.id]))
+    } catch {
+      setSendError('Could not reach PACER. Try again.')
+    } finally {
+      setSending(false)
+    }
+  }
+
   if (!observation) {
     return (
       <aside
@@ -60,6 +81,7 @@ export default function PACERProcessing({
   const claude = observation.claude
   const analyzing = observation.analyzing || false
   const claudeError = observation.claudeError || null
+  const isSent = sentIds.has(observation.id)
 
   const related = observation.constellation
     ? observations
@@ -218,7 +240,7 @@ export default function PACERProcessing({
       )}
 
       {/* Routing */}
-      <div className="px-6 py-5">
+      <div className="px-6 py-5 border-b" style={{ borderColor: '#0f1520' }}>
         <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
           {routed ? 'Routed to:' : 'Suggested routes:'}
         </p>
@@ -292,11 +314,41 @@ export default function PACERProcessing({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Send to PACER */}
+      <div className="px-6 py-5">
+        <p className="text-xs mb-3" style={{ color: '#1f2937' }}>Send to campus:</p>
+        <button
+          onClick={handleSendToPACER}
+          disabled={sending || isSent}
+          className="w-full text-left rounded-lg px-4 py-3"
+          style={{
+            background: isSent ? '#041208' : '#0a0f1a',
+            border: `1px solid ${isSent ? '#0a3018' : '#141c2e'}`,
+            cursor: sending || isSent ? 'default' : 'pointer',
+            opacity: sending ? 0.6 : 1,
+          }}
+        >
+          <p
+            className="text-sm font-medium"
+            style={{ color: isSent ? '#1a7a40' : '#2d3a50' }}
+          >
+            {isSent ? '✓ Sent to PACER' : sending ? 'Sending…' : 'Send to PACER'}
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: isSent ? '#0f4a28' : '#151d2e' }}>
+            {isSent ? 'Pending review — awaiting approval' : 'Enters as pending_review'}
+          </p>
+        </button>
+
+        {sendError && (
+          <p className="text-xs mt-2" style={{ color: '#5a1a1a' }}>{sendError}</p>
+        )}
 
         {!hasApiKey && (
           <button
             onClick={onRequestApiKey}
-            className="w-full text-xs mt-6 py-2 rounded-lg"
+            className="w-full text-xs mt-4 py-2 rounded-lg"
             style={{
               background: 'transparent',
               border: '1px solid #141c2e',

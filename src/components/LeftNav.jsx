@@ -51,9 +51,16 @@ export default function LeftNav({ currentRoom, onSelect }) {
         })}
       </ul>
 
-      <div className="mt-auto px-3">
+      <div className="mt-auto px-3 flex flex-col gap-3">
+        <button
+          onClick={() => onSelect('home')}
+          className="text-xs text-left"
+          style={{ background: 'none', border: 'none', color: '#1a2d4a', cursor: 'pointer', padding: 0 }}
+        >
+          ⌂ Command Center
+        </button>
         <p className="text-xs" style={{ color: '#1f2937' }}>
-          v0.3 · Atrium
+          v0.4 · Atrium
         </p>
       </div>
     </nav>
