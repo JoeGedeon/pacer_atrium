@@ -2,19 +2,19 @@ import { useState } from 'react'
 import { sendToPACER } from '../lib/bridge'
 
 const ROUTES = [
-  { id: 'FleetFlow', label: 'FleetFlow', description: 'Operations, fleet, logistics',         color: '#3b82f6', activeBg: '#0d1f3c', activeBorder: '#1d3f6e' },
-  { id: 'Isles',     label: 'Isles',     description: 'World-building, lore, narrative',      color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
-  { id: 'Doctrine',  label: 'Doctrine',  description: 'Principles, frameworks, constitution', color: '#f59e0b', activeBg: '#1c1200', activeBorder: '#5c3a00' },
-  { id: 'Content',   label: 'Content',   description: 'Assets, posts, creative work',         color: '#8b5cf6', activeBg: '#130c24', activeBorder: '#3b1f7a' },
-  { id: 'Archive',   label: 'Archive',   description: 'Preserve without routing',             color: '#6b7280', activeBg: '#0f1117', activeBorder: '#374151' },
+  { id: 'FleetFlow',              label: 'FleetFlow',              description: 'Operational Systems',                  color: '#3b82f6', activeBg: '#0d1f3c', activeBorder: '#1d3f6e' },
+  { id: 'Isles of the Awakening', label: 'Isles of the Awakening', description: 'Worlds · Lore · Characters',            color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
+  { id: 'Doctrine',               label: 'Doctrine',               description: 'Principles · Frameworks · Architecture', color: '#f59e0b', activeBg: '#1c1200', activeBorder: '#5c3a00' },
+  { id: 'Content',                label: 'Content',                description: 'Media · Assets · Publishing',           color: '#8b5cf6', activeBg: '#130c24', activeBorder: '#3b1f7a' },
+  { id: 'Archive',                label: 'Archive',                description: 'Preserve Without Routing',              color: '#6b7280', activeBg: '#0f1117', activeBorder: '#374151' },
 ]
 
 const STATIC_NEXT = {
-  FleetFlow: ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
-  Isles:     ['What character embodies this?', 'Where does this fit the mythology?', 'What emotion does this carry?'],
-  Doctrine:  ['Is this a principle or an exception?', 'What rule would prevent this?', 'Who needs to know this?'],
-  Content:   ['What is the headline?', 'Who is the audience?', 'What format fits this best?'],
-  Archive:   ['When should this resurface?', 'What would make this relevant again?', 'Who should find this?'],
+  FleetFlow:              ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
+  'Isles of the Awakening': ['What character embodies this?', 'Where does this fit the mythology?', 'What emotion does this carry?'],
+  Doctrine:               ['Is this a principle or an exception?', 'What rule would prevent this?', 'Who needs to know this?'],
+  Content:                ['What is the headline?', 'Who is the audience?', 'What format fits this best?'],
+  Archive:                ['When should this resurface?', 'What would make this relevant again?', 'Who should find this?'],
 }
 
 const TYPE_ICONS = { text: '✍️', voice: '🎤', image: '📸', document: '📄', idea: '💡' }
@@ -242,7 +242,7 @@ export default function PACERProcessing({
       {/* Routing */}
       <div className="px-6 py-5 border-b" style={{ borderColor: '#0f1520' }}>
         <p className="text-xs mb-3" style={{ color: '#1f2937' }}>
-          {routed ? 'Routed to:' : 'Suggested routes:'}
+          {routed ? 'Routed to:' : 'Where does this belong?'}
         </p>
 
         <div className="flex flex-col gap-2">
