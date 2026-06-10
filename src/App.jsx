@@ -53,6 +53,7 @@ export default function App() {
       text: obs.text,
       type: obs.type,
       constellation: obs.constellation || null,
+      source: obs.source || null,
       timestamp: new Date(),
       status: 'received',
       destination: null,

@@ -382,9 +382,10 @@ export default function MuseRoom({ observations = [], onSurface }) {
                   ) : (
                     <button onClick={() => {
                       onSurface({
-                        text: `Connection noticed: ${c.a} ↔ ${c.b} — ${c.note}`,
+                        text: `Connection noticed: ${c.a} ↔ ${c.b} — ${c.note}.`,
                         type: 'text',
                         constellation: null,
+                        source: 'Muse Back Wall',
                       })
                       setSurfaced(prev => new Set([...prev, key]))
                     }} style={{
