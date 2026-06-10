@@ -29,17 +29,11 @@ const ROOM_META = {
     layer: 'Preservation Layer',
     description: 'All observations preserved. Routed and unrouted. Waiting to become relevant.',
   },
-  doctrine: {
-    icon: '📜',
-    name: 'Doctrine',
-    layer: 'Canon Layer',
-    description: 'Principles, frameworks, and institutional canon. Observations that became permanent.',
-  },
-  content: {
-    icon: '🎥',
-    name: 'Content',
-    layer: 'Publishing Layer',
-    description: 'Media · Assets · Publishing. Creative work ready for audience.',
+  muse: {
+    icon: '🎭',
+    name: 'Muse',
+    layer: 'Creative Faculty',
+    description: 'Ideas · Stories · Characters · Worlds. The creative intelligence of the campus.',
   },
 }
 
@@ -47,42 +41,27 @@ export default function PlaceholderRoom({ room }) {
   const meta = ROOM_META[room] || { icon: '🔵', name: room, layer: '', description: '' }
 
   return (
-    <div
-      className="flex-1 flex flex-col items-center justify-center"
-      style={{ background: '#090c14' }}
+    <div className="flex-1 flex flex-col items-center justify-center"
+      style={{ background: 'var(--bg-0)' }}
     >
-      <div
-        className="text-center"
-        style={{ maxWidth: '360px', padding: '0 24px' }}
-      >
+      <div className="text-center" style={{ maxWidth: '360px', padding: '0 24px' }}>
         <div style={{ fontSize: '30px', marginBottom: '16px' }}>{meta.icon}</div>
 
         {meta.layer && (
-          <p
-            className="text-xs font-semibold tracking-widest uppercase mb-2"
-            style={{ color: '#1a2d4a', letterSpacing: '0.15em' }}
-          >
-            {meta.layer}
-          </p>
+          <p className="text-xs font-semibold tracking-widest uppercase mb-2"
+            style={{ color: 'var(--text-4)', letterSpacing: '0.15em' }}
+          >{meta.layer}</p>
         )}
 
-        <h2
-          className="font-bold tracking-wide uppercase"
-          style={{ fontSize: '14px', color: '#c9d3e8', letterSpacing: '0.12em', marginBottom: '14px' }}
-        >
-          {meta.name}
-        </h2>
+        <h2 className="font-bold tracking-wide uppercase"
+          style={{ fontSize: '14px', color: 'var(--text-0)', letterSpacing: '0.12em', marginBottom: '14px' }}
+        >{meta.name}</h2>
 
-        <p
-          className="text-sm leading-relaxed"
-          style={{ color: '#2d3a50', marginBottom: '32px' }}
-        >
-          {meta.description}
-        </p>
+        <p className="text-sm leading-relaxed"
+          style={{ color: 'var(--text-3)', marginBottom: '32px' }}
+        >{meta.description}</p>
 
-        <p className="text-xs" style={{ color: '#141c2e' }}>
-          This room is being constructed.
-        </p>
+        <p className="text-xs" style={{ color: 'var(--text-6)' }}>This room is being constructed.</p>
       </div>
     </div>
   )

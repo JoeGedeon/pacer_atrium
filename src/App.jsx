@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useTheme } from './hooks/useTheme'
 import LeftNav from './components/LeftNav'
 import PACERHome from './components/PACERHome'
 import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
 import AtriumDashboard from './components/AtriumDashboard'
 import DoctrineRoom from './components/DoctrineRoom'
+import TheaterRoom from './components/TheaterRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
@@ -21,6 +23,8 @@ function loadObservations() {
 }
 
 export default function App() {
+  const { theme, setTheme } = useTheme()
+
   const [currentRoom, setCurrentRoom] = useState('home')
   const [observations, setObservations] = useState(loadObservations)
   const [activeObservation, setActiveObservation] = useState(null)
@@ -86,16 +90,22 @@ export default function App() {
   const isHome     = currentRoom === 'home'
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
+  const isTheater  = currentRoom === 'content'
 
   return (
     <div
       className="flex h-screen overflow-hidden"
-      style={{ background: '#07090f', color: '#dde3f0' }}
+      style={{ background: 'var(--bg-0)', color: 'var(--text-0)' }}
     >
       {showKeyGate && <APIKeyGate onKey={handleApiKey} />}
 
       {!isHome && (
-        <LeftNav currentRoom={currentRoom} onSelect={setCurrentRoom} />
+        <LeftNav
+          currentRoom={currentRoom}
+          onSelect={setCurrentRoom}
+          theme={theme}
+          onThemeChange={setTheme}
+        />
       )}
 
       {isHome && (
@@ -135,8 +145,9 @@ export default function App() {
       )}
 
       {isDoctrine && <DoctrineRoom />}
+      {isTheater  && <TheaterRoom />}
 
-      {!isHome && !isAtrium && !isDoctrine && (
+      {!isHome && !isAtrium && !isDoctrine && !isTheater && (
         <PlaceholderRoom room={currentRoom} />
       )}
     </div>
