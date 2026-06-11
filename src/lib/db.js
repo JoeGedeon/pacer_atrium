@@ -143,6 +143,31 @@ export async function updateKELReview(uid, id, patch) {
   })
 }
 
+// ── Institution Events — witnesses to governance decisions ────────────────────
+
+function eventColl(uid) { return collection(db, 'users', uid, 'institution_events') }
+
+export async function createInstitutionEvent(uid, data) {
+  await addDoc(eventColl(uid), {
+    eventType:       data.eventType,
+    title:           data.title,
+    description:     data.description     || null,
+    actor:           data.actor           || uid,
+    relatedEntityId: data.relatedEntityId || null,
+    createdAt:       serverTimestamp(),
+  })
+}
+
+export function listenInstitutionEvents(uid, callback) {
+  const q = query(eventColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return { ...data, id: d.id, createdAt: data.createdAt?.toDate?.() ?? new Date() }
+    }))
+  })
+}
+
 // ── Graduate Registry — written only by Builder Studio, read everywhere ────────
 
 function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }

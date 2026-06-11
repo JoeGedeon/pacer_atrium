@@ -24,6 +24,7 @@ import {
   listenObservations, createObservation, updateObservation,
   listenMuseWorks, createKELDecision, listenGraduates,
   createKELReview, listenKELReviews, updateKELReview,
+  createInstitutionEvent, listenInstitutionEvents,
 } from './lib/db'
 
 async function migrateLocalStorage(uid) {
@@ -69,6 +70,7 @@ export default function App() {
   const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
+  const [institutionEvents, setInstitutionEvents] = useState([])
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -92,7 +94,8 @@ export default function App() {
     const unsubMuse    = listenMuseWorks(user.uid, setMuseWorks)
     const unsubGrad    = listenGraduates(user.uid, setGraduates)
     const unsubReviews = listenKELReviews(user.uid, setKelReviews)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews() }
+    const unsubEvents  = listenInstitutionEvents(user.uid, setInstitutionEvents)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -143,19 +146,37 @@ export default function App() {
     await createKELDecision(user.uid, decisionData)
   }
 
-  function requestBuilderReview() {
+  async function requestBuilderReview() {
     if (builderReadiness !== 'locked') return  // already pending or approved
-    createKELReview(user.uid, { requestType: 'builder_readiness' })
+    const id = await createKELReview(user.uid, { requestType: 'builder_readiness' })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'builder_review_requested',
+      title:           'Builder Review Requested',
+      description:     'A readiness review has been submitted to KEL. The forge does not open without judgment.',
+      relatedEntityId: id,
+    })
   }
 
   // Called by KEL only — no other path opens the forge
   async function approveKELReview(id) {
     await updateKELReview(user.uid, id, { status: 'approved', reviewedBy: user.uid })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'builder_review_approved',
+      title:           'Builder Review Approved',
+      description:     'KEL has confirmed readiness. Builder Studio is open. The forge begins.',
+      relatedEntityId: id,
+    })
   }
 
   // No silent denials — rationale required
   async function denyKELReview(id, rationale) {
     await updateKELReview(user.uid, id, { status: 'denied', rationale, reviewedBy: user.uid })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'builder_review_denied',
+      title:           'Builder Review Denied',
+      description:     `Denied. ${rationale}`,
+      relatedEntityId: id,
+    })
   }
 
   const isHome     = currentRoom === 'home'
@@ -280,7 +301,7 @@ export default function App() {
             isMobile={isMobile}
           />
         )}
-        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} uid={user?.uid} isMobile={isMobile} />}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom />}
         {isTheater  && <TheaterRoom graduates={graduates} isMobile={isMobile} />}
         {isBusinessCenter && (

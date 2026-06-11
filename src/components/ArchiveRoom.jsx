@@ -36,6 +36,17 @@ const DECISION_STYLES = {
   deferred: { bg: 'var(--bg-2)', border: 'var(--border-1)', color: 'var(--text-3)', label: 'Deferred' },
 }
 
+const EVENT_STYLES = {
+  builder_review_requested: { bg: '#0a0d14', border: '#1e3a5f', color: '#3b82f6', label: 'Review Requested' },
+  builder_review_approved:  { bg: '#041208', border: '#0a3018', color: '#10b981', label: 'Review Approved'  },
+  builder_review_denied:    { bg: '#140808', border: '#3a1010', color: '#ef4444', label: 'Review Denied'    },
+  graduate_added:           { bg: '#0a0a04', border: '#3a3010', color: '#f59e0b', label: 'Graduate Added'   },
+}
+
+function eventStyle(type) {
+  return EVENT_STYLES[type] || { bg: 'var(--bg-2)', border: 'var(--border-1)', color: '#f59e0b', label: 'Institution' }
+}
+
 const CAT_ICONS = {
   music: '🎵', visual: '🎨', lore: '📖',
   worldbuilding: '🌎', characters: '🎭', productions: '🎬',
@@ -45,9 +56,13 @@ function TimelineEntry({ entry, isLast }) {
   const isObs      = entry.kind === 'observation'
   const isWork     = entry.kind === 'work'
   const isDecision = entry.kind === 'decision'
+  const isEvent    = entry.kind === 'event'
   const ds = isDecision ? (DECISION_STYLES[entry.decision] || DECISION_STYLES.deferred) : null
+  const es = isEvent    ? eventStyle(entry.eventType) : null
 
-  const dotColor = isDecision
+  const dotColor = isEvent
+    ? (es?.color || '#f59e0b')
+    : isDecision
     ? (ds?.color || '#f59e0b')
     : isWork
     ? '#8b5cf6'
@@ -68,11 +83,30 @@ function TimelineEntry({ entry, isLast }) {
       <div style={{ flex: 1, paddingBottom: '14px' }}>
         <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.06em',
           paddingTop: '12px', marginBottom: '5px' }}>
-          {isDecision ? 'KEL DECISION' : isWork ? 'WORK' : 'FIRST OBSERVED'}
+          {isEvent ? 'GOVERNANCE' : isDecision ? 'KEL DECISION' : isWork ? 'WORK' : 'FIRST OBSERVED'}
           {' · '}{formatDate(entry.timestamp)}{' · '}{formatTime(entry.timestamp)}
         </p>
 
-        {isDecision ? (
+        {isEvent ? (
+          <div style={{ background: es.bg, border: `1px solid ${es.border}`,
+            borderRadius: '8px', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '999px',
+                fontWeight: 600, color: es.color, border: `1px solid ${es.border}` }}>
+                {es.label}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600,
+              marginBottom: entry.description ? '5px' : 0 }}>
+              {entry.title}
+            </p>
+            {entry.description && (
+              <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
+                {entry.description}
+              </p>
+            )}
+          </div>
+        ) : isDecision ? (
           <div style={{ background: ds.bg, border: `1px solid ${ds.border}`,
             borderRadius: '8px', padding: '12px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -134,7 +168,7 @@ function TimelineEntry({ entry, isLast }) {
   )
 }
 
-export default function ArchiveRoom({ observations = [], museWorks = [], uid, isMobile }) {
+export default function ArchiveRoom({ observations = [], museWorks = [], institutionEvents = [], uid, isMobile }) {
   const [kelDecisions, setKelDecisions] = useState([])
   const [view, setView]                 = useState('timeline')
 
@@ -167,6 +201,11 @@ export default function ArchiveRoom({ observations = [], museWorks = [], uid, is
       id: `kel-${k.id}`, kind: 'decision',
       recommendation: k.recommendation, domain: k.domain, decision: k.decision,
       timestamp: toDate(k.decidedAt),
+    })),
+    ...institutionEvents.map(e => ({
+      id: `evt-${e.id}`, kind: 'event',
+      eventType: e.eventType, title: e.title, description: e.description,
+      timestamp: toDate(e.createdAt),
     })),
   ].sort((a, b) => b.timestamp - a.timestamp)
 
@@ -209,6 +248,7 @@ export default function ArchiveRoom({ observations = [], museWorks = [], uid, is
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
             {allEntries.length} record{allEntries.length !== 1 ? 's' : ''} ·{' '}
+            {institutionEvents.length > 0 && `${institutionEvents.length} governance · `}
             {kelDecisions.length} decision{kelDecisions.length !== 1 ? 's' : ''} ·{' '}
             {threadKeys.length} thread{threadKeys.length !== 1 ? 's' : ''}
           </p>
