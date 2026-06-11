@@ -188,15 +188,22 @@ export function listenGraduates(uid, callback) {
 
 export async function createGraduate(uid, data) {
   const ref = await addDoc(gradColl(uid), {
-    graduateName:      data.graduateName,
-    discipline:        data.discipline,
-    sequence:          data.sequence,
-    tagline:           data.tagline        || null,
-    proof:             data.proof          || null,
-    productionTitle:   data.productionTitle || null,
-    evaluationStatus:  data.evaluationStatus  || 'in_development',
+    graduateName:       data.graduateName,
+    discipline:         data.discipline,
+    sequence:           data.sequence,
+    tagline:            data.tagline            || null,
+    proof:              data.proof              || null,
+    productionTitle:    data.productionTitle    || null,
+    evaluationStatus:   data.evaluationStatus   || 'in_development',
     transmissionStatus: data.transmissionStatus || 'pending',
-    graduatedAt:       serverTimestamp(),
+    graduatedAt:        serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'graduate_added',
+    title:           `${data.graduateName} added to Graduate Registry`,
+    description:     'A new graduate has earned a plaque.',
+    actor:           uid,
+    relatedEntityId: ref.id,
   })
   return ref.id
 }
