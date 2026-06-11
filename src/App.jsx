@@ -15,6 +15,7 @@ import VERARoom from './components/VERARoom'
 import ArchiveRoom from './components/ArchiveRoom'
 import KELRoom from './components/KELRoom'
 import BusinessCenterRoom from './components/BusinessCenterRoom'
+import BuilderStudioRoom from './components/BuilderStudioRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
@@ -66,6 +67,7 @@ export default function App() {
   const [analyzingIds, setAnalyzingIds]           = useState(new Set())
   const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
   const [showKeyGate, setShowKeyGate]             = useState(false)
+  const [builderStudioUnlocked, setBuilderStudioUnlocked] = useState(false) // unlock condition unspecified
 
   // Derived: merge Firestore data with ephemeral per-session analyzing state
   const _active = observations.find(o => o.id === activeObservationId) || null
@@ -140,6 +142,7 @@ export default function App() {
   const isArchive  = currentRoom === 'archive'
   const isKEL            = currentRoom === 'kel'
   const isBusinessCenter = currentRoom === 'businesscenter'
+  const isBuilderStudio  = currentRoom === 'builderstudio'
   const isSettings       = currentRoom === 'settings'
 
   if (loading) {
@@ -259,8 +262,13 @@ export default function App() {
           <BusinessCenterRoom
             observations={observations}
             graduates={graduates}
+            builderStudioUnlocked={builderStudioUnlocked}
+            onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             isMobile={isMobile}
           />
+        )}
+        {isBuilderStudio && (
+          <BuilderStudioRoom isMobile={isMobile} />
         )}
         {isKEL && (
           <KELRoom
@@ -283,7 +291,7 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>

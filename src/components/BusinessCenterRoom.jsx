@@ -33,7 +33,7 @@ function formatDate(date) {
 const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
 function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
 
-export default function BusinessCenterRoom({ observations = [], graduates = [], isMobile }) {
+export default function BusinessCenterRoom({ observations = [], graduates = [], builderStudioUnlocked = false, onEnterBuilderStudio, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
   const signals = observations
@@ -294,21 +294,41 @@ export default function BusinessCenterRoom({ observations = [], graduates = [], 
             }}>
               Evidence leaves.
             </p>
-            <div style={{
-              display: 'inline-block',
-              border: '1px solid var(--border-1)',
-              borderRadius: '6px',
-              padding: '10px 22px',
-              color: 'var(--text-5)',
-              fontSize: '11px',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-              cursor: 'default',
-              userSelect: 'none',
-            }}>
-              Door Closed
-            </div>
+            {builderStudioUnlocked ? (
+              <button
+                onClick={onEnterBuilderStudio}
+                style={{
+                  display: 'inline-block',
+                  background: '#1a0a00',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '10px 22px',
+                  color: '#f59e0b',
+                  fontSize: '12px',
+                  letterSpacing: '0.06em',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Enter Builder Studio →
+              </button>
+            ) : (
+              <div style={{
+                display: 'inline-block',
+                border: '1px solid var(--border-1)',
+                borderRadius: '6px',
+                padding: '10px 22px',
+                color: 'var(--text-5)',
+                fontSize: '11px',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                cursor: 'default',
+                userSelect: 'none',
+              }}>
+                Door Closed
+              </div>
+            )}
             <p style={{
               color: 'var(--text-6)', fontSize: '10px',
               marginTop: '18px', fontStyle: 'italic',
