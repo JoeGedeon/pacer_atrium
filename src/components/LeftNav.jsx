@@ -100,6 +100,7 @@ export default function LeftNav({
       </ul>
 
       <div className="mt-auto px-3 flex flex-col gap-3">
+        <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
         <button
           onClick={() => onSelect('home')}
           className="text-xs text-left"
