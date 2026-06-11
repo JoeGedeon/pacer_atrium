@@ -150,9 +150,13 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
             padding: '16px 20px',
             marginBottom: '20px',
           }}>
-            <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 700,
-              letterSpacing: '0.04em', marginBottom: '8px' }}>
-              FleetFlow — First Graduate
+            <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
+              letterSpacing: '0.04em', marginBottom: '2px' }}>
+              FleetFlow
+            </p>
+            <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600,
+              letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '12px' }}>
+              First Graduate
             </p>
             <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7,
               marginBottom: '6px' }}>
