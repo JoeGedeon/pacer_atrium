@@ -45,7 +45,7 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
     analyzePatterns(observations, apiKey)
       .then(r  => { setPatterns(r); setAnalyzing(false) })
       .catch(e => { setAnalysisError(e.message); setAnalyzing(false) })
-  }, []) // eslint-disable-line
+  }, [observations.length, apiKey]) // eslint-disable-line
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
@@ -100,7 +100,7 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
                         color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5,
                         paddingLeft: '10px', borderLeft: '2px solid #a0783035',
                       }}>
-                        {o.text.length > 85 ? o.text.slice(0, 85) + '…' : o.text}
+                        {(o.text?.length ?? 0) > 85 ? o.text.slice(0, 85) + '…' : (o.text || '')}
                       </p>
                     ))}
                   </div>
@@ -118,7 +118,7 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
                         color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.5,
                         paddingLeft: '10px', borderLeft: '2px solid var(--border-2)',
                       }}>
-                        {o.text.length > 85 ? o.text.slice(0, 85) + '…' : o.text}
+                        {(o.text?.length ?? 0) > 85 ? o.text.slice(0, 85) + '…' : (o.text || '')}
                       </p>
                     ))}
                   </div>
@@ -133,7 +133,7 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     {remaining.map(o => (
                       <p key={o.id} style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.5 }}>
-                        {o.text.length > 85 ? o.text.slice(0, 85) + '…' : o.text}
+                        {(o.text?.length ?? 0) > 85 ? o.text.slice(0, 85) + '…' : (o.text || '')}
                       </p>
                     ))}
                   </div>
