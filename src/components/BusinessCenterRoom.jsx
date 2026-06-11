@@ -140,14 +140,29 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
               textTransform: 'uppercase', fontWeight: 600 }}>FleetFlow Gateway</p>
           </div>
-          <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
-            marginBottom: '16px' }}>
-            Operational Stewardship · Reality keeps score.
-          </p>
-          <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7,
-            maxWidth: '460px', marginBottom: '20px' }}>
-            Business Center teaches operations. FleetFlow executes them. Built from thirty years inside the operation — it sees the gap between what was promised and what was delivered, and the cost of ignoring that gap.
-          </p>
+
+          {/* First Graduate plaque */}
+          <div style={{
+            background: 'var(--bg-2)',
+            border: '1px solid var(--border-1)',
+            borderLeft: '3px solid #10b981',
+            borderRadius: '0 8px 8px 0',
+            padding: '16px 20px',
+            marginBottom: '20px',
+          }}>
+            <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 700,
+              letterSpacing: '0.04em', marginBottom: '8px' }}>
+              FleetFlow — First Graduate
+            </p>
+            <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7,
+              marginBottom: '6px' }}>
+              Built from thirty years of operational reality.
+            </p>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65,
+              fontStyle: 'italic' }}>
+              Proof that the discipline survives contact with the field.
+            </p>
+          </div>
 
           {/* FleetFlow-specific memory */}
           {signals.filter(o =>
