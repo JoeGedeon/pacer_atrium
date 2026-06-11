@@ -147,7 +147,7 @@ export default function PACERProcessing({
           )}
         </div>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
-          {observation.text.length > 100 ? observation.text.slice(0, 100) + '…' : observation.text}
+          {(observation.text?.length ?? 0) > 100 ? observation.text.slice(0, 100) + '…' : (observation.text || '')}
         </p>
       </div>
 

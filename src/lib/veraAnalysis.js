@@ -37,6 +37,7 @@ export function clusterObservations(observations) {
 }
 
 function detectTheme(text) {
+  if (!text || typeof text !== 'string') return null
   const lower = text.toLowerCase()
   const scores = {}
   for (const [theme, keywords] of Object.entries(THEME_KEYWORDS)) {
@@ -50,6 +51,7 @@ export async function analyzePatterns(observations, apiKey) {
   if (!apiKey || observations.length < 3) return null
 
   const texts = observations
+    .filter(o => o.text && typeof o.text === 'string')
     .slice(0, 40)
     .map((o, i) => `${i + 1}. ${o.text}${o.constellation ? ` [${o.constellation}]` : ''}`)
     .join('\n')

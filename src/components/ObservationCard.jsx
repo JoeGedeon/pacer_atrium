@@ -49,7 +49,7 @@ export default function ObservationCard({ observation, isActive, onClick }) {
             className="text-sm leading-relaxed"
             style={{ color: isActive ? 'var(--text-1)' : 'var(--text-2)' }}
           >
-            {text.length > 110 ? text.slice(0, 110) + '…' : text}
+            {(text?.length ?? 0) > 110 ? text.slice(0, 110) + '…' : (text || '')}
           </p>
           <div className="flex items-center flex-wrap gap-2 mt-2">
             <span className="text-xs" style={{ color: 'var(--text-5)' }}>
