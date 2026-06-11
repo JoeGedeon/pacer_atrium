@@ -248,7 +248,7 @@ export default function App() {
             isMobile={isMobile}
           />
         )}
-        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} />}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom />}
         {isTheater  && <TheaterRoom />}
         {isKEL && (

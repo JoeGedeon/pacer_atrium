@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+import { listenKELDecisions } from '../lib/db'
 
 function formatDate(date) {
   if (!date) return ''
@@ -11,180 +13,360 @@ function formatTime(date) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-const STATUS_LABELS = {
-  routed:           'Routed',
-  received:         'Received',
-  opening_night:    'Opening Night',
-  published_memory: 'Published Memory',
+function toDate(v) {
+  return v instanceof Date ? v : new Date(v || Date.now())
 }
 
-const STATUS_COLORS = {
-  routed:           '#3b82f6',
-  received:         'var(--text-4)',
-  opening_night:    '#10b981',
-  published_memory: '#06b6d4',
+function getPeriod(date) {
+  const now = new Date()
+  const d = toDate(date)
+  const diffDays = (now - d) / 86400000
+  if (d.toDateString() === now.toDateString()) return 'Today'
+  if (diffDays < 7)   return 'This Week'
+  if (diffDays < 30)  return 'This Month'
+  if (diffDays < 365) return 'This Year'
+  return 'Origins'
+}
+
+const PERIOD_ORDER = ['Today', 'This Week', 'This Month', 'This Year', 'Origins']
+
+const DECISION_STYLES = {
+  approved: { bg: '#041208', border: '#0a3018', color: '#1a7a40', label: 'Approved' },
+  rejected: { bg: '#140808', border: '#3a1010', color: '#7a2020', label: 'Rejected' },
+  deferred: { bg: 'var(--bg-2)', border: 'var(--border-1)', color: 'var(--text-3)', label: 'Deferred' },
 }
 
 const CAT_ICONS = {
-  music:         '🎵',
-  visual:        '🎨',
-  lore:          '📖',
-  worldbuilding: '🌎',
-  characters:    '🎭',
-  productions:   '🎬',
+  music: '🎵', visual: '🎨', lore: '📖',
+  worldbuilding: '🌎', characters: '🎭', productions: '🎬',
 }
 
-export default function ArchiveRoom({ observations = [], museWorks = [] }) {
-  const works = museWorks.filter(
+function TimelineEntry({ entry, isLast }) {
+  const isObs      = entry.kind === 'observation'
+  const isWork     = entry.kind === 'work'
+  const isDecision = entry.kind === 'decision'
+  const ds = isDecision ? (DECISION_STYLES[entry.decision] || DECISION_STYLES.deferred) : null
+
+  const dotColor = isDecision
+    ? (ds?.color || '#f59e0b')
+    : isWork
+    ? '#8b5cf6'
+    : entry.destination ? '#3b82f6' : 'var(--border-1)'
+
+  return (
+    <div style={{ display: 'flex', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center',
+        width: '12px', flexShrink: 0 }}>
+        <div style={{ width: '7px', height: '7px', borderRadius: '50%',
+          marginTop: '14px', background: dotColor, flexShrink: 0 }} />
+        {!isLast && (
+          <div style={{ flex: 1, width: '1px', background: 'var(--border-0)',
+            marginTop: '4px', minHeight: '16px' }} />
+        )}
+      </div>
+
+      <div style={{ flex: 1, paddingBottom: '14px' }}>
+        <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.06em',
+          paddingTop: '12px', marginBottom: '5px' }}>
+          {isDecision ? 'KEL DECISION' : isWork ? 'WORK' : 'FIRST OBSERVED'}
+          {' · '}{formatDate(entry.timestamp)}{' · '}{formatTime(entry.timestamp)}
+        </p>
+
+        {isDecision ? (
+          <div style={{ background: ds.bg, border: `1px solid ${ds.border}`,
+            borderRadius: '8px', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '999px',
+                fontWeight: 600, color: ds.color, border: `1px solid ${ds.border}` }}>
+                {ds.label}
+              </span>
+              <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{entry.domain}</span>
+            </div>
+            <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.6 }}>
+              {entry.recommendation}
+            </p>
+          </div>
+        ) : isWork ? (
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+            borderRadius: '8px', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '12px' }}>{CAT_ICONS[entry.category] || '🎭'}</span>
+              <p style={{ fontSize: '13px', color: 'var(--text-0)', fontWeight: 600 }}>{entry.title}</p>
+            </div>
+            {entry.notes && (
+              <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6,
+                maxHeight: '60px', overflow: 'hidden',
+                maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)' }}>
+                {entry.notes}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div style={{
+            background: 'var(--bg-2)',
+            border: entry.constellation
+              ? '1px solid var(--border-1)'
+              : '1px solid var(--border-0)',
+            borderLeft: entry.constellation ? '3px solid #a0783050' : undefined,
+            borderRadius: entry.constellation ? '0 8px 8px 0' : '8px',
+            padding: '12px 16px',
+          }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-1)', lineHeight: 1.6,
+              marginBottom: (entry.constellation || entry.destination) ? '6px' : 0 }}>
+              {(entry.text?.length ?? 0) > 200
+                ? entry.text.slice(0, 200) + '…'
+                : (entry.text || '')}
+            </p>
+            {entry.constellation && (
+              <p style={{ fontSize: '9px', color: '#a07830', letterSpacing: '0.1em' }}>
+                ✦ {entry.constellation}
+              </p>
+            )}
+            {entry.destination && (
+              <p style={{ fontSize: '10px', color: 'var(--text-5)', marginTop: '3px' }}>
+                → {entry.destination}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function ArchiveRoom({ observations = [], museWorks = [], uid, isMobile }) {
+  const [kelDecisions, setKelDecisions] = useState([])
+  const [view, setView]                 = useState('timeline')
+
+  useEffect(() => {
+    if (!uid) return
+    return listenKELDecisions(uid, setKelDecisions)
+  }, [uid])
+
+  const publishedWorks = museWorks.filter(
     w => w.status === 'published_memory' || w.status === 'opening_night'
   )
 
-  // Routed observations (have a destination) form the observation record
-  const routedObs = observations.filter(o => o.destination || o.status === 'routed')
-
-  // Merge into a single timeline, sorted newest first
-  const timeline = [
-    ...works.map(w => ({
-      id: `muse-${w.id}`,
-      kind: 'work',
-      title: w.title,
-      category: w.category,
-      status: w.status,
-      notes: w.notes,
-      timestamp: w.createdAt,
+  const allEntries = [
+    ...observations
+      .filter(o => o.text)
+      .map(o => ({
+        id: `obs-${o.id}`, kind: 'observation',
+        text: o.text, type: o.type,
+        destination: o.destination, constellation: o.constellation,
+        status: o.status,
+        timestamp: toDate(o.timestamp),
+      })),
+    ...publishedWorks.map(w => ({
+      id: `muse-${w.id}`, kind: 'work',
+      title: w.title, category: w.category,
+      status: w.status, notes: w.notes,
+      timestamp: toDate(w.createdAt),
     })),
-    ...routedObs.map(o => ({
-      id: `obs-${o.id}`,
-      kind: 'observation',
-      text: o.text,
-      type: o.type,
-      destination: o.destination,
-      constellation: o.constellation,
-      status: o.status,
-      timestamp: o.timestamp instanceof Date ? o.timestamp : new Date(o.timestamp),
+    ...kelDecisions.map(k => ({
+      id: `kel-${k.id}`, kind: 'decision',
+      recommendation: k.recommendation, domain: k.domain, decision: k.decision,
+      timestamp: toDate(k.decidedAt),
     })),
   ].sort((a, b) => b.timestamp - a.timestamp)
+
+  // Group by period for timeline view
+  const byPeriod = {}
+  for (const entry of allEntries) {
+    const p = getPeriod(entry.timestamp)
+    if (!byPeriod[p]) byPeriod[p] = []
+    byPeriod[p].push(entry)
+  }
+
+  // Group by constellation for threads view
+  const threads = {}
+  for (const obs of observations) {
+    if (!obs.text || !obs.constellation) continue
+    if (!threads[obs.constellation]) threads[obs.constellation] = []
+    threads[obs.constellation].push(obs)
+  }
+  const threadKeys = Object.keys(threads).sort((a, b) => threads[b].length - threads[a].length)
+  const unthreaded = observations.filter(o => o.text && !o.constellation)
+
+  const px = isMobile ? 'px-6' : 'px-10'
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
       {/* Header */}
-      <div className="shrink-0 px-10 pt-8 pb-5" style={{ borderBottom: '1px solid var(--border-0)' }}>
+      <div className={`shrink-0 ${px} pt-8 pb-5`}
+        style={{ borderBottom: '1px solid var(--border-0)' }}>
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-          textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}
-        >Preservation Layer</p>
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+          College of Memory
+        </p>
         <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
-          letterSpacing: '0.08em', marginBottom: '6px' }}
-        >ARCHIVE</h2>
-        <p style={{ color: 'var(--text-3)', fontSize: '12px', marginBottom: '4px' }}>
-          What the campus has institutionalized.
+          letterSpacing: '0.08em', marginBottom: '5px' }}>Archivist Hall</h2>
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
+          marginBottom: '12px' }}>
+          The past is still speaking.
         </p>
-        <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
-          {timeline.length} record{timeline.length !== 1 ? 's' : ''} ·{' '}
-          {works.length} published work{works.length !== 1 ? 's' : ''} ·{' '}
-          {routedObs.length} routed observation{routedObs.length !== 1 ? 's' : ''}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+            {allEntries.length} record{allEntries.length !== 1 ? 's' : ''} ·{' '}
+            {kelDecisions.length} decision{kelDecisions.length !== 1 ? 's' : ''} ·{' '}
+            {threadKeys.length} thread{threadKeys.length !== 1 ? 's' : ''}
+          </p>
+          <div style={{ display: 'flex', gap: '2px' }}>
+            {['timeline', 'threads'].map(v => (
+              <button key={v} onClick={() => setView(v)} style={{
+                background: view === v ? 'var(--bg-3)' : 'none',
+                border: `1px solid ${view === v ? 'var(--border-1)' : 'transparent'}`,
+                color: view === v ? 'var(--text-0)' : 'var(--text-4)',
+                fontSize: '10px', padding: '4px 10px', borderRadius: '5px',
+                cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'capitalize',
+              }}>{v}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Timeline */}
-      <div className="flex-1 overflow-y-auto px-10 py-6">
-        {timeline.length === 0 ? (
+      {/* Content */}
+      <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+        {allEntries.length === 0 ? (
           <div className="flex items-center justify-center h-48">
-            <div style={{ textAlign: 'center', maxWidth: '300px' }}>
+            <div style={{ textAlign: 'center', maxWidth: '320px' }}>
               <p style={{ color: 'var(--text-4)', fontSize: '13px', marginBottom: '8px' }}>
-                The Archive is empty.
+                Archivist Hall is listening.
               </p>
               <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.7 }}>
-                Routed observations and published works<br />will appear here in order of time.
+                Observations, decisions, and published works<br />
+                will appear here as the institution builds its history.
               </p>
             </div>
           </div>
+        ) : view === 'timeline' ? (
+          <div>
+            {PERIOD_ORDER.filter(p => byPeriod[p]?.length).map(period => (
+              <div key={period} style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px',
+                  marginBottom: '16px' }}>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                    textTransform: 'uppercase', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {period}
+                  </p>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--border-0)' }} />
+                  <p style={{ color: 'var(--text-6)', fontSize: '9px', whiteSpace: 'nowrap' }}>
+                    {byPeriod[period].length}
+                  </p>
+                </div>
+                <div className="flex flex-col">
+                  {byPeriod[period].map((entry, i) => (
+                    <TimelineEntry
+                      key={entry.id}
+                      entry={entry}
+                      isLast={i === byPeriod[period].length - 1}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="flex flex-col">
-            {timeline.map((entry, i) => {
-              const isWork = entry.kind === 'work'
-              const color  = isWork
-                ? STATUS_COLORS[entry.status] || 'var(--text-3)'
-                : STATUS_COLORS[entry.status] || (entry.destination ? '#3b82f6' : 'var(--text-4)')
-
-              return (
-                <div key={entry.id} style={{ display: 'flex', gap: '20px', marginBottom: '0' }}>
-                  {/* Timeline spine */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    width: '16px', flexShrink: 0 }}
-                  >
-                    <div style={{
-                      width: '7px', height: '7px', borderRadius: '50%', marginTop: '16px',
-                      background: color, flexShrink: 0,
-                    }} />
-                    {i < timeline.length - 1 && (
-                      <div style={{ flex: 1, width: '1px', background: 'var(--border-0)', marginTop: '4px' }} />
-                    )}
-                  </div>
-
-                  {/* Entry content */}
-                  <div style={{ flex: 1, paddingBottom: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-5)', paddingTop: '14px' }}>
-                        {formatDate(entry.timestamp)} · {formatTime(entry.timestamp)}
-                      </span>
-                      <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '999px',
-                        background: `${color}15`, color, border: `1px solid ${color}28`,
-                        marginTop: '12px',
-                      }}>
-                        {isWork
-                          ? (STATUS_LABELS[entry.status] || entry.status)
-                          : (entry.destination || STATUS_LABELS[entry.status] || 'Received')}
-                      </span>
-                    </div>
-
-                    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-                      borderRadius: '8px', padding: '14px 18px' }}
-                    >
-                      {isWork ? (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '12px' }}>{CAT_ICONS[entry.category] || '🎭'}</span>
-                            <p style={{ fontSize: '13px', color: 'var(--text-0)', fontWeight: 600 }}>
-                              {entry.title}
+          // Threads view
+          <div>
+            {threadKeys.length === 0 && unthreaded.length === 0 ? (
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>
+                No constellations yet. Accept constellation suggestions in Atrium to create threads.
+              </p>
+            ) : (
+              <>
+                {threadKeys.map(constellation => {
+                  const sorted = [...threads[constellation]]
+                    .sort((a, b) => toDate(a.timestamp) - toDate(b.timestamp))
+                  return (
+                    <div key={constellation} style={{ marginBottom: '32px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px',
+                        marginBottom: '12px' }}>
+                        <p style={{ color: '#a07830', fontSize: '10px',
+                          letterSpacing: '0.1em', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          ✦ {constellation}
+                        </p>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--border-0)' }} />
+                        <p style={{ color: 'var(--text-6)', fontSize: '9px', whiteSpace: 'nowrap' }}>
+                          {sorted.length} signal{sorted.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {sorted.map((obs, i) => (
+                          <div key={obs.id} style={{
+                            background: 'var(--bg-2)',
+                            border: '1px solid var(--border-1)',
+                            borderLeft: '3px solid #a0783050',
+                            borderRadius: '0 8px 8px 0',
+                            padding: '12px 16px',
+                          }}>
+                            <p style={{ color: 'var(--text-6)', fontSize: '9px',
+                              letterSpacing: '0.08em', marginBottom: '4px' }}>
+                              {i === 0 ? 'FIRST SIGNAL' : `SIGNAL ${i + 1}`}
+                              {' · '}{formatDate(obs.timestamp)}
                             </p>
+                            <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.6 }}>
+                              {(obs.text?.length ?? 0) > 200
+                                ? obs.text.slice(0, 200) + '…'
+                                : (obs.text || '')}
+                            </p>
+                            {obs.destination && (
+                              <p style={{ color: 'var(--text-5)', fontSize: '10px', marginTop: '5px' }}>
+                                → {obs.destination}
+                              </p>
+                            )}
                           </div>
-                          {entry.notes && (
-                            <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6,
-                              maxHeight: '72px', overflow: 'hidden',
-                              maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-                            }}>{entry.notes}</p>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <p style={{ fontSize: '13px', color: 'var(--text-1)', lineHeight: 1.6,
-                            marginBottom: entry.constellation ? '8px' : 0 }}
-                          >
-                            {entry.text?.length > 200
-                              ? entry.text.slice(0, 200) + '…'
-                              : entry.text}
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {unthreaded.length > 0 && (
+                  <div style={{ marginBottom: '32px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px',
+                      marginBottom: '12px' }}>
+                      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                        textTransform: 'uppercase', fontWeight: 600 }}>Unthreaded</p>
+                      <div style={{ flex: 1, height: '1px', background: 'var(--border-0)' }} />
+                      <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>{unthreaded.length}</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {unthreaded.slice(0, 20).map(obs => (
+                        <div key={obs.id} style={{
+                          background: 'var(--bg-1)', border: '1px solid var(--border-0)',
+                          borderRadius: '8px', padding: '10px 14px',
+                        }}>
+                          <p style={{ color: 'var(--text-6)', fontSize: '9px', marginBottom: '3px' }}>
+                            {formatDate(obs.timestamp)}
                           </p>
-                          {entry.constellation && (
-                            <p style={{ fontSize: '10px', color: '#a07830' }}>
-                              {entry.constellation}
-                            </p>
-                          )}
-                        </>
+                          <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.5 }}>
+                            {(obs.text?.length ?? 0) > 140
+                              ? obs.text.slice(0, 140) + '…'
+                              : (obs.text || '')}
+                          </p>
+                        </div>
+                      ))}
+                      {unthreaded.length > 20 && (
+                        <p style={{ color: 'var(--text-5)', fontSize: '11px', padding: '4px 0' }}>
+                          +{unthreaded.length - 20} more unthreaded signals
+                        </p>
                       )}
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="shrink-0" style={{ borderTop: '1px solid var(--border-0)', padding: '14px 40px' }}>
+      <div className="shrink-0" style={{ borderTop: '1px solid var(--border-0)',
+        padding: '12px 40px' }}>
         <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>
-          Archive answers: what do we know? Constellations answer: what does it mean?
+          Lessons survive the people who learned them.
         </p>
       </div>
     </div>

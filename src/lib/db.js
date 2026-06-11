@@ -86,3 +86,20 @@ export async function createKELDecision(uid, data) {
     decidedAt:      serverTimestamp(),
   })
 }
+
+export function listenKELDecisions(uid, callback) {
+  const q = query(
+    collection(db, 'users', uid, 'kel_decisions'),
+    orderBy('decidedAt', 'desc')
+  )
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id: d.id,
+        decidedAt: data.decidedAt?.toDate?.() ?? new Date(),
+      }
+    }))
+  })
+}
