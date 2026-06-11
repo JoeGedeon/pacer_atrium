@@ -8,7 +8,7 @@ const PACER_ROOMS = [
   { id: 'content',   label: 'Theater',   icon: '🎬' },
   { id: 'fleetflow', label: 'FleetFlow', icon: '🚛' },
   { id: 'isles',     label: 'Isles',     icon: '🏝️' },
-  { id: 'archive',   label: 'Archive',   icon: '📚' },
+  { id: 'archive',   label: 'Archivist', icon: '📚' },
   { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
   { id: 'settings',  label: 'Settings',  icon: '⚙️', infra: true },
 ]
