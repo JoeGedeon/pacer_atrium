@@ -33,7 +33,7 @@ function formatDate(date) {
 const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
 function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
 
-export default function BusinessCenterRoom({ observations = [], graduates = [], builderStudioUnlocked = false, onEnterBuilderStudio, isMobile }) {
+export default function BusinessCenterRoom({ observations = [], graduates = [], builderReadiness = 'locked', onRequestBuilderReview, onEnterBuilderStudio, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
   const signals = observations
@@ -294,7 +294,7 @@ export default function BusinessCenterRoom({ observations = [], graduates = [], 
             }}>
               Evidence leaves.
             </p>
-            {builderStudioUnlocked ? (
+            {builderReadiness === 'approved' && (
               <button
                 onClick={onEnterBuilderStudio}
                 style={{
@@ -312,7 +312,25 @@ export default function BusinessCenterRoom({ observations = [], graduates = [], 
               >
                 Enter Builder Studio →
               </button>
-            ) : (
+            )}
+            {builderReadiness === 'pending' && (
+              <div style={{
+                display: 'inline-block',
+                border: '1px solid #3b82f640',
+                borderRadius: '6px',
+                padding: '10px 22px',
+                color: '#3b82f6',
+                fontSize: '11px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                cursor: 'default',
+                userSelect: 'none',
+              }}>
+                Under KEL Review
+              </div>
+            )}
+            {builderReadiness === 'locked' && (
               <div style={{
                 display: 'inline-block',
                 border: '1px solid var(--border-1)',
@@ -335,6 +353,39 @@ export default function BusinessCenterRoom({ observations = [], graduates = [], 
             }}>
               Graduation requires proof.
             </p>
+
+            {builderReadiness === 'locked' && (
+              <div style={{ marginTop: '20px', paddingTop: '20px',
+                borderTop: '1px solid var(--border-0)' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '11px',
+                  lineHeight: 1.65, marginBottom: '12px' }}>
+                  When the discipline is learned and a build proposal is ready,
+                  ask KEL to review readiness for Builder Studio.
+                </p>
+                <button
+                  onClick={onRequestBuilderReview}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--border-1)',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    color: 'var(--text-3)',
+                    fontSize: '11px',
+                    letterSpacing: '0.04em',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Request Builder Review
+                </button>
+              </div>
+            )}
+
+            {builderReadiness === 'pending' && (
+              <p style={{ color: 'var(--text-5)', fontSize: '11px',
+                lineHeight: 1.65, marginTop: '16px' }}>
+                A readiness review has been submitted to KEL. The forge opens when judgment confirms readiness.
+              </p>
+            )}
           </div>
         </div>
 
