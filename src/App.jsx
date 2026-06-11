@@ -302,7 +302,7 @@ export default function App() {
           />
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
-        {isDoctrine && <DoctrineRoom />}
+        {isDoctrine && <DoctrineRoom isMobile={isMobile} />}
         {isTheater  && <TheaterRoom graduates={graduates} isMobile={isMobile} />}
         {isBusinessCenter && (
           <BusinessCenterRoom
