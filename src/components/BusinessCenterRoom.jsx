@@ -160,7 +160,7 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
             </p>
             <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65,
               fontStyle: 'italic' }}>
-              Proof that the discipline survives contact with the field.
+              Proof that the discipline survives contact with reality.
             </p>
           </div>
 
