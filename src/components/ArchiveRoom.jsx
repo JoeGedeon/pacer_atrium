@@ -201,7 +201,7 @@ export default function ArchiveRoom({ observations = [], museWorks = [], uid, is
           College of Memory
         </p>
         <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
-          letterSpacing: '0.08em', marginBottom: '5px' }}>Archivist Hall</h2>
+          letterSpacing: '0.08em', marginBottom: '5px' }}>Archie Hall</h2>
         <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
           marginBottom: '12px' }}>
           The past is still speaking.
