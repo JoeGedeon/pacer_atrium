@@ -21,7 +21,7 @@ import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 import {
   listenObservations, createObservation, updateObservation,
-  listenMuseWorks, createKELDecision,
+  listenMuseWorks, createKELDecision, listenGraduates,
 } from './lib/db'
 
 async function migrateLocalStorage(uid) {
@@ -61,6 +61,7 @@ export default function App() {
   const [currentRoom, setCurrentRoom]             = useState('home')
   const [observations, setObservations]           = useState([])
   const [museWorks, setMuseWorks]                 = useState([])
+  const [graduates, setGraduates]                 = useState([])
   const [activeObservationId, setActiveObservationId] = useState(null)
   const [analyzingIds, setAnalyzingIds]           = useState(new Set())
   const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
@@ -78,7 +79,8 @@ export default function App() {
     migrateLocalStorage(user.uid)
     const unsubObs  = listenObservations(user.uid, setObservations)
     const unsubMuse = listenMuseWorks(user.uid, setMuseWorks)
-    return () => { unsubObs(); unsubMuse() }
+    const unsubGrad = listenGraduates(user.uid, setGraduates)
+    return () => { unsubObs(); unsubMuse(); unsubGrad() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -252,10 +254,11 @@ export default function App() {
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom />}
-        {isTheater  && <TheaterRoom isMobile={isMobile} />}
+        {isTheater  && <TheaterRoom graduates={graduates} isMobile={isMobile} />}
         {isBusinessCenter && (
           <BusinessCenterRoom
             observations={observations}
+            graduates={graduates}
             isMobile={isMobile}
           />
         )}

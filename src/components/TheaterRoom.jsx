@@ -25,7 +25,11 @@ const FLEETFLOW_ACTS = [
   { label: 'Act V',   title: 'The Next Builder', note: 'The door. Builder Studio. The empty plaque. The resident walking toward the forge.' },
 ]
 
-export default function TheaterRoom({ isMobile }) {
+const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
+
+function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
+
+export default function TheaterRoom({ graduates = [], isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
   return (
@@ -154,7 +158,42 @@ export default function TheaterRoom({ isMobile }) {
             </div>
           </div>
 
-          {/* Empty future slot */}
+          {/* Registry graduates (sequence > 1, or any future FleetFlow record) */}
+          {graduates.map(g => (
+            <div key={g.id} style={{
+              border: '1px solid var(--border-1)',
+              borderLeft: '3px solid #8b5cf6',
+              borderRadius: '0 10px 10px 0',
+              overflow: 'hidden',
+              marginBottom: '12px',
+            }}>
+              <div style={{ background: 'var(--bg-2)', padding: '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start',
+                  justifyContent: 'space-between', gap: '12px', marginBottom: '4px' }}>
+                  <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
+                    letterSpacing: '0.02em' }}>
+                    {g.productionTitle || `${g.graduateName}: ${ordinal(g.sequence)} Graduate`}
+                  </p>
+                  <span style={{
+                    flexShrink: 0,
+                    background: '#8b5cf615', border: '1px solid #8b5cf640',
+                    borderRadius: '4px', padding: '2px 8px',
+                    color: '#8b5cf6', fontSize: '9px', fontWeight: 600,
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                  }}>
+                    {g.evaluationStatus === 'active' ? 'Active' : 'In Development'}
+                  </span>
+                </div>
+                {g.tagline && (
+                  <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
+                    {g.tagline}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Empty slot — persists until next graduate earns a plaque */}
           <div style={{
             border: '1px dashed var(--border-0)',
             borderRadius: '10px',

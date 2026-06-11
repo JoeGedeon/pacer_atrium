@@ -103,3 +103,36 @@ export function listenKELDecisions(uid, callback) {
     }))
   })
 }
+
+// ── Graduate Registry — written only by Builder Studio, read everywhere ────────
+
+function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }
+
+export function listenGraduates(uid, callback) {
+  const q = query(gradColl(uid), orderBy('sequence', 'asc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id: d.id,
+        graduatedAt: data.graduatedAt?.toDate?.() ?? null,
+      }
+    }))
+  })
+}
+
+export async function createGraduate(uid, data) {
+  const ref = await addDoc(gradColl(uid), {
+    graduateName:      data.graduateName,
+    discipline:        data.discipline,
+    sequence:          data.sequence,
+    tagline:           data.tagline        || null,
+    proof:             data.proof          || null,
+    productionTitle:   data.productionTitle || null,
+    evaluationStatus:  data.evaluationStatus  || 'in_development',
+    transmissionStatus: data.transmissionStatus || 'pending',
+    graduatedAt:       serverTimestamp(),
+  })
+  return ref.id
+}

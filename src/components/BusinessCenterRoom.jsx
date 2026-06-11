@@ -30,7 +30,10 @@ function formatDate(date) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function BusinessCenterRoom({ observations = [], isMobile }) {
+const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
+function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
+
+export default function BusinessCenterRoom({ observations = [], graduates = [], isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
   const signals = observations
@@ -167,6 +170,31 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
               Proof that the discipline survives contact with reality.
             </p>
           </div>
+
+          {/* Additional graduate plaques from registry */}
+          {graduates.filter(g => g.sequence > 1).map(g => (
+            <div key={g.id} style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border-1)',
+              borderLeft: '3px solid #10b981',
+              borderRadius: '0 8px 8px 0',
+              padding: '16px 20px',
+              marginBottom: '12px',
+            }}>
+              <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
+                letterSpacing: '0.04em', marginBottom: '2px' }}>
+                {g.graduateName}
+              </p>
+              <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600,
+                letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                {ordinal(g.sequence)} Graduate
+              </p>
+              {g.proof && (
+                <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65,
+                  fontStyle: 'italic' }}>{g.proof}</p>
+              )}
+            </div>
+          ))}
 
           {/* FleetFlow-specific memory */}
           {signals.filter(o =>
