@@ -13,12 +13,14 @@ import TheaterRoom from './components/TheaterRoom'
 import MuseRoom from './components/MuseRoom'
 import VERARoom from './components/VERARoom'
 import ArchiveRoom from './components/ArchiveRoom'
+import KELRoom from './components/KELRoom'
+import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 import {
   listenObservations, createObservation, updateObservation,
-  listenMuseWorks,
+  listenMuseWorks, createKELDecision,
 } from './lib/db'
 
 async function migrateLocalStorage(uid) {
@@ -60,7 +62,7 @@ export default function App() {
   const [museWorks, setMuseWorks]                 = useState([])
   const [activeObservationId, setActiveObservationId] = useState(null)
   const [analyzingIds, setAnalyzingIds]           = useState(new Set())
-  const [apiKey] = useState(() => localStorage.getItem('pacer_api_key') || null)
+  const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
   const [showKeyGate, setShowKeyGate]             = useState(false)
 
   // Derived: merge Firestore data with ephemeral per-session analyzing state
@@ -117,8 +119,13 @@ export default function App() {
     setShowKeyGate(false)
     if (key) {
       localStorage.setItem('pacer_api_key', key)
-      window.location.reload()
+      setApiKey(key)
     }
+  }
+
+  async function recordKELDecision(decisionData) {
+    if (!user) return
+    await createKELDecision(user.uid, decisionData)
   }
 
   const isHome     = currentRoom === 'home'
@@ -128,6 +135,8 @@ export default function App() {
   const isMuse     = currentRoom === 'muse'
   const isVERA     = currentRoom === 'vera'
   const isArchive  = currentRoom === 'archive'
+  const isKEL      = currentRoom === 'kel'
+  const isSettings = currentRoom === 'settings'
 
   if (loading) {
     return (
@@ -242,8 +251,28 @@ export default function App() {
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} />}
         {isDoctrine && <DoctrineRoom />}
         {isTheater  && <TheaterRoom />}
+        {isKEL && (
+          <KELRoom
+            observations={observations}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            onDecision={recordKELDecision}
+            isMobile={isMobile}
+          />
+        )}
+        {isSettings && (
+          <SettingsRoom
+            user={user}
+            theme={theme}
+            onThemeChange={setTheme}
+            apiKey={apiKey}
+            onApiKeyChange={setApiKey}
+            onSignOut={signOut}
+            isMobile={isMobile}
+          />
+        )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
