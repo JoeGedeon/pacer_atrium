@@ -8,6 +8,15 @@ const CONSTITUTIONAL_PRINCIPLES = [
   },
 ]
 
+const CANDIDATE_PRINCIPLES = [
+  {
+    id: 'shake-the-tree',
+    text: 'What survives scrutiny is what marches.',
+    inConsideration: 'June 2026',
+    note: 'Rooted in thirty years of operational reality, the Marching 100 tradition, and the behavior of palm trees in Florida hurricanes. The weak preparation falls away. The excuses fall away. The inconsistency falls away. What remains is not declared worthy — it proves itself worthy by still being present. A principle earns the wall by surviving the shaking, not by being proclaimed from it. Currently in the shaking phase.',
+  },
+]
+
 const PRINCIPLES = [
   { id: 1,  text: 'Operational Honesty is when reality and the record match.',   tag: 'Foundation'   },
   { id: 2,  text: 'Execution requires human approval.',                           tag: 'Governance'   },
@@ -83,6 +92,7 @@ export default function DoctrineRoom({ isMobile }) {
         </p>
         <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
           {CONSTITUTIONAL_PRINCIPLES.length} constitutional
+          {' · '}{CANDIDATE_PRINCIPLES.length} candidate
           {' · '}{PRINCIPLES.length} principles
           {' · '}{CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}
         </p>
@@ -122,6 +132,52 @@ export default function DoctrineRoom({ isMobile }) {
               </div>
               <div style={{ background: 'var(--bg-1)', padding: '14px 20px' }}>
                 <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.7 }}>
+                  {p.note}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Candidate Principles — in the shaking phase */}
+      <section style={{ maxWidth: '600px', marginBottom: '40px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+          Candidate Principles
+        </p>
+        <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic',
+          marginBottom: '16px' }}>
+          In the shaking phase. Not yet ratified. Not yet on the wall.
+        </p>
+        <div className="flex flex-col gap-4">
+          {CANDIDATE_PRINCIPLES.map(p => (
+            <div key={p.id} style={{
+              border: '1px dashed var(--border-1)',
+              borderLeft: '3px dashed var(--border-1)',
+              borderRadius: '0 10px 10px 0',
+              overflow: 'hidden',
+            }}>
+              <div style={{ background: 'var(--bg-1)', padding: '16px 20px',
+                borderBottom: '1px solid var(--border-0)' }}>
+                <div style={{ display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', fontWeight: 600,
+                    letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                    Candidate
+                  </p>
+                  <span style={{ color: 'var(--text-6)', fontSize: '9px',
+                    letterSpacing: '0.08em', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    In consideration since {p.inConsideration}
+                  </span>
+                </div>
+                <p style={{ color: 'var(--text-2)', fontSize: '13px', fontWeight: 500,
+                  lineHeight: 1.6, fontStyle: 'italic' }}>
+                  {p.text}
+                </p>
+              </div>
+              <div style={{ background: 'var(--bg-0)', padding: '14px 20px' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
                   {p.note}
                 </p>
               </div>
