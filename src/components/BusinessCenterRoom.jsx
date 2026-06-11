@@ -234,6 +234,62 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
           </p>
         </div>
 
+        {/* Builder Studio — the door at the back */}
+        <div style={{
+          maxWidth: '540px',
+          marginTop: '48px',
+          paddingTop: '36px',
+          borderTop: '1px solid var(--border-0)',
+        }}>
+          <div style={{
+            border: '1px solid var(--border-1)',
+            borderRadius: '10px',
+            padding: '28px 28px 24px',
+            background: 'var(--bg-1)',
+            textAlign: 'center',
+          }}>
+            <p style={{
+              color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.2em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '16px',
+            }}>
+              Builder Studio
+            </p>
+            <p style={{
+              color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8,
+              marginBottom: '4px',
+            }}>
+              Knowledge enters.
+            </p>
+            <p style={{
+              color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8,
+              marginBottom: '24px',
+            }}>
+              Evidence leaves.
+            </p>
+            <div style={{
+              display: 'inline-block',
+              border: '1px solid var(--border-1)',
+              borderRadius: '6px',
+              padding: '10px 22px',
+              color: 'var(--text-5)',
+              fontSize: '11px',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              cursor: 'default',
+              userSelect: 'none',
+            }}>
+              Door Closed
+            </div>
+            <p style={{
+              color: 'var(--text-6)', fontSize: '10px',
+              marginTop: '18px', fontStyle: 'italic',
+            }}>
+              Graduation requires proof.
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   )
