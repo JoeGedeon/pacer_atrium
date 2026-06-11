@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FleetFlow Doctrine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root,
+  [data-theme="light"] {
+    --ink:    #0E0E0E;
+    --paper:  #F7F4EE;
+    --rule:   #C8B89A;
+    --gold:   #8B6914;
+    --dim:    #6B6050;
+    --accent: #1C3A1C;
+    --toggle-bg: transparent;
+    --toggle-border: #C8B89A;
+  }
+
+  [data-theme="dark"] {
+    --ink:    #F0EDE6;
+    --paper:  #111111;
+    --rule:   #333333;
+    --gold:   #D4AF37;
+    --dim:    #A09080;
+    --accent: #7FBF7F;
+    --toggle-bg: transparent;
+    --toggle-border: #333333;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  /* Theme toggle button */
+  .theme-toggle {
+    background: var(--toggle-bg);
+    border: 1px solid var(--toggle-border);
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 1px;
+    padding: 5px 11px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .theme-toggle:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 80px 32px 120px;
+  }
+
+  /* ── HEADER ── */
+  .masthead {
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 28px 0 20px;
+    margin-bottom: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .masthead-left {}
+  .wordmark {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .doctrine-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+  .masthead-right {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--dim);
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* ── OPENING ── */
+  .opening {
+    margin-bottom: 72px;
+  }
+  .opening-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .opening-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 38pt;
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--ink);
+    margin-bottom: 32px;
+    letter-spacing: -0.5px;
+  }
+  .opening-body {
+    font-size: 11pt;
+    color: var(--dim);
+    line-height: 1.85;
+    max-width: 520px;
+  }
+  .opening-list {
+    margin: 20px 0 20px 0;
+    padding: 0;
+    list-style: none;
+  }
+  .opening-list li {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10pt;
+    color: var(--ink);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: 0.3px;
+  }
+  .opening-list li:first-child { border-top: 1px solid var(--rule); }
+  .closing-line {
+    font-size: 11pt;
+    color: var(--dim);
+    font-style: italic;
+    margin-top: 20px;
+  }
+
+  /* ── PRINCIPLES ── */
+  .principles { margin-bottom: 72px; }
+
+  .principle {
+    padding: 40px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .principle:last-child { border-bottom: 1px solid var(--rule); }
+
+  .principle-marker {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .principle-rule {
+    width: 32px;
+    height: 2px;
+    background: var(--gold);
+    flex-shrink: 0;
+  }
+  .principle-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .principle-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26pt;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+
+  .principle-body {
+    font-size: 10.5pt;
+    color: var(--dim);
+    line-height: 1.85;
+    margin-bottom: 16px;
+  }
+
+  .principle-emphasis {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10pt;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin: 20px 0 8px;
+  }
+
+  .principle-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9pt;
+    color: var(--dim);
+    line-height: 2;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── ACQUISITION LOOP ── */
+  .loop {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 20px 0;
+  }
+  .loop-step {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9pt;
+    color: var(--ink);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .loop-arrow {
+    font-size: 10pt;
+    color: var(--rule);
+    margin: 0 8px;
+  }
+
+  /* ── BELIEFS ── */
+  .beliefs {
+    margin-bottom: 72px;
+    padding: 40px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .beliefs-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+  }
+  .belief {
+    display: flex;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px dotted var(--rule);
+    align-items: baseline;
+  }
+  .belief:first-of-type { border-top: 1px dotted var(--rule); }
+  .belief-mark {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--gold);
+    flex-shrink: 0;
+    width: 16px;
+    margin-top: 2px;
+  }
+  .belief-text {
+    font-size: 10.5pt;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 3px solid var(--ink);
+    padding-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .footer-left {}
+  .footer-version {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .footer-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+  .footer-right {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--dim);
+    text-align: right;
+    line-height: 1.8;
+  }
+  .footer-seal {
+    font-size: 18pt;
+    margin-top: 8px;
+    letter-spacing: 4px;
+  }
+
+  /* ── LOCKED BADGE ── */
+  .locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+  .locked::before {
+    content: '▪';
+    font-size: 6pt;
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 48px 20px 80px; }
+    .opening-headline { font-size: 28pt; }
+    .principle-title { font-size: 22pt; }
+    .masthead { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .footer { flex-direction: column; gap: 20px; }
+    .loop { gap: 0; }
+  }
+
+  @media print {
+    body { background: white; }
+    .page { padding: 40px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div class="masthead-left">
+      <div class="wordmark">FleetFlow</div>
+      <div class="doctrine-label">Doctrine — Version 1</div>
+    </div>
+    <div class="masthead-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+      <button class="theme-toggle" data-pacer-toggle onclick="PACERTheme.toggle()" aria-label="Toggle theme">◑ Dark</button>
+      <div>
+        JPG Ventures LLC<br>
+        Stone Mountain, Georgia<br>
+        June 2026
+      </div>
+    </div>
+  </div>
+
+  <!-- OPENING -->
+  <div class="opening">
+    <div class="opening-eyebrow">Why FleetFlow Exists</div>
+    <h1 class="opening-headline">Reality keeps<br>score.</h1>
+    <p class="opening-body">
+      FleetFlow exists to help moving companies see what reality already knows.
+    </p>
+    <ul class="opening-list">
+      <li>Missed charges.</li>
+      <li>Lost revenue.</li>
+      <li>Operational blind spots.</li>
+      <li>Work that happened but never made it to the invoice.</li>
+    </ul>
+    <p class="closing-line">
+      Reality keeps score whether we record it or not.
+    </p>
+  </div>
+
+  <!-- PRINCIPLES -->
+  <div class="principles">
+
+    <div class="principle">
+      <div class="principle-marker">
+        <div class="principle-rule"></div>
+        <div class="principle-label">Principle 1</div>
+      </div>
+      <h2 class="principle-title">Reality Gets a Vote</h2>
+      <p class="principle-body">
+        Assumptions do not matter.<br>
+        Opinions do not matter.<br>
+        Reality gets a vote.
+      </p>
+      <p class="principle-body">
+        Every move, every invoice, every charge, every exception produces evidence.
+      </p>
+      <span class="principle-emphasis">The evidence decides.</span>
+    </div>
+
+    <div class="principle">
+      <div class="principle-marker">
+        <div class="principle-rule"></div>
+        <div class="principle-label">Principle 2</div>
+      </div>
+      <h2 class="principle-title">Show Me One Job</h2>
+      <p class="principle-body">
+        Do not start with a sales pitch.<br>
+        Do not start with a demo.<br>
+        Do not start with a subscription.
+      </p>
+      <span class="principle-emphasis">Start with reality.</span>
+      <p class="principle-body" style="margin-top:16px;">
+        Show me one job. One move. One invoice. One operational story.
+      </p>
+      <p class="principle-body">
+        If FleetFlow cannot survive one real job, it does not deserve the next one.
+      </p>
+    </div>
+
+    <div class="principle">
+      <div class="principle-marker">
+        <div class="principle-rule"></div>
+        <div class="principle-label">Principle 3</div>
+      </div>
+      <h2 class="principle-title">The Acquisition Loop</h2>
+      <p class="principle-body">
+        Trust is earned before software is adopted.
+      </p>
+      <div class="loop">
+        <span class="loop-step">Content</span>
+        <span class="loop-arrow">→</span>
+        <span class="loop-step">Conversation</span>
+        <span class="loop-arrow">→</span>
+        <span class="loop-step">One Job</span>
+        <span class="loop-arrow">→</span>
+        <span class="loop-step">Trust</span>
+        <span class="loop-arrow">→</span>
+        <span class="loop-step">Pilot</span>
+        <span class="loop-arrow">→</span>
+        <span class="loop-step">Subscription</span>
+      </div>
+      <p class="principle-body" style="margin-top:16px;">
+        The goal is not to collect leads.<br>
+        The goal is to understand reality.
+      </p>
+      <span class="principle-emphasis">
+        The subscription is the result of trust, not the beginning of it.
+      </span>
+    </div>
+
+  </div>
+
+  <!-- BELIEFS -->
+  <div class="beliefs">
+    <div class="beliefs-eyebrow">What FleetFlow Believes</div>
+
+    <div class="belief"><span class="belief-mark">◆</span><span class="belief-text">Everyone remembers the work. Nobody remembers the invoice.</span></div>
+    <div class="belief"><span class="belief-mark">◆</span><span class="belief-text">Operational mistakes compound.</span></div>
+    <div class="belief"><span class="belief-mark">◆</span><span class="belief-text">Visibility prevents loss.</span></div>
+    <div class="belief"><span class="belief-mark">◆</span><span class="belief-text">Reality keeps score.</span></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-version">FleetFlow Doctrine v1</div>
+      <div class="footer-status">Written · Locked · Ready to Test</div>
+      <div class="locked">Doctrine — Three Principles</div>
+    </div>
+    <div class="footer-right">
+      <div>Next Build Target</div>
+      <div style="color:var(--ink);font-weight:600;margin-top:4px">Use "Show me one job"<br>five times. Record the votes.</div>
+      <div class="footer-seal">🍍📦💰</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── PACER THEME SYSTEM (inline for single-file use) ──
+const PACERTheme = (() => {
+  const KEY = 'pacer-theme';
+  const ATTR = 'data-theme';
+  const ROOT = document.documentElement;
+
+  function systemPref() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function saved() { try { return localStorage.getItem(KEY); } catch(e) { return null; } }
+  function save(t) { try { localStorage.setItem(KEY, t); } catch(e) {} }
+
+  function apply(theme) {
+    ROOT.setAttribute(ATTR, theme);
+    document.querySelectorAll('[data-pacer-toggle]').forEach(btn => {
+      btn.textContent = theme === 'dark' ? '☀ Light' : '◑ Dark';
+    });
+    window.dispatchEvent(new CustomEvent('pacer-theme-change', { detail: { theme } }));
+  }
+
+  function init() {
+    const theme = saved() || systemPref();
+    apply(theme);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (!saved()) apply(e.matches ? 'dark' : 'light');
+    });
+  }
+
+  function toggle() {
+    const next = (ROOT.getAttribute(ATTR) || 'light') === 'dark' ? 'light' : 'dark';
+    save(next); apply(next); return next;
+  }
+
+  function get() { return ROOT.getAttribute(ATTR) || 'light'; }
+  function set(t) { save(t); apply(t); }
+
+  return { init, toggle, get, set };
+})();
+
+PACERTheme.init();
+</script>
+</body>
+</html>
