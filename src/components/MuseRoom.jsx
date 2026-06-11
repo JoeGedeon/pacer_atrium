@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createMuseWork, updateMuseWork } from '../lib/db'
 
 const CATEGORIES = [
   { id: 'music',         label: 'Music',        icon: '🎵' },
@@ -40,67 +41,74 @@ const CONSTELLATIONS = [
   { a: 'Crossing the Bridge', b: 'Theater',   note: 'story finds its stage' },
 ]
 
-function loadWorks() {
-  try {
-    return JSON.parse(localStorage.getItem('muse_works') || '[]').map(w => ({
-      ...w,
-      createdAt: new Date(w.createdAt),
-      // migrate old premiered boolean to status string
-      status: w.status || (w.premiered ? 'opening_night' : 'shaping'),
-    }))
-  } catch { return [] }
-}
-
-function tilt(seed, i) {
-  return (((seed + i) % 7) - 3) * 0.55
-}
-
 function nextStatus(current) {
   const idx = LIFECYCLE_IDS.indexOf(current)
   return idx < LIFECYCLE_IDS.length - 1 ? LIFECYCLE_IDS[idx + 1] : current
 }
 
-export default function MuseRoom({ observations = [], onSurface }) {
-  const [works, setWorks]           = useState(loadWorks)
-  const [activeWork, setActiveWork] = useState(null)
-  const [draft, setDraft]           = useState({ title: '', category: 'characters' })
-  const [adding, setAdding]         = useState(false)
-  const [surfaced, setSurfaced]     = useState(new Set())
+export default function MuseRoom({ observations = [], works = [], uid, onSurface }) {
+  const [activeWork, setActiveWork]   = useState(null)
+  const [draft, setDraft]             = useState({ title: '', category: 'characters' })
+  const [adding, setAdding]           = useState(false)
+  const [surfaced, setSurfaced]       = useState(new Set())
+  const [pendingActiveId, setPendingActiveId] = useState(null)
 
-  useEffect(() => {
-    try { localStorage.setItem('muse_works', JSON.stringify(works)) } catch {}
-  }, [works])
+  // Local notes state — avoids cursor-reset from Firestore round-trips while typing
+  const [editNotes, setEditNotes]     = useState('')
+  const [notesWorkId, setNotesWorkId] = useState(null)
 
+  // Keep activeWork in sync with incoming Firestore updates
   useEffect(() => {
+    if (pendingActiveId) {
+      const w = works.find(w => w.id === pendingActiveId)
+      if (w) { setActiveWork(w); setPendingActiveId(null) }
+      return
+    }
     if (!activeWork) return
     const updated = works.find(w => w.id === activeWork.id)
     if (updated) setActiveWork(updated)
-  }, [works]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [works, pendingActiveId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function addWork() {
-    if (!draft.title.trim()) return
-    const w = {
-      id: Date.now(),
-      title: draft.title.trim(),
-      category: draft.category,
-      notes: '',
-      status: 'shaping',
-      createdAt: new Date(),
+  // Sync local notes when the active work changes
+  useEffect(() => {
+    if (activeWork?.id !== notesWorkId) {
+      setEditNotes(activeWork?.notes || '')
+      setNotesWorkId(activeWork?.id || null)
     }
-    setWorks(prev => [w, ...prev])
-    setActiveWork(w)
+  }, [activeWork?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function addWork() {
+    if (!draft.title.trim() || !uid) return
+    const id = await createMuseWork(uid, {
+      title:    draft.title.trim(),
+      category: draft.category,
+      notes:    '',
+      status:   'shaping',
+    })
+    setPendingActiveId(id)
     setDraft({ title: '', category: 'characters' })
     setAdding(false)
   }
 
-  function updateNotes(id, notes) {
-    setWorks(prev => prev.map(w => w.id === id ? { ...w, notes } : w))
+  function handleNotesChange(e) {
+    setEditNotes(e.target.value)
   }
 
-  function advance(id) {
-    setWorks(prev => prev.map(w =>
-      w.id === id ? { ...w, status: nextStatus(w.status) } : w
-    ))
+  function handleNotesBlur() {
+    if (uid && notesWorkId) {
+      updateMuseWork(uid, notesWorkId, { notes: editNotes }).catch(console.error)
+    }
+  }
+
+  async function advance(id) {
+    if (!uid) return
+    const work = works.find(w => w.id === id)
+    if (!work) return
+    await updateMuseWork(uid, id, { status: nextStatus(work.status) })
+  }
+
+  function tilt(seed, i) {
+    return (((seed.charCodeAt(0) + i) % 7) - 3) * 0.55
   }
 
   const signals   = observations.slice(0, 14)
@@ -111,10 +119,9 @@ export default function MuseRoom({ observations = [], onSurface }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
-      {/* ── Three panels ─────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* LEFT WING — arriving signals, intentionally messy */}
+        {/* LEFT WING */}
         <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
           style={{ width: '210px', borderRight: '1px solid var(--border-0)' }}
         >
@@ -155,14 +162,13 @@ export default function MuseRoom({ observations = [], onSurface }) {
           )}
         </div>
 
-        {/* CENTER STAGE — dominant, like an easel */}
+        {/* CENTER STAGE */}
         <div className="flex-1 flex flex-col overflow-hidden"
           style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-0)' }}
         >
           {activeWork ? (
             <div className="flex flex-col flex-1 px-12 py-10 overflow-y-auto">
 
-              {/* Work header */}
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
@@ -173,7 +179,6 @@ export default function MuseRoom({ observations = [], onSurface }) {
                   >{activeWork.title}</h2>
                 </div>
 
-                {/* Lifecycle action button */}
                 {nextStage ? (
                   <button onClick={() => advance(activeWork.id)} style={{
                     fontSize: '11px', padding: '7px 16px', borderRadius: '8px', fontWeight: 500,
@@ -223,14 +228,15 @@ export default function MuseRoom({ observations = [], onSurface }) {
                 })}
               </div>
 
-              {/* Studio notes */}
+              {/* Studio notes — local state; write to Firestore on blur */}
               <div style={{ flex: 1 }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', marginBottom: '12px' }}
                 >Studio Notes</p>
                 <textarea
-                  value={activeWork.notes}
-                  onChange={e => updateNotes(activeWork.id, e.target.value)}
+                  value={editNotes}
+                  onChange={handleNotesChange}
+                  onBlur={handleNotesBlur}
                   placeholder="What's taking shape here?"
                   className="w-full resize-none outline-none"
                   style={{
@@ -256,7 +262,7 @@ export default function MuseRoom({ observations = [], onSurface }) {
           )}
         </div>
 
-        {/* RIGHT WING — works in progress, increasingly organized */}
+        {/* RIGHT WING */}
         <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
           style={{ width: '250px', background: 'var(--bg-0)' }}
         >
@@ -319,8 +325,8 @@ export default function MuseRoom({ observations = [], onSurface }) {
                 >{cat.icon} {cat.label}</p>
                 <div className="flex flex-col gap-0.5">
                   {catWorks.map(w => {
-                    const glyph = STATUS_GLYPHS[w.status] || ''
-                    const color = STATUS_COLORS[w.status] || 'var(--text-2)'
+                    const glyph    = STATUS_GLYPHS[w.status] || ''
+                    const color    = STATUS_COLORS[w.status] || 'var(--text-2)'
                     const isActive = activeWork?.id === w.id
                     return (
                       <button key={w.id} onClick={() => setActiveWork(w)}
@@ -349,7 +355,7 @@ export default function MuseRoom({ observations = [], onSurface }) {
         </div>
       </div>
 
-      {/* BACK WALL — constellations Muse noticed */}
+      {/* BACK WALL */}
       <div className="shrink-0" style={{
         borderTop: '1px solid var(--border-0)',
         background: 'var(--bg-0)',
@@ -367,8 +373,8 @@ export default function MuseRoom({ observations = [], onSurface }) {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 28px' }}>
           {CONSTELLATIONS.map((c, i) => {
-            const key    = `${c.a}↔${c.b}`
-            const done   = surfaced.has(key)
+            const key  = `${c.a}⇔${c.b}`
+            const done = surfaced.has(key)
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span style={{ color: done ? 'var(--text-5)' : 'var(--text-2)', fontSize: '11px' }}>{c.a}</span>
@@ -381,7 +387,7 @@ export default function MuseRoom({ observations = [], onSurface }) {
                   ) : (
                     <button onClick={() => {
                       onSurface({
-                        text: `Connection noticed: ${c.a} ↔ ${c.b} — ${c.note}.`,
+                        text: `Connection noticed: ${c.a} ⇔ ${c.b} — ${c.note}.`,
                         type: 'text',
                         constellation: null,
                         source: 'Muse Back Wall',
@@ -400,7 +406,7 @@ export default function MuseRoom({ observations = [], onSurface }) {
         </div>
       </div>
 
-      {/* BOTTOM — discovery, not project management */}
+      {/* BOTTOM */}
       <div className="shrink-0" style={{
         borderTop: '1px solid var(--border-0)',
         padding: '14px 28px',

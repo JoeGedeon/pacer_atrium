@@ -16,16 +16,38 @@ import ArchiveRoom from './components/ArchiveRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
+import {
+  listenObservations, createObservation, updateObservation,
+  listenMuseWorks,
+} from './lib/db'
 
-function loadObservations() {
+async function migrateLocalStorage(uid) {
+  const flagKey = `pacer_migrated_${uid}`
+  if (localStorage.getItem(flagKey)) return
   try {
-    return JSON.parse(localStorage.getItem('pacer_observations') || '[]').map(o => ({
-      ...o,
-      timestamp: new Date(o.timestamp),
-    }))
-  } catch {
-    return []
+    const raw = localStorage.getItem('pacer_observations')
+    if (raw) {
+      const local = JSON.parse(raw).map(o => ({ ...o, timestamp: new Date(o.timestamp) }))
+      for (const obs of [...local].reverse()) {
+        await createObservation(uid, {
+          text:          obs.text,
+          type:          obs.type,
+          storageUrl:    obs.storageUrl    || null,
+          constellation: obs.constellation || null,
+          source:        obs.source        || null,
+          status:        obs.status        || 'received',
+          destination:   obs.destination   || null,
+          claude:        obs.claude        || null,
+          claudeError:   obs.claudeError   || null,
+          timestamp:     obs.timestamp,
+        })
+      }
+      localStorage.removeItem('pacer_observations')
+    }
+  } catch (e) {
+    console.error('[PACER migration]', e)
   }
+  localStorage.setItem(flagKey, '1')
 }
 
 export default function App() {
@@ -33,58 +55,62 @@ export default function App() {
   const { user, loading, signIn, signUp, signOut } = useAuth()
   const isMobile = useIsMobile()
 
-  const [currentRoom, setCurrentRoom] = useState('home')
-  const [observations, setObservations] = useState(loadObservations)
-  const [activeObservation, setActiveObservation] = useState(null)
+  const [currentRoom, setCurrentRoom]             = useState('home')
+  const [observations, setObservations]           = useState([])
+  const [museWorks, setMuseWorks]                 = useState([])
+  const [activeObservationId, setActiveObservationId] = useState(null)
+  const [analyzingIds, setAnalyzingIds]           = useState(new Set())
   const [apiKey] = useState(() => localStorage.getItem('pacer_api_key') || null)
-  const [showKeyGate, setShowKeyGate] = useState(false)
+  const [showKeyGate, setShowKeyGate]             = useState(false)
 
+  // Derived: merge Firestore data with ephemeral per-session analyzing state
+  const _active = observations.find(o => o.id === activeObservationId) || null
+  const activeObservation = _active
+    ? { ..._active, analyzing: analyzingIds.has(_active.id) }
+    : null
+
+  // Start Firestore listeners once we know the user
   useEffect(() => {
-    try {
-      localStorage.setItem('pacer_observations', JSON.stringify(observations))
-    } catch { /* storage full */ }
-  }, [observations])
-
-  function patchObservation(id, patch) {
-    setObservations(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o))
-    setActiveObservation(prev => prev?.id === id ? { ...prev, ...patch } : prev)
-  }
+    if (!user) return
+    migrateLocalStorage(user.uid)
+    const unsubObs  = listenObservations(user.uid, setObservations)
+    const unsubMuse = listenMuseWorks(user.uid, setMuseWorks)
+    return () => { unsubObs(); unsubMuse() }
+  }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
-    const id = Date.now()
-    const entry = {
-      id,
-      text: obs.text,
-      type: obs.type,
-      storageUrl: obs.storageUrl || null,
+    const id = await createObservation(user.uid, {
+      text:          obs.text,
+      type:          obs.type,
+      storageUrl:    obs.storageUrl    || null,
       constellation: obs.constellation || null,
-      source: obs.source || null,
-      timestamp: new Date(),
-      status: 'received',
-      destination: null,
-      analyzing: !!apiKey && obs.type !== 'image',
-      claude: null,
-      claudeError: null,
-    }
-    setObservations(prev => [entry, ...prev])
-    setActiveObservation(entry)
+      source:        obs.source        || null,
+      status:        'received',
+      destination:   null,
+      claude:        null,
+      claudeError:   null,
+    })
+    setActiveObservationId(id)
 
-    if (apiKey) {
+    if (apiKey && obs.type !== 'image') {
+      setAnalyzingIds(prev => new Set([...prev, id]))
       try {
         const result = await analyzeObservation(obs.text, apiKey)
-        patchObservation(id, { analyzing: false, claude: result })
+        await updateObservation(user.uid, id, { claude: result })
       } catch (e) {
-        patchObservation(id, { analyzing: false, claudeError: e.message })
+        await updateObservation(user.uid, id, { claudeError: e.message })
+      } finally {
+        setAnalyzingIds(prev => { const s = new Set(prev); s.delete(id); return s })
       }
     }
   }
 
-  function routeObservation(id, destination) {
-    patchObservation(id, { destination, status: 'routed' })
+  async function routeObservation(id, destination) {
+    await updateObservation(user.uid, id, { destination, status: 'routed' })
   }
 
-  function acceptConstellation(id, constellation) {
-    patchObservation(id, { constellation })
+  async function acceptConstellation(id, constellation) {
+    await updateObservation(user.uid, id, { constellation })
   }
 
   function handleApiKey(key) {
@@ -144,7 +170,6 @@ export default function App() {
         />
       )}
 
-      {/* Room area — on mobile, sits above the fixed bottom nav */}
       <div style={{
         flex: 1,
         display: 'flex',
@@ -160,13 +185,12 @@ export default function App() {
 
         {isAtrium && (
           <>
-            {/* On mobile: show stream OR detail, not both side-by-side */}
             {(!isMobile || !activeObservation) && (
               <ObservationStream
                 observations={observations}
                 onSubmit={submitObservation}
                 activeObservation={activeObservation}
-                onSelectObservation={setActiveObservation}
+                onSelectObservation={obs => setActiveObservationId(obs.id)}
                 uid={user?.uid}
                 isMobile={isMobile}
               />
@@ -182,14 +206,14 @@ export default function App() {
                   onRequestApiKey={() => setShowKeyGate(true)}
                   uid={user?.uid}
                   isMobile={isMobile}
-                  onBack={isMobile ? () => setActiveObservation(null) : null}
+                  onBack={isMobile ? () => setActiveObservationId(null) : null}
                 />
               )
               : (
                 !isMobile && (
                   <AtriumDashboard
                     observations={observations}
-                    onSelectObservation={setActiveObservation}
+                    onSelectObservation={obs => setActiveObservationId(obs.id)}
                   />
                 )
               )
@@ -197,9 +221,25 @@ export default function App() {
           </>
         )}
 
-        {isMuse     && <MuseRoom observations={observations} onSurface={submitObservation} isMobile={isMobile} />}
-        {isVERA     && <VERARoom observations={observations} apiKey={apiKey} onConnectClaude={() => setShowKeyGate(true)} isMobile={isMobile} />}
-        {isArchive  && <ArchiveRoom observations={observations} />}
+        {isMuse && (
+          <MuseRoom
+            observations={observations}
+            works={museWorks}
+            uid={user?.uid}
+            onSurface={submitObservation}
+            isMobile={isMobile}
+          />
+        )}
+        {isVERA && (
+          <VERARoom
+            observations={observations}
+            museWorks={museWorks}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            isMobile={isMobile}
+          />
+        )}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} />}
         {isDoctrine && <DoctrineRoom />}
         {isTheater  && <TheaterRoom />}
 

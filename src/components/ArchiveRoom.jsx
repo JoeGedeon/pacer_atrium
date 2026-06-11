@@ -1,12 +1,3 @@
-function loadMuseWorks() {
-  try {
-    return JSON.parse(localStorage.getItem('muse_works') || '[]').map(w => ({
-      ...w,
-      createdAt: new Date(w.createdAt),
-      _source: 'muse',
-    }))
-  } catch { return [] }
-}
 
 function formatDate(date) {
   if (!date) return ''
@@ -43,8 +34,8 @@ const CAT_ICONS = {
   productions:   '🎬',
 }
 
-export default function ArchiveRoom({ observations = [] }) {
-  const works = loadMuseWorks().filter(
+export default function ArchiveRoom({ observations = [], museWorks = [] }) {
+  const works = museWorks.filter(
     w => w.status === 'published_memory' || w.status === 'opening_night'
   )
 
