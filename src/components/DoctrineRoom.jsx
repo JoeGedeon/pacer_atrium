@@ -15,6 +15,12 @@ const CANDIDATE_PRINCIPLES = [
     inConsideration: 'June 2026',
     note: 'Rooted in thirty years of operational reality, the Marching 100 tradition, and the behavior of palm trees in Florida hurricanes. The weak preparation falls away. The excuses fall away. The inconsistency falls away. What remains is not declared worthy — it proves itself worthy by still being present. A principle earns the wall by surviving the shaking, not by being proclaimed from it. Currently in the shaking phase.',
   },
+  {
+    id: 'three-filters',
+    text: 'Survive the storm. Survive the shake. Produce a consequence.',
+    inConsideration: 'June 2026',
+    note: 'Three independent domains — Florida hurricane resilience, FAMU tree-shaking culture, and repository consequence discipline — converged on the same filtering pattern without coordination. The pattern appears recurrent rather than invented. What passes all three filters probably belongs. What passes long enough probably earns the wall. The order matters: resilience first, then scrutiny, then consequence. Future builders may challenge the sequence. Good. Let them.',
+  },
 ]
 
 const PRINCIPLES = [
@@ -47,6 +53,20 @@ const CANONIZATIONS = [
     note: 'A FleetFlow incident, an Isles character, a Doctrine principle, a song, a patent, a business strategy — all move through the same six states. The lifecycle is not navigation. It is evolution. No state may be skipped. No new states may be added without a canonization decision. These six are sufficient because each represents a fundamentally different condition of existence.',
     closing: ['One lifecycle.', 'All content.'],
     realm: 'PACER University',
+  },
+  {
+    id: 'campus-rule-001',
+    title: 'PACER Campus Rule #001 — Infrastructure Is Declared Once',
+    fields: [
+      { label: 'Rule',    value: 'Infrastructure is declared once. Behavior is inherited everywhere.' },
+      { label: 'Layer 1', value: 'Campus Infrastructure — declares reality (theme, auth, nav, design tokens)' },
+      { label: 'Layer 2', value: 'Buildings — rooms inherit, they do not reinvent' },
+      { label: 'Layer 3', value: 'Standalone Artifacts — may carry inline theme when disconnected from campus' },
+      { label: 'Status',  value: 'Locked · In Force' },
+    ],
+    note: 'Authentication, navigation, theme, and institutional state are campus responsibilities. Rooms consume them. Rooms do not recreate them. A room that defines its own theme engine has admitted a raccoon to the server closet.',
+    closing: ['Rooms consume.', 'Rooms do not recreate.'],
+    realm: 'PACER Campus',
   },
   {
     id: 'aiziano-canon',

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PACER Campus Rule #001</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root,
+  [data-theme="light"] {
+    --ink:    #0E0E0E;
+    --paper:  #F7F4EE;
+    --rule:   #C8B89A;
+    --gold:   #8B6914;
+    --dim:    #6B6050;
+    --accent: #1C3A1C;
+    --warn:   #7A2020;
+    --toggle-border: #C8B89A;
+  }
+
+  [data-theme="dark"] {
+    --ink:    #F0EDE6;
+    --paper:  #111111;
+    --rule:   #333333;
+    --gold:   #D4AF37;
+    --dim:    #A09080;
+    --accent: #7FBF7F;
+    --warn:   #BF6060;
+    --toggle-border: #333333;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid var(--toggle-border);
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 1px;
+    padding: 5px 11px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .theme-toggle:hover { color: var(--ink); border-color: var(--ink); }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 80px 32px 120px;
+  }
+
+  .masthead {
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 28px 0 20px;
+    margin-bottom: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .wordmark {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .doc-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+  .masthead-right {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--dim);
+    text-align: right;
+    line-height: 1.8;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .opening { margin-bottom: 64px; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 34pt;
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--ink);
+    margin-bottom: 28px;
+    letter-spacing: -0.5px;
+  }
+  .body-text {
+    font-size: 10.5pt;
+    color: var(--dim);
+    line-height: 1.85;
+    margin-bottom: 16px;
+  }
+
+  .rule-block {
+    padding: 40px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .rule-block:last-of-type { border-bottom: 1px solid var(--rule); }
+
+  .rule-marker {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .rule-bar { width: 32px; height: 2px; background: var(--gold); flex-shrink: 0; }
+  .rule-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .rule-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22pt;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+
+  .emphasis {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10pt;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin: 20px 0 8px;
+  }
+
+  /* Layer table */
+  .layer-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  .layer-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-align: left;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .layer-table td {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9pt;
+    color: var(--dim);
+    padding: 10px 0;
+    border-bottom: 1px dotted var(--rule);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .layer-table td:first-child { color: var(--ink); font-weight: 600; width: 30%; padding-right: 16px; }
+  .layer-table td:last-child { color: var(--dim); width: 40%; }
+
+  /* Warning block */
+  .warning {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-left: 3px solid var(--warn);
+    background: transparent;
+  }
+  .warning-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--warn);
+    margin-bottom: 8px;
+  }
+  .warning-text {
+    font-size: 10pt;
+    color: var(--dim);
+    line-height: 1.7;
+  }
+
+  /* Code blocks */
+  .code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9pt;
+    color: var(--accent);
+    background: transparent;
+    padding: 2px 0;
+  }
+
+  /* Checklist */
+  .checklist { list-style: none; margin: 20px 0; }
+  .checklist li {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5pt;
+    color: var(--ink);
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--rule);
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .checklist li:first-child { border-top: 1px dotted var(--rule); }
+  .checklist li::before { content: '✓'; color: var(--accent); flex-shrink: 0; }
+
+  .do-not { list-style: none; margin: 20px 0; }
+  .do-not li {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5pt;
+    color: var(--dim);
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--rule);
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .do-not li:first-child { border-top: 1px dotted var(--rule); }
+  .do-not li::before { content: '✗'; color: var(--warn); flex-shrink: 0; }
+
+  .footer {
+    border-top: 3px solid var(--ink);
+    padding-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-top: 72px;
+  }
+  .footer-version {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .footer-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--dim);
+  }
+  .footer-right {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8pt;
+    color: var(--dim);
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  .locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+  .locked::before { content: '▪'; font-size: 6pt; }
+
+  @media (max-width: 600px) {
+    .page { padding: 48px 20px 80px; }
+    .headline { font-size: 26pt; }
+    .masthead { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .footer { flex-direction: column; gap: 20px; }
+    .layer-table td:last-child { display: none; }
+  }
+
+  @media print {
+    body { background: white; }
+    .page { padding: 40px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div>
+      <div class="wordmark">PACER Campus</div>
+      <div class="doc-label">Build Standards — Rule #001</div>
+    </div>
+    <div class="masthead-right">
+      <button class="theme-toggle" data-pacer-toggle onclick="PACERTheme.toggle()" aria-label="Toggle theme">◑ Dark</button>
+      <div>
+        JPG Ventures LLC<br>
+        Internal Reference<br>
+        June 2026
+      </div>
+    </div>
+  </div>
+
+  <!-- OPENING -->
+  <div class="opening">
+    <div class="eyebrow">Campus Build Standard</div>
+    <h1 class="headline">Infrastructure<br>is declared once.</h1>
+    <p class="body-text">
+      Behavior is inherited everywhere.
+    </p>
+    <p class="body-text">
+      This rule governs how shared systems are structured across the PACER campus.
+      It applies to theme engines, authentication, navigation, shared state, and design tokens.
+      It applies to every room, every building, and every artifact that is part of this institution.
+    </p>
+  </div>
+
+  <!-- LAYER ARCHITECTURE -->
+  <div class="rule-block">
+    <div class="rule-marker">
+      <div class="rule-bar"></div>
+      <div class="rule-label">The Three Layers</div>
+    </div>
+    <h2 class="rule-title">Campus, Buildings, Artifacts</h2>
+    <p class="body-text">
+      Every component of the campus belongs to exactly one layer.
+      Each layer has a defined relationship to shared infrastructure.
+    </p>
+
+    <table class="layer-table">
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Owns</th>
+          <th>Rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Campus Infrastructure</td>
+          <td>pacer-theme.js, authentication, navigation, shared state, design tokens</td>
+          <td>Declares reality. Does not inherit.</td>
+        </tr>
+        <tr>
+          <td>Buildings (Rooms)</td>
+          <td>Atrium, Archivist Hall, Business Center, Theater, future colleges</td>
+          <td>Inherits from campus. Does not reinvent.</td>
+        </tr>
+        <tr>
+          <td>Standalone Artifacts</td>
+          <td>Doctrine PDFs, exported reports, printable manifestos, offline documents</td>
+          <td>Carries inline copies of required infrastructure. Expected to survive disconnected from campus.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- THEME RULE -->
+  <div class="rule-block">
+    <div class="rule-marker">
+      <div class="rule-bar"></div>
+      <div class="rule-label">Applied to Theme</div>
+    </div>
+    <h2 class="rule-title">One Theme Engine.<br>Two Deployment Modes.</h2>
+
+    <span class="emphasis">Campus buildings:</span>
+    <ul class="checklist">
+      <li>Load <span class="code">&lt;script src="/pacer-theme.js"&gt;&lt;/script&gt;</span> from campus root</li>
+      <li>Add <span class="code">data-pacer-toggle</span> attribute to any toggle button</li>
+      <li>Do not define local theme variables or a competing toggle function</li>
+    </ul>
+
+    <span class="emphasis">Standalone artifacts:</span>
+    <ul class="checklist">
+      <li>Carry an inline copy of PACERTheme in a <span class="code">&lt;script&gt;</span> block</li>
+      <li>May be opened without any campus infrastructure present</li>
+      <li>Do not link to external <span class="code">pacer-theme.js</span></li>
+    </ul>
+
+    <div class="warning">
+      <div class="warning-label">The Raccoon Warning</div>
+      <div class="warning-text">
+        A room that defines its own theme engine has admitted a raccoon to the server closet.
+        The damage is slow, incremental, and entirely preventable.
+        When discovered, remove the competing engine immediately.
+        Do not negotiate with the raccoon.
+      </div>
+    </div>
+
+    <span class="emphasis">Never do this:</span>
+    <ul class="do-not">
+      <li>Load both inline and external pacer-theme.js on the same page</li>
+      <li>Define a RoomTheme, LocalTheme, or PageTheme in any building</li>
+      <li>Create a "special dark mode" for one room</li>
+      <li>Merge the inline and external versions into one "universal" file</li>
+    </ul>
+  </div>
+
+  <!-- THE DEEPER PRINCIPLE -->
+  <div class="rule-block">
+    <div class="rule-marker">
+      <div class="rule-bar"></div>
+      <div class="rule-label">Why This Rule Exists</div>
+    </div>
+    <h2 class="rule-title">The Pattern Runs<br>Through Everything</h2>
+    <p class="body-text">
+      The Blue Pineapple is not recreated in every room.
+      The institution defines hospitality. The rooms inherit it.
+    </p>
+    <p class="body-text">
+      Doctrine is not rewritten for every building.
+      The institution defines reality. The rooms inherit it.
+    </p>
+    <p class="body-text">
+      The theme engine is not rewritten for every room.
+      The institution defines appearance. The rooms inherit it.
+    </p>
+    <span class="emphasis">Same pattern. Different layer.</span>
+    <p class="body-text" style="margin-top:16px;">
+      Six months from now, a future builder will be tempted to define a special
+      dark mode for one room because it seemed easier in the moment.
+      This document exists to name that temptation clearly
+      and explain why it leads to six months of nonsense afterward.
+    </p>
+    <p class="body-text">
+      Infrastructure is declared once.
+      Behavior is inherited everywhere.
+      The institution teaches this.
+      The rooms practice it.
+    </p>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>
+      <div class="footer-version">PACER Campus Rule #001</div>
+      <div class="footer-status">Written · Locked · In Force</div>
+      <div class="locked">Build Standards</div>
+    </div>
+    <div class="footer-right">
+      Internal reference<br>
+      Not for distribution<br>
+      <span style="color:var(--ink);font-weight:600;">JPG Ventures LLC</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── PACER THEME SYSTEM (inline for single-file use) ──
+const PACERTheme = (() => {
+  const KEY = 'pacer-theme';
+  const ATTR = 'data-theme';
+  const ROOT = document.documentElement;
+
+  function systemPref() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function saved() { try { return localStorage.getItem(KEY); } catch(e) { return null; } }
+  function save(t) { try { localStorage.setItem(KEY, t); } catch(e) {} }
+
+  function apply(theme) {
+    ROOT.setAttribute(ATTR, theme);
+    document.querySelectorAll('[data-pacer-toggle]').forEach(btn => {
+      btn.textContent = theme === 'dark' ? '☀ Light' : '◑ Dark';
+    });
+    window.dispatchEvent(new CustomEvent('pacer-theme-change', { detail: { theme } }));
+  }
+
+  function init() {
+    const theme = saved() || systemPref();
+    apply(theme);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (!saved()) apply(e.matches ? 'dark' : 'light');
+    });
+  }
+
+  function toggle() {
+    const next = (ROOT.getAttribute(ATTR) || 'light') === 'dark' ? 'light' : 'dark';
+    save(next); apply(next); return next;
+  }
+
+  function get() { return ROOT.getAttribute(ATTR) || 'light'; }
+  function set(t) { save(t); apply(t); }
+
+  return { init, toggle, get, set };
+})();
+
+PACERTheme.init();
+</script>
+</body>
+</html>
