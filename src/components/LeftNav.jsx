@@ -4,12 +4,13 @@ const PACER_ROOMS = [
   { id: 'atrium',    label: 'Atrium',    icon: '🍍' },
   { id: 'muse',      label: 'Muse',      icon: '🎭' },
   { id: 'vera',      label: 'VERA',      icon: '✨', infra: true },
-  { id: 'kel',       label: 'KEL',       icon: '⚙️', infra: true },
+  { id: 'kel',       label: 'KEL',       icon: '◎',  infra: true },
   { id: 'content',   label: 'Theater',   icon: '🎬' },
   { id: 'fleetflow', label: 'FleetFlow', icon: '🚛' },
   { id: 'isles',     label: 'Isles',     icon: '🏝️' },
   { id: 'archive',   label: 'Archive',   icon: '📚' },
   { id: 'doctrine',  label: 'Doctrine',  icon: '📜' },
+  { id: 'settings',  label: 'Settings',  icon: '⚙️', infra: true },
 ]
 
 export default function LeftNav({
@@ -99,7 +100,6 @@ export default function LeftNav({
       </ul>
 
       <div className="mt-auto px-3 flex flex-col gap-3">
-        <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
         <button
           onClick={() => onSelect('home')}
           className="text-xs text-left"
@@ -108,32 +108,13 @@ export default function LeftNav({
           ⌂ Command Center
         </button>
         {!hasApiKey && (
-          <div>
-            <button
-              onClick={onConnectClaude}
-              className="text-xs text-left"
-              style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0,
-                display: 'block', marginBottom: '2px' }}
-            >
-              ✦ Connect Claude
-            </button>
-            <p className="text-xs" style={{ color: 'var(--text-6)', fontSize: '9px' }}>
-              Stored only on this device.
-            </p>
-          </div>
-        )}
-        {user && (
-          <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '10px' }}>
-            <p className="text-xs" style={{ color: 'var(--text-6)', marginBottom: '4px',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-            >{user.email}</p>
-            <button
-              onClick={onSignOut}
-              className="text-xs"
-              style={{ background: 'none', border: 'none', color: 'var(--text-4)',
-                cursor: 'pointer', padding: 0 }}
-            >Sign out</button>
-          </div>
+          <button
+            onClick={onConnectClaude}
+            className="text-xs text-left"
+            style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0 }}
+          >
+            ✦ Connect Claude
+          </button>
         )}
         <p className="text-xs" style={{ color: 'var(--text-6)' }}>
           v0.7 · Atrium

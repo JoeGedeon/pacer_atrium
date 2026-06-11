@@ -72,3 +72,17 @@ export async function createMuseWork(uid, data) {
 export async function updateMuseWork(uid, id, patch) {
   await updateDoc(doc(db, 'users', uid, 'muse_works', id), patch)
 }
+
+// ── KEL Decisions — written by App, never by KEL ─────────────────────────────
+
+export async function createKELDecision(uid, data) {
+  await addDoc(collection(db, 'users', uid, 'kel_decisions'), {
+    recommendation: data.recommendation,
+    reasoning:      data.reasoning,
+    domain:         data.domain,
+    confidence:     data.confidence ?? null,
+    cited:          data.cited      ?? [],
+    decision:       data.decision,
+    decidedAt:      serverTimestamp(),
+  })
+}
