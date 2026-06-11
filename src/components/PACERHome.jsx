@@ -14,8 +14,17 @@ export default function PACERHome({ onEnter, observationCount }) {
           PACER
         </h1>
 
-        <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '52px' }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '32px' }}>
           There is room. Come in.
+        </p>
+
+        <p style={{
+          color: 'var(--text-6)', fontSize: '12px', lineHeight: 1.8,
+          fontStyle: 'italic', marginBottom: '40px',
+          borderTop: '1px solid var(--border-0)', borderBottom: '1px solid var(--border-0)',
+          padding: '16px 0',
+        }}>
+          How do we preserve what matters while moving it forward?
         </p>
 
         <div className="flex flex-col gap-3">
@@ -48,8 +57,8 @@ export default function PACERHome({ onEnter, observationCount }) {
             <div className="flex items-center gap-4">
               <span style={{ fontSize: '20px' }}>📚</span>
               <div>
-                <p className="text-sm" style={{ color: 'var(--text-2)', marginBottom: '4px' }}>Enter Archive</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-5)' }}>Preserved observations</p>
+                <p className="text-sm" style={{ color: 'var(--text-2)', marginBottom: '4px' }}>Archivist Hall</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-5)' }}>Memory and institutional record</p>
               </div>
             </div>
           </button>
