@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTheme } from './hooks/useTheme'
 import { useAuth } from './hooks/useAuth'
 import { useIsMobile } from './hooks/useIsMobile'
@@ -23,6 +23,7 @@ import { analyzeObservation } from './lib/claudeRouting'
 import {
   listenObservations, createObservation, updateObservation,
   listenMuseWorks, createKELDecision, listenGraduates,
+  createKELReview, listenKELReviews, updateKELReview,
 } from './lib/db'
 
 async function migrateLocalStorage(uid) {
@@ -67,9 +68,15 @@ export default function App() {
   const [analyzingIds, setAnalyzingIds]           = useState(new Set())
   const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
   const [showKeyGate, setShowKeyGate]             = useState(false)
-  const [builderReadiness, setBuilderReadiness]   = useState(
-    () => localStorage.getItem('pacer_builder_readiness') || 'locked'
-  )
+  const [kelReviews, setKelReviews]               = useState([])
+
+  // Builder readiness derives from the ledger — not from local state
+  const builderReadiness = useMemo(() => {
+    const reviews = kelReviews.filter(r => r.requestType === 'builder_readiness')
+    if (reviews.some(r => r.status === 'approved')) return 'approved'
+    if (reviews.some(r => r.status === 'pending'))  return 'pending'
+    return 'locked'
+  }, [kelReviews])
 
   // Derived: merge Firestore data with ephemeral per-session analyzing state
   const _active = observations.find(o => o.id === activeObservationId) || null
@@ -81,10 +88,11 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     migrateLocalStorage(user.uid)
-    const unsubObs  = listenObservations(user.uid, setObservations)
-    const unsubMuse = listenMuseWorks(user.uid, setMuseWorks)
-    const unsubGrad = listenGraduates(user.uid, setGraduates)
-    return () => { unsubObs(); unsubMuse(); unsubGrad() }
+    const unsubObs     = listenObservations(user.uid, setObservations)
+    const unsubMuse    = listenMuseWorks(user.uid, setMuseWorks)
+    const unsubGrad    = listenGraduates(user.uid, setGraduates)
+    const unsubReviews = listenKELReviews(user.uid, setKelReviews)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -136,14 +144,18 @@ export default function App() {
   }
 
   function requestBuilderReview() {
-    localStorage.setItem('pacer_builder_readiness', 'pending')
-    setBuilderReadiness('pending')
+    if (builderReadiness !== 'locked') return  // already pending or approved
+    createKELReview(user.uid, { requestType: 'builder_readiness' })
   }
 
-  // Called by KEL when a builder readiness decision is approved — no other path
-  function approveBuilderStudio() {
-    localStorage.setItem('pacer_builder_readiness', 'approved')
-    setBuilderReadiness('approved')
+  // Called by KEL only — no other path opens the forge
+  async function approveKELReview(id) {
+    await updateKELReview(user.uid, id, { status: 'approved', reviewedBy: user.uid })
+  }
+
+  // No silent denials — rationale required
+  async function denyKELReview(id, rationale) {
+    await updateKELReview(user.uid, id, { status: 'denied', rationale, reviewedBy: user.uid })
   }
 
   const isHome     = currentRoom === 'home'
@@ -290,6 +302,9 @@ export default function App() {
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             onDecision={recordKELDecision}
+            kelReviews={kelReviews}
+            onApproveReview={approveKELReview}
+            onDenyReview={denyKELReview}
             isMobile={isMobile}
           />
         )}

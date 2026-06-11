@@ -104,6 +104,45 @@ export function listenKELDecisions(uid, callback) {
   })
 }
 
+// ── KEL Review Ledger — institutional review records, not observation decisions ─
+
+function kelReviewColl(uid) { return collection(db, 'users', uid, 'kel_reviews') }
+
+export async function createKELReview(uid, data) {
+  const ref = await addDoc(kelReviewColl(uid), {
+    requestType: data.requestType,
+    status:      'pending',
+    residentId:  uid,
+    rationale:   null,
+    reviewedBy:  null,
+    reviewedAt:  null,
+    createdAt:   serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function listenKELReviews(uid, callback) {
+  const q = query(kelReviewColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id: d.id,
+        createdAt:  data.createdAt?.toDate?.()  ?? new Date(),
+        reviewedAt: data.reviewedAt?.toDate?.() ?? null,
+      }
+    }))
+  })
+}
+
+export async function updateKELReview(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'kel_reviews', id), {
+    ...patch,
+    reviewedAt: serverTimestamp(),
+  })
+}
+
 // ── Graduate Registry — written only by Builder Studio, read everywhere ────────
 
 function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }
