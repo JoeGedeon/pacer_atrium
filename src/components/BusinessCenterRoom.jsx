@@ -30,7 +30,10 @@ function formatDate(date) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function BusinessCenterRoom({ observations = [], isMobile }) {
+const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
+function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
+
+export default function BusinessCenterRoom({ observations = [], graduates = [], builderReadiness = 'locked', onRequestBuilderReview, onEnterBuilderStudio, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
   const signals = observations
@@ -150,9 +153,13 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
             padding: '16px 20px',
             marginBottom: '20px',
           }}>
-            <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 700,
-              letterSpacing: '0.04em', marginBottom: '8px' }}>
-              FleetFlow — First Graduate
+            <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
+              letterSpacing: '0.04em', marginBottom: '2px' }}>
+              FleetFlow
+            </p>
+            <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600,
+              letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '12px' }}>
+              First Graduate
             </p>
             <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7,
               marginBottom: '6px' }}>
@@ -163,6 +170,31 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
               Proof that the discipline survives contact with reality.
             </p>
           </div>
+
+          {/* Additional graduate plaques from registry */}
+          {graduates.filter(g => g.sequence > 1).map(g => (
+            <div key={g.id} style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border-1)',
+              borderLeft: '3px solid #10b981',
+              borderRadius: '0 8px 8px 0',
+              padding: '16px 20px',
+              marginBottom: '12px',
+            }}>
+              <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
+                letterSpacing: '0.04em', marginBottom: '2px' }}>
+                {g.graduateName}
+              </p>
+              <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600,
+                letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                {ordinal(g.sequence)} Graduate
+              </p>
+              {g.proof && (
+                <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65,
+                  fontStyle: 'italic' }}>{g.proof}</p>
+              )}
+            </div>
+          ))}
 
           {/* FleetFlow-specific memory */}
           {signals.filter(o =>
@@ -228,6 +260,133 @@ export default function BusinessCenterRoom({ observations = [], isMobile }) {
           <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '10px' }}>
             Business Center teaches. FleetFlow executes. The gateway is where they meet.
           </p>
+        </div>
+
+        {/* Builder Studio — the door at the back */}
+        <div style={{
+          maxWidth: '540px',
+          marginTop: '48px',
+          paddingTop: '36px',
+          borderTop: '1px solid var(--border-0)',
+        }}>
+          <div style={{
+            border: '1px solid var(--border-1)',
+            borderRadius: '10px',
+            padding: '28px 28px 24px',
+            background: 'var(--bg-1)',
+            textAlign: 'center',
+          }}>
+            <p style={{
+              color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.2em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '16px',
+            }}>
+              Builder Studio
+            </p>
+            <p style={{
+              color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8,
+              marginBottom: '4px',
+            }}>
+              Knowledge enters.
+            </p>
+            <p style={{
+              color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8,
+              marginBottom: '24px',
+            }}>
+              Evidence leaves.
+            </p>
+            {builderReadiness === 'approved' && (
+              <button
+                onClick={onEnterBuilderStudio}
+                style={{
+                  display: 'inline-block',
+                  background: '#1a0a00',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '10px 22px',
+                  color: '#f59e0b',
+                  fontSize: '12px',
+                  letterSpacing: '0.06em',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Enter Builder Studio →
+              </button>
+            )}
+            {builderReadiness === 'pending' && (
+              <div style={{
+                display: 'inline-block',
+                border: '1px solid #3b82f640',
+                borderRadius: '6px',
+                padding: '10px 22px',
+                color: '#3b82f6',
+                fontSize: '11px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                cursor: 'default',
+                userSelect: 'none',
+              }}>
+                Under KEL Review
+              </div>
+            )}
+            {builderReadiness === 'locked' && (
+              <div style={{
+                display: 'inline-block',
+                border: '1px solid var(--border-1)',
+                borderRadius: '6px',
+                padding: '10px 22px',
+                color: 'var(--text-5)',
+                fontSize: '11px',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                cursor: 'default',
+                userSelect: 'none',
+              }}>
+                Door Closed
+              </div>
+            )}
+            <p style={{
+              color: 'var(--text-6)', fontSize: '10px',
+              marginTop: '18px', fontStyle: 'italic',
+            }}>
+              Graduation requires proof.
+            </p>
+
+            {builderReadiness === 'locked' && (
+              <div style={{ marginTop: '20px', paddingTop: '20px',
+                borderTop: '1px solid var(--border-0)' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '11px',
+                  lineHeight: 1.65, marginBottom: '12px' }}>
+                  When the discipline is learned and a build proposal is ready,
+                  ask KEL to review readiness for Builder Studio.
+                </p>
+                <button
+                  onClick={onRequestBuilderReview}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--border-1)',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    color: 'var(--text-3)',
+                    fontSize: '11px',
+                    letterSpacing: '0.04em',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Request Builder Review
+                </button>
+              </div>
+            )}
+
+            {builderReadiness === 'pending' && (
+              <p style={{ color: 'var(--text-5)', fontSize: '11px',
+                lineHeight: 1.65, marginTop: '16px' }}>
+                A readiness review has been submitted to KEL. The forge opens when judgment confirms readiness.
+              </p>
+            )}
+          </div>
         </div>
 
       </div>

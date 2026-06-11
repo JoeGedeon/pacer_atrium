@@ -15,13 +15,14 @@ import VERARoom from './components/VERARoom'
 import ArchiveRoom from './components/ArchiveRoom'
 import KELRoom from './components/KELRoom'
 import BusinessCenterRoom from './components/BusinessCenterRoom'
+import BuilderStudioRoom from './components/BuilderStudioRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 import {
   listenObservations, createObservation, updateObservation,
-  listenMuseWorks, createKELDecision,
+  listenMuseWorks, createKELDecision, listenGraduates,
 } from './lib/db'
 
 async function migrateLocalStorage(uid) {
@@ -61,10 +62,14 @@ export default function App() {
   const [currentRoom, setCurrentRoom]             = useState('home')
   const [observations, setObservations]           = useState([])
   const [museWorks, setMuseWorks]                 = useState([])
+  const [graduates, setGraduates]                 = useState([])
   const [activeObservationId, setActiveObservationId] = useState(null)
   const [analyzingIds, setAnalyzingIds]           = useState(new Set())
   const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
   const [showKeyGate, setShowKeyGate]             = useState(false)
+  const [builderReadiness, setBuilderReadiness]   = useState(
+    () => localStorage.getItem('pacer_builder_readiness') || 'locked'
+  )
 
   // Derived: merge Firestore data with ephemeral per-session analyzing state
   const _active = observations.find(o => o.id === activeObservationId) || null
@@ -78,7 +83,8 @@ export default function App() {
     migrateLocalStorage(user.uid)
     const unsubObs  = listenObservations(user.uid, setObservations)
     const unsubMuse = listenMuseWorks(user.uid, setMuseWorks)
-    return () => { unsubObs(); unsubMuse() }
+    const unsubGrad = listenGraduates(user.uid, setGraduates)
+    return () => { unsubObs(); unsubMuse(); unsubGrad() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -129,6 +135,17 @@ export default function App() {
     await createKELDecision(user.uid, decisionData)
   }
 
+  function requestBuilderReview() {
+    localStorage.setItem('pacer_builder_readiness', 'pending')
+    setBuilderReadiness('pending')
+  }
+
+  // Called by KEL when a builder readiness decision is approved — no other path
+  function approveBuilderStudio() {
+    localStorage.setItem('pacer_builder_readiness', 'approved')
+    setBuilderReadiness('approved')
+  }
+
   const isHome     = currentRoom === 'home'
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
@@ -138,6 +155,7 @@ export default function App() {
   const isArchive  = currentRoom === 'archive'
   const isKEL            = currentRoom === 'kel'
   const isBusinessCenter = currentRoom === 'businesscenter'
+  const isBuilderStudio  = currentRoom === 'builderstudio'
   const isSettings       = currentRoom === 'settings'
 
   if (loading) {
@@ -252,12 +270,19 @@ export default function App() {
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom />}
-        {isTheater  && <TheaterRoom />}
+        {isTheater  && <TheaterRoom graduates={graduates} isMobile={isMobile} />}
         {isBusinessCenter && (
           <BusinessCenterRoom
             observations={observations}
+            graduates={graduates}
+            builderReadiness={builderReadiness}
+            onRequestBuilderReview={requestBuilderReview}
+            onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             isMobile={isMobile}
           />
+        )}
+        {isBuilderStudio && (
+          <BuilderStudioRoom isMobile={isMobile} />
         )}
         {isKEL && (
           <KELRoom
@@ -280,7 +305,7 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
