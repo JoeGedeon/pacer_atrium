@@ -21,6 +21,12 @@ const CANDIDATE_PRINCIPLES = [
     inConsideration: 'June 2026',
     note: 'Three independent domains — Florida hurricane resilience, FAMU tree-shaking culture, and repository consequence discipline — converged on the same filtering pattern without coordination. The pattern appears recurrent rather than invented. What passes all three filters probably belongs. What passes long enough probably earns the wall. The order matters: resilience first, then scrutiny, then consequence. Future builders may challenge the sequence. Good. Let them.',
   },
+  {
+    id: 'declared-observed',
+    text: 'Declared State is what was intended. Observed State is what exists. Governance is the comparison between them.',
+    inConsideration: 'June 2026',
+    note: 'The gap between Declared State and Observed State is where governance begins. Without observation, intention becomes assumption. Without declaration, observation becomes noise. Institutions endure by continuously reconciling the two. A missing toggle, a missed invoice, an orphaned principle — the mechanism is the same at every scale. Recognizing the gap is governance. Restoring it is execution. Recording why it disappeared is memory. Preventing it from disappearing again is institutional learning. PACER\'s entire architecture is an attempt to perform this comparison continuously.',
+  },
 ]
 
 const PRINCIPLES = [

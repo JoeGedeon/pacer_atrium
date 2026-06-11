@@ -14,8 +14,12 @@ export default function PACERHome({ onEnter, observationCount }) {
           PACER
         </h1>
 
-        <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '32px' }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '6px' }}>
           There is room. Come in.
+        </p>
+
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', marginBottom: '32px' }}>
+          Come in with respect.
         </p>
 
         <p style={{
