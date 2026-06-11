@@ -8,9 +8,6 @@ const MUSE_CONSTELLATIONS = [
   { a: 'Crossing the Bridge', b: 'Theater',   note: 'story finds its stage' },
 ]
 
-function loadMuseWorks() {
-  try { return JSON.parse(localStorage.getItem('muse_works') || '[]') } catch { return [] }
-}
 
 const PANEL = {
   background: 'var(--bg-0)',
@@ -32,14 +29,13 @@ const PANEL_HEADER = {
   marginBottom: '16px',
 }
 
-export default function VERARoom({ observations = [], apiKey, onConnectClaude, isMobile }) {
+export default function VERARoom({ observations = [], museWorks = [], apiKey, onConnectClaude, isMobile }) {
   const [patterns,  setPatterns]  = useState(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState(null)
   const hasAnalyzed = useRef(false)
 
   const { byConstellation, byTheme, remaining } = clusterObservations(observations)
-  const museWorks      = loadMuseWorks()
   const obsConstellations = Object.keys(byConstellation)
 
   useEffect(() => {
