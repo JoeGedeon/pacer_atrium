@@ -1,3 +1,4 @@
+// Future: graduate creation must call createGraduate, which emits graduate_added institutional event.
 export default function BuilderStudioRoom({ isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 

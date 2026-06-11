@@ -104,6 +104,70 @@ export function listenKELDecisions(uid, callback) {
   })
 }
 
+// ── KEL Review Ledger — institutional review records, not observation decisions ─
+
+function kelReviewColl(uid) { return collection(db, 'users', uid, 'kel_reviews') }
+
+export async function createKELReview(uid, data) {
+  const ref = await addDoc(kelReviewColl(uid), {
+    requestType: data.requestType,
+    status:      'pending',
+    residentId:  uid,
+    rationale:   null,
+    reviewedBy:  null,
+    reviewedAt:  null,
+    createdAt:   serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function listenKELReviews(uid, callback) {
+  const q = query(kelReviewColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id: d.id,
+        createdAt:  data.createdAt?.toDate?.()  ?? new Date(),
+        reviewedAt: data.reviewedAt?.toDate?.() ?? null,
+      }
+    }))
+  })
+}
+
+export async function updateKELReview(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'kel_reviews', id), {
+    ...patch,
+    reviewedAt: serverTimestamp(),
+  })
+}
+
+// ── Institution Events — witnesses to governance decisions ────────────────────
+
+function eventColl(uid) { return collection(db, 'users', uid, 'institution_events') }
+
+export async function createInstitutionEvent(uid, data) {
+  await addDoc(eventColl(uid), {
+    eventType:       data.eventType,
+    title:           data.title,
+    description:     data.description     || null,
+    actor:           data.actor           || uid,
+    relatedEntityId: data.relatedEntityId || null,
+    createdAt:       serverTimestamp(),
+  })
+}
+
+export function listenInstitutionEvents(uid, callback) {
+  const q = query(eventColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return { ...data, id: d.id, createdAt: data.createdAt?.toDate?.() ?? new Date() }
+    }))
+  })
+}
+
 // ── Graduate Registry — written only by Builder Studio, read everywhere ────────
 
 function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }
@@ -124,15 +188,22 @@ export function listenGraduates(uid, callback) {
 
 export async function createGraduate(uid, data) {
   const ref = await addDoc(gradColl(uid), {
-    graduateName:      data.graduateName,
-    discipline:        data.discipline,
-    sequence:          data.sequence,
-    tagline:           data.tagline        || null,
-    proof:             data.proof          || null,
-    productionTitle:   data.productionTitle || null,
-    evaluationStatus:  data.evaluationStatus  || 'in_development',
+    graduateName:       data.graduateName,
+    discipline:         data.discipline,
+    sequence:           data.sequence,
+    tagline:            data.tagline            || null,
+    proof:              data.proof              || null,
+    productionTitle:    data.productionTitle    || null,
+    evaluationStatus:   data.evaluationStatus   || 'in_development',
     transmissionStatus: data.transmissionStatus || 'pending',
-    graduatedAt:       serverTimestamp(),
+    graduatedAt:        serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'graduate_added',
+    title:           `${data.graduateName} added to Graduate Registry`,
+    description:     'A new graduate has earned a plaque.',
+    actor:           uid,
+    relatedEntityId: ref.id,
   })
   return ref.id
 }

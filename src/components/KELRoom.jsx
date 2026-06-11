@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import { requestKELRecommendation } from '../lib/kelAnalysis'
 
+const REQUEST_LABELS = { builder_readiness: 'Builder Readiness' }
+
+function timeAgo(date) {
+  if (!date) return ''
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000)
+  if (mins < 1)   return 'just now'
+  if (mins < 60)  return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)   return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
 const DOMAIN_COLORS = {
   'FleetFlow':              '#3b82f6',
   'Isles of the Awakening': '#10b981',
@@ -12,12 +24,17 @@ const DOMAIN_COLORS = {
 function domainColor(d) { return DOMAIN_COLORS[d] || '#4b5563' }
 
 export default function KELRoom({
-  observations = [], apiKey, onConnectClaude, onDecision, isMobile,
+  observations = [], apiKey, onConnectClaude, onDecision,
+  kelReviews = [], onApproveReview, onDenyReview, isMobile,
 }) {
-  const [rec,       setRec]       = useState(null)
-  const [reading,   setReading]   = useState(false)
-  const [kelError,  setKelError]  = useState(null)
-  const [decided,   setDecided]   = useState(null)
+  const [rec,          setRec]          = useState(null)
+  const [reading,      setReading]      = useState(false)
+  const [kelError,     setKelError]     = useState(null)
+  const [decided,      setDecided]      = useState(null)
+  const [denyingId,    setDenyingId]    = useState(null)
+  const [denyRationale, setDenyRationale] = useState('')
+
+  const pendingReviews = kelReviews.filter(r => r.status === 'pending')
 
   const validObs = observations.filter(o => o.text && typeof o.text === 'string')
   const canRead  = !!apiKey && validObs.length >= 2
@@ -65,6 +82,110 @@ export default function KELRoom({
       </div>
 
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-6' : 'px-10'} py-8`}>
+
+        {/* Pending Reviews — institutional ledger */}
+        {pendingReviews.length > 0 && (
+          <div style={{ maxWidth: '560px', marginBottom: '36px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
+              Pending Reviews
+            </p>
+            <div className="flex flex-col gap-3">
+              {pendingReviews.map(review => (
+                <div key={review.id} style={{
+                  background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                  borderLeft: '3px solid #3b82f6', borderRadius: '0 8px 8px 0',
+                  padding: '14px 18px',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <div>
+                      <p style={{ color: 'var(--text-2)', fontSize: '12px',
+                        fontWeight: 600, marginBottom: '2px' }}>
+                        {REQUEST_LABELS[review.requestType] ?? review.requestType}
+                      </p>
+                      <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+                        {timeAgo(review.createdAt)}
+                      </p>
+                    </div>
+                    <span style={{
+                      background: '#3b82f615', border: '1px solid #3b82f640',
+                      borderRadius: '4px', padding: '2px 8px',
+                      color: '#3b82f6', fontSize: '9px', fontWeight: 600,
+                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                    }}>Pending</span>
+                  </div>
+
+                  {denyingId === review.id ? (
+                    <div>
+                      <p style={{ color: 'var(--text-4)', fontSize: '11px',
+                        marginBottom: '8px' }}>
+                        Rationale required before denial is recorded.
+                      </p>
+                      <textarea
+                        value={denyRationale}
+                        onChange={e => setDenyRationale(e.target.value)}
+                        placeholder="Why is this request denied?"
+                        rows={3}
+                        style={{
+                          width: '100%', background: 'var(--bg-1)',
+                          border: '1px solid var(--border-1)', borderRadius: '6px',
+                          padding: '8px 12px', color: 'var(--text-1)',
+                          fontSize: '12px', lineHeight: 1.6, resize: 'vertical',
+                          marginBottom: '10px', boxSizing: 'border-box',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          disabled={!denyRationale.trim()}
+                          onClick={() => {
+                            onDenyReview(review.id, denyRationale.trim())
+                            setDenyingId(null)
+                            setDenyRationale('')
+                          }}
+                          style={{
+                            background: '#140808', border: '1px solid #3a1010',
+                            color: denyRationale.trim() ? '#7a2020' : 'var(--text-6)',
+                            fontSize: '11px', fontWeight: 600,
+                            padding: '6px 14px', borderRadius: '6px',
+                            cursor: denyRationale.trim() ? 'pointer' : 'default',
+                          }}
+                        >Confirm Denial</button>
+                        <button
+                          onClick={() => { setDenyingId(null); setDenyRationale('') }}
+                          style={{
+                            background: 'none', border: '1px solid var(--border-1)',
+                            color: 'var(--text-4)', fontSize: '11px',
+                            padding: '6px 14px', borderRadius: '6px', cursor: 'pointer',
+                          }}
+                        >Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => onApproveReview(review.id)}
+                        style={{
+                          background: '#041208', border: '1px solid #0a3018',
+                          color: '#1a7a40', fontSize: '11px', fontWeight: 600,
+                          padding: '6px 14px', borderRadius: '6px', cursor: 'pointer',
+                        }}
+                      >Approve</button>
+                      <button
+                        onClick={() => { setDenyingId(review.id); setDenyRationale('') }}
+                        style={{
+                          background: '#140808', border: '1px solid #3a1010',
+                          color: '#7a2020', fontSize: '11px', fontWeight: 600,
+                          padding: '6px 14px', borderRadius: '6px', cursor: 'pointer',
+                        }}
+                      >Deny</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* No API key */}
         {!apiKey && (
