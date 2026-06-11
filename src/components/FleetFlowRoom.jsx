@@ -36,12 +36,12 @@ export default function FleetFlowRoom({ observations = [], isMobile }) {
         style={{ borderBottom: '1px solid var(--border-0)' }}>
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
           textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
-          College of Operations
+          Operational Gateway
         </p>
         <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
-          letterSpacing: '0.08em', marginBottom: '6px' }}>FleetFlow</h2>
+          letterSpacing: '0.08em', marginBottom: '6px' }}>FleetFlow Gateway</h2>
         <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
-          Operational stewardship. Reality doesn't wait for the paperwork.
+          Reality keeps score.
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export default function FleetFlowRoom({ observations = [], isMobile }) {
             </div>
           )}
           <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '10px' }}>
-            PACER memory travels with you. FleetFlow reads what Archivist Hall has kept.
+            PACER teaches. FleetFlow executes. The gateway is where they meet.
           </p>
         </div>
       </div>

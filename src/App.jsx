@@ -14,7 +14,7 @@ import MuseRoom from './components/MuseRoom'
 import VERARoom from './components/VERARoom'
 import ArchiveRoom from './components/ArchiveRoom'
 import KELRoom from './components/KELRoom'
-import FleetFlowRoom from './components/FleetFlowRoom'
+import BusinessCenterRoom from './components/BusinessCenterRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import APIKeyGate from './components/APIKeyGate'
@@ -136,9 +136,9 @@ export default function App() {
   const isMuse     = currentRoom === 'muse'
   const isVERA     = currentRoom === 'vera'
   const isArchive  = currentRoom === 'archive'
-  const isKEL        = currentRoom === 'kel'
-  const isFleetFlow  = currentRoom === 'fleetflow'
-  const isSettings   = currentRoom === 'settings'
+  const isKEL            = currentRoom === 'kel'
+  const isBusinessCenter = currentRoom === 'businesscenter'
+  const isSettings       = currentRoom === 'settings'
 
   if (loading) {
     return (
@@ -253,8 +253,8 @@ export default function App() {
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom />}
         {isTheater  && <TheaterRoom />}
-        {isFleetFlow && (
-          <FleetFlowRoom
+        {isBusinessCenter && (
+          <BusinessCenterRoom
             observations={observations}
             isMobile={isMobile}
           />
@@ -280,7 +280,7 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isFleetFlow && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
