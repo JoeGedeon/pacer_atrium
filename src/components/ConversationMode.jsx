@@ -22,8 +22,10 @@ export default function ConversationMode({
   const [history, setHistory]       = useState([])
   const [liveTranscript, setLiveTranscript] = useState('')
   const [error, setError]           = useState(null)
-  const recognitionRef = useRef(null)
-  const historyEndRef  = useRef(null)
+  const recognitionRef  = useRef(null)
+  const historyEndRef   = useRef(null)
+  const startTimeRef    = useRef(null)
+  const gotResultRef    = useRef(false)
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -96,11 +98,18 @@ export default function ConversationMode({
     recognition.continuous     = false
     recognition.interimResults = true
     recognition.lang           = 'en-US'
+    recognition.maxAlternatives = 1
     recognitionRef.current     = recognition
+    gotResultRef.current       = false
 
-    recognition.onstart = () => { setVoiceState('listening'); setLiveTranscript('') }
+    recognition.onstart = () => {
+      startTimeRef.current = Date.now()
+      setVoiceState('listening')
+      setLiveTranscript('')
+    }
 
     recognition.onresult = (event) => {
+      gotResultRef.current = true
       const transcript = Array.from(event.results).map(r => r[0].transcript).join('')
       setLiveTranscript(transcript)
       if (event.results[event.results.length - 1].isFinal) {
@@ -114,12 +123,24 @@ export default function ConversationMode({
     }
 
     recognition.onerror = (event) => {
-      if (event.error !== 'no-speech') setError(`Mic: ${event.error}`)
+      const msg = event.error === 'not-allowed'
+        ? 'Microphone access denied. Allow mic access in your browser settings.'
+        : event.error === 'network'
+        ? 'Speech recognition requires an internet connection.'
+        : event.error === 'no-speech'
+        ? null // silent — no-speech is normal
+        : `Mic error: ${event.error}`
+      if (msg) setError(msg)
       setVoiceState('idle')
       setLiveTranscript('')
     }
 
     recognition.onend = () => {
+      const elapsed = Date.now() - (startTimeRef.current || 0)
+      if (!gotResultRef.current && elapsed < 1500) {
+        // Ended too quickly — likely browser didn't have permission yet or recognition failed to init
+        setError('Microphone ended immediately. If this just loaded, try tapping again.')
+      }
       setVoiceState(prev => prev === 'listening' ? 'idle' : prev)
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 
 const BACKDROP = {
   position: 'fixed', inset: 0, zIndex: 9000,
@@ -15,15 +15,6 @@ const CARD = {
   boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
 }
 
-const SPEAKING_BAR = {
-  position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
-  zIndex: 9000,
-  background: 'var(--bg-1)', border: '1px solid var(--border-1)',
-  borderRadius: '24px', padding: '10px 20px',
-  display: 'flex', alignItems: 'center', gap: '10px',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-}
-
 function btn(primary) {
   return {
     fontFamily: 'inherit', cursor: 'pointer', borderRadius: '8px',
@@ -35,32 +26,11 @@ function btn(primary) {
   }
 }
 
-export default function ArrivalBrief({ mode, greeting, text, loading, onDismiss, onAccept, onDecline }) {
-  const autoRef = useRef(null)
-
-  // Auto-dismiss voice overlay after 12s failsafe
-  useEffect(() => {
-    if (mode !== 'voice') return
-    autoRef.current = setTimeout(onDismiss, 12000)
-    return () => clearTimeout(autoRef.current)
-  }, [mode]) // eslint-disable-line
-
-  if (mode === 'voice') {
-    return (
-      <div style={SPEAKING_BAR}>
-        <span style={{
-          width: '7px', height: '7px', borderRadius: '50%',
-          background: '#8b5cf6', boxShadow: '0 0 8px #8b5cf680', flexShrink: 0,
-          animation: 'voice-ring 1.6s ease-in-out infinite',
-        }} />
-        <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>PACER is speaking…</span>
-        <button onClick={onDismiss} style={{
-          background: 'none', border: 'none', color: 'var(--text-5)',
-          cursor: 'pointer', fontSize: '14px', padding: '0 0 0 4px', lineHeight: 1,
-        }}>✕</button>
-      </div>
-    )
-  }
+// mode: 'ask' | 'text' | 'voice'
+// voice renders a text card + Play button — requires user tap to unlock browser audio
+export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking, onDismiss, onAccept, onDecline, onSpeak }) {
+  const dismissed = useRef(false)
+  function dismiss() { if (!dismissed.current) { dismissed.current = true; onDismiss() } }
 
   if (mode === 'ask') {
     return (
@@ -85,9 +55,9 @@ export default function ArrivalBrief({ mode, greeting, text, loading, onDismiss,
     )
   }
 
-  if (mode === 'text') {
+  if (mode === 'text' || mode === 'voice') {
     return (
-      <div style={BACKDROP} onClick={e => { if (e.target === e.currentTarget) onDismiss() }}>
+      <div style={BACKDROP} onClick={e => { if (e.target === e.currentTarget) dismiss() }}>
         <div style={CARD}>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
             textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
@@ -110,7 +80,14 @@ export default function ArrivalBrief({ mode, greeting, text, loading, onDismiss,
               </p>
             )}
           </div>
-          <button style={btn(false)} onClick={onDismiss}>Dismiss</button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {mode === 'voice' && !loading && text && (
+              <button style={btn(true)} onClick={onSpeak} disabled={isSpeaking}>
+                {isSpeaking ? '🔊 Speaking…' : '▶ Play'}
+              </button>
+            )}
+            <button style={btn(false)} onClick={dismiss}>Dismiss</button>
+          </div>
         </div>
       </div>
     )
@@ -118,3 +95,4 @@ export default function ArrivalBrief({ mode, greeting, text, loading, onDismiss,
 
   return null
 }
+
