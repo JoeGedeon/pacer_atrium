@@ -19,6 +19,7 @@ import BuilderStudioRoom from './components/BuilderStudioRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import Intake from './components/Intake'
+import ConversationMode from './components/ConversationMode'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 import {
@@ -68,6 +69,7 @@ export default function App() {
   const isMobile = useIsMobile()
 
   const [currentRoom, setCurrentRoom]             = useState('home')
+  const [atriumMode, setAtriumMode]               = useState('observe') // 'observe' | 'conversation'
   const [observations, setObservations]           = useState([])
   const [museWorks, setMuseWorks]                 = useState([])
   const [graduates, setGraduates]                 = useState([])
@@ -307,41 +309,55 @@ export default function App() {
         )}
 
         {isAtrium && (
-          <>
-            {(!isMobile || !activeObservation) && (
-              <ObservationStream
+          atriumMode === 'conversation'
+            ? (
+              <ConversationMode
                 observations={observations}
-                onSubmit={submitObservation}
-                activeObservation={activeObservation}
-                onSelectObservation={obs => setActiveObservationId(obs.id)}
-                uid={user?.uid}
+                institutionEvents={institutionEvents}
+                apiKey={apiKey}
+                onConnectClaude={() => setShowKeyGate(true)}
                 isMobile={isMobile}
+                onSwitchToText={() => setAtriumMode('observe')}
               />
-            )}
-            {activeObservation
-              ? (
-                <PACERProcessing
-                  observation={activeObservation}
-                  observations={observations}
-                  onRoute={routeObservation}
-                  onAcceptConstellation={acceptConstellation}
-                  hasApiKey={!!apiKey}
-                  onRequestApiKey={() => setShowKeyGate(true)}
-                  uid={user?.uid}
-                  isMobile={isMobile}
-                  onBack={isMobile ? () => setActiveObservationId(null) : null}
-                />
-              )
-              : (
-                !isMobile && (
-                  <AtriumDashboard
+            )
+            : (
+              <>
+                {(!isMobile || !activeObservation) && (
+                  <ObservationStream
                     observations={observations}
+                    onSubmit={submitObservation}
+                    activeObservation={activeObservation}
                     onSelectObservation={obs => setActiveObservationId(obs.id)}
+                    uid={user?.uid}
+                    isMobile={isMobile}
+                    onSwitchToConversation={() => setAtriumMode('conversation')}
                   />
-                )
-              )
-            }
-          </>
+                )}
+                {activeObservation
+                  ? (
+                    <PACERProcessing
+                      observation={activeObservation}
+                      observations={observations}
+                      onRoute={routeObservation}
+                      onAcceptConstellation={acceptConstellation}
+                      hasApiKey={!!apiKey}
+                      onRequestApiKey={() => setShowKeyGate(true)}
+                      uid={user?.uid}
+                      isMobile={isMobile}
+                      onBack={isMobile ? () => setActiveObservationId(null) : null}
+                    />
+                  )
+                  : (
+                    !isMobile && (
+                      <AtriumDashboard
+                        observations={observations}
+                        onSelectObservation={obs => setActiveObservationId(obs.id)}
+                      />
+                    )
+                  )
+                }
+              </>
+            )
         )}
 
         {isMuse && (
