@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { enrichForFormat, FORMATS } from '../lib/theaterEnrichment'
+import { createMultiManifestTest } from '../lib/db'
 
 const TEACHINGS = [
   {
@@ -31,8 +32,17 @@ const FLEETFLOW_ACTS = [
 const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
 function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
 
-function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
-  const px = isMobile ? 'px-6' : 'px-10'
+const LIVE_FORMATS = FORMATS.filter(f => f.available)
+
+const PRESERVATION_OPTIONS = [
+  { id: 'preserved', label: 'Preserved', color: '#10b981' },
+  { id: 'shifted',   label: 'Shifted',   color: '#f59e0b' },
+  { id: 'drifted',   label: 'Drifted',   color: '#ef4444' },
+]
+
+// ── Single Manifest ───────────────────────────────────────────────────────────
+
+function SingleManifest({ observations, apiKey, onConnectClaude, isMobile }) {
   const [formatId, setFormatId] = useState('image')
   const [concept, setConcept]   = useState('')
   const [staged, setStaged]     = useState('')
@@ -41,6 +51,7 @@ function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
   const [copied, setCopied]     = useState(false)
 
   const selectedFormat = FORMATS.find(f => f.id === formatId)
+  const incoming = (observations || []).filter(o => o.destination === 'Theater')
 
   async function handleStage() {
     if (!concept.trim()) return
@@ -65,205 +76,619 @@ function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
   }
 
   return (
-    <div className={`flex-1 overflow-y-auto ${px} py-8`}>
-      <div style={{ maxWidth: '580px' }}>
+    <div style={{ maxWidth: '580px' }}>
 
-        {/* Framing */}
-        <div style={{ marginBottom: '32px' }}>
-          <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8, marginBottom: '10px' }}>
-            The stage is ready.
-          </p>
-          <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
-            MUSE notices. KODEX understands. Theater asks: how should the audience experience this?
-            Bring an observation — Theater stages it.
-          </p>
-        </div>
-
-        {/* Observation input */}
-        <div style={{ marginBottom: '20px' }}>
+      {/* Incoming Briefs */}
+      {incoming.length > 0 && (
+        <div style={{ marginBottom: '28px' }}>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-            Observation
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+            Incoming — {incoming.length} staged for production
           </p>
-          <textarea
-            value={concept}
-            onChange={e => setConcept(e.target.value)}
-            placeholder="FleetFlow ↔ Isles = movement as narrative   /   Blue Pineapple threshold   /   Governance is the comparison between declared and observed state"
-            rows={3}
-            style={{
-              width: '100%',
-              background: 'var(--bg-2)',
-              border: '1px solid var(--border-1)',
-              borderRadius: '8px',
-              padding: '12px 14px',
-              color: 'var(--text-1)',
-              fontSize: '13px',
-              lineHeight: 1.6,
-              resize: 'vertical',
-              outline: 'none',
-              fontFamily: 'inherit',
-            }}
-            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleStage() }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {incoming.map(obs => (
+              <button
+                key={obs.id}
+                onClick={() => { setConcept(obs.text || ''); setStaged('') }}
+                style={{
+                  width: '100%', textAlign: 'left',
+                  background: concept === obs.text ? '#130a20' : 'var(--bg-2)',
+                  border: `1px solid ${concept === obs.text ? '#a855f7' : 'var(--border-1)'}`,
+                  borderLeft: `3px solid ${concept === obs.text ? '#a855f7' : '#a855f740'}`,
+                  borderRadius: '0 8px 8px 0',
+                  padding: '10px 14px', cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                  <p style={{ color: '#a855f7', fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Staged from Atrium
+                  </p>
+                  <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>
+                    {obs.constellation || obs.type || 'observation'}
+                  </p>
+                </div>
+                <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
+                  {(obs.text?.length ?? 0) > 90 ? obs.text.slice(0, 90) + '…' : (obs.text || '')}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
+      )}
 
-        {/* Format selection */}
+      {/* Framing */}
+      <div style={{ marginBottom: '32px' }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8, marginBottom: '10px' }}>
+          The stage is ready.
+        </p>
+        <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
+          MUSE notices. KODEX understands. Theater asks: how should the audience experience this?
+          Bring an observation — Theater stages it.
+        </p>
+      </div>
+
+      {/* Observation */}
+      <div style={{ marginBottom: '20px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+          Observation
+        </p>
+        <textarea
+          value={concept}
+          onChange={e => { setConcept(e.target.value); setStaged('') }}
+          placeholder="FleetFlow ↔ Isles = movement as narrative   /   Blue Pineapple threshold   /   Governance is the comparison between declared and observed state"
+          rows={3}
+          style={{
+            width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+            borderRadius: '8px', padding: '12px 14px', color: 'var(--text-1)',
+            fontSize: '13px', lineHeight: 1.6, resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+          }}
+          onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleStage() }}
+        />
+      </div>
+
+      {/* Format */}
+      <div style={{ marginBottom: '24px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+          How should this be performed?
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {FORMATS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => f.available && setFormatId(f.id)}
+              disabled={!f.available}
+              style={{
+                padding: '8px 14px', borderRadius: '8px', fontSize: '12px',
+                cursor: f.available ? 'pointer' : 'default',
+                background: formatId === f.id ? '#7c3aed' : f.available ? 'var(--bg-2)' : 'var(--bg-1)',
+                color: formatId === f.id ? '#fff' : f.available ? 'var(--text-3)' : 'var(--text-6)',
+                border: `1px solid ${formatId === f.id ? '#8b5cf6' : f.available ? 'var(--border-1)' : 'var(--border-0)'}`,
+                fontWeight: formatId === f.id ? 600 : 400,
+                transition: 'all 0.15s', opacity: f.available ? 1 : 0.5,
+              }}
+            >
+              {f.icon} {f.label}
+              {!f.available && <span style={{ fontSize: '9px', marginLeft: '5px', opacity: 0.6 }}>soon</span>}
+            </button>
+          ))}
+        </div>
+        {selectedFormat?.available && (
+          <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '8px', fontStyle: 'italic' }}>
+            {selectedFormat.note}
+          </p>
+        )}
+      </div>
+
+      {/* Button */}
+      {!apiKey ? (
+        <button onClick={onConnectClaude} style={{
+          background: '#0d1a2e', border: '1px solid #1d4ed8', borderRadius: '8px',
+          padding: '10px 20px', color: '#93c5fd', fontSize: '12px', fontWeight: 600,
+          cursor: 'pointer', marginBottom: '24px',
+        }}>
+          ✦ Connect Claude to stage with PACER
+        </button>
+      ) : (
+        <button onClick={handleStage} disabled={!concept.trim() || staging} style={{
+          background: concept.trim() && !staging ? '#7c3aed' : 'var(--bg-2)',
+          border: `1px solid ${concept.trim() && !staging ? '#8b5cf6' : 'var(--border-1)'}`,
+          borderRadius: '8px', padding: '10px 20px',
+          color: concept.trim() && !staging ? '#fff' : 'var(--text-5)',
+          fontSize: '12px', fontWeight: 600,
+          cursor: concept.trim() && !staging ? 'pointer' : 'default',
+          marginBottom: '24px', transition: 'all 0.15s',
+        }}>
+          {staging ? 'Staging…' : '🎭 Stage this'}
+        </button>
+      )}
+
+      {error && <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '16px' }}>{error}</p>}
+
+      {staged && (
+        <div style={{
+          background: 'var(--bg-2)', border: '1px solid #8b5cf640',
+          borderLeft: '3px solid #8b5cf6', borderRadius: '0 10px 10px 0',
+          overflow: 'hidden', marginBottom: '24px',
+        }}>
+          <div style={{ padding: '10px 16px', borderBottom: '1px solid #8b5cf620',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ color: '#8b5cf6', fontSize: '9px', fontWeight: 700,
+              letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+              {selectedFormat?.icon} {selectedFormat?.label} — Staged for Production
+            </p>
+            <button onClick={handleCopy} style={{
+              background: 'none', border: '1px solid #8b5cf640', borderRadius: '4px',
+              padding: '3px 10px', color: copied ? '#10b981' : '#8b5cf6',
+              fontSize: '9px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.08em',
+            }}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>
+              {staged}
+            </p>
+          </div>
+          {selectedFormat?.outputNote && (
+            <div style={{ padding: '10px 16px', borderTop: '1px solid #8b5cf620' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '10px', lineHeight: 1.6 }}>
+                {selectedFormat.outputNote}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Studio roadmap */}
+      <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '20px' }}>
+        <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+          Production Wing
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+          {[
+            { label: 'Image Studio',       status: 'active', note: 'Visual manifestation' },
+            { label: 'Story Studio',        status: 'active', note: 'Written manifestation' },
+            { label: 'Infographic Studio',  status: 'active', note: 'Data manifestation' },
+            { label: 'Presentation Studio', status: 'active', note: 'Slide manifestation' },
+            { label: 'Motion Studio',       status: 'active', note: 'Video manifestation' },
+            { label: 'Sound Studio',        status: 'coming', note: 'Voice and atmosphere' },
+          ].map(({ label, status, note }) => (
+            <div key={label} style={{ minWidth: '140px' }}>
+              <p style={{
+                fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em',
+                textTransform: 'uppercase', marginBottom: '2px',
+                color: status === 'active' ? '#8b5cf6' : 'var(--text-6)',
+              }}>
+                {label}
+              </p>
+              <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>{note}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+// ── Multi-Manifest ────────────────────────────────────────────────────────────
+
+function ManifestPanel({ format, manifest, onScore, isMobile }) {
+  const [copied, setCopied] = useState(false)
+  const scoreColor = manifest?.score
+    ? PRESERVATION_OPTIONS.find(o => o.id === manifest.score)?.color
+    : null
+
+  function handleCopy() {
+    navigator.clipboard.writeText(manifest?.output || '').then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    })
+  }
+
+  return (
+    <div style={{
+      background: 'var(--bg-2)',
+      border: `1px solid ${scoreColor ? scoreColor + '40' : 'var(--border-1)'}`,
+      borderRadius: '8px',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Panel header */}
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-0)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: scoreColor ? scoreColor + '08' : 'transparent',
+      }}>
+        <p style={{ color: scoreColor || 'var(--text-3)', fontSize: '11px', fontWeight: 600 }}>
+          {format.icon} {format.label} Studio
+        </p>
+        {manifest?.status === 'done' && (
+          <button onClick={handleCopy} style={{
+            background: 'none', border: '1px solid var(--border-1)', borderRadius: '4px',
+            padding: '2px 8px', color: copied ? '#10b981' : 'var(--text-5)',
+            fontSize: '9px', cursor: 'pointer',
+          }}>
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        )}
+      </div>
+
+      {/* Output */}
+      <div style={{ padding: '14px', flex: 1, minHeight: '120px', maxHeight: '200px', overflowY: 'auto' }}>
+        {!manifest && (
+          <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>Waiting…</p>
+        )}
+        {manifest?.status === 'loading' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%',
+              background: '#8b5cf6', animation: 'pulse-fade 1.5s infinite' }} />
+            <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>Staging…</p>
+          </div>
+        )}
+        {manifest?.status === 'done' && (
+          <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+            {manifest.output}
+          </p>
+        )}
+        {manifest?.status === 'error' && (
+          <p style={{ color: '#ef4444', fontSize: '11px' }}>{manifest.output}</p>
+        )}
+      </div>
+
+      {/* Preservation scoring */}
+      {manifest?.status === 'done' && (
+        <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border-0)',
+          display: 'flex', gap: '4px' }}>
+          {PRESERVATION_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => onScore(format.id, opt.id)}
+              style={{
+                flex: 1, padding: '4px 0', borderRadius: '4px',
+                fontSize: '9px', fontWeight: 600, letterSpacing: '0.04em', cursor: 'pointer',
+                background: manifest.score === opt.id ? opt.color + '18' : 'transparent',
+                border: `1px solid ${manifest.score === opt.id ? opt.color : 'var(--border-1)'}`,
+                color: manifest.score === opt.id ? opt.color : 'var(--text-5)',
+                transition: 'all 0.1s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MultiManifestView({ observations, apiKey, onConnectClaude, uid, isMobile }) {
+  const [concept, setConcept]     = useState('')
+  const [manifests, setManifests] = useState(null)
+  const [running, setRunning]     = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const [archived, setArchived]   = useState(false)
+
+  const incoming = (observations || []).filter(o => o.destination === 'Theater')
+
+  const allDone = manifests && LIVE_FORMATS.every(f => manifests[f.id]?.status !== 'loading')
+  const scoredCount    = manifests ? LIVE_FORMATS.filter(f => manifests[f.id]?.score).length : 0
+  const preservedCount = manifests ? LIVE_FORMATS.filter(f => manifests[f.id]?.score === 'preserved').length : 0
+  const shiftedCount   = manifests ? LIVE_FORMATS.filter(f => manifests[f.id]?.score === 'shifted').length : 0
+  const driftedCount   = manifests ? LIVE_FORMATS.filter(f => manifests[f.id]?.score === 'drifted').length : 0
+  const allScored = allDone && scoredCount === LIVE_FORMATS.length
+
+  async function runAll() {
+    if (!concept.trim() || running || !apiKey) return
+    setRunning(true)
+    setArchived(false)
+
+    const initial = {}
+    LIVE_FORMATS.forEach(f => { initial[f.id] = { status: 'loading', output: '', score: null } })
+    setManifests(initial)
+
+    await Promise.all(LIVE_FORMATS.map(async f => {
+      try {
+        const result = await enrichForFormat(concept, f.id, apiKey)
+        setManifests(prev => ({
+          ...prev,
+          [f.id]: { status: 'done', output: result, score: null },
+        }))
+      } catch (e) {
+        setManifests(prev => ({
+          ...prev,
+          [f.id]: { status: 'error', output: e.message, score: null },
+        }))
+      }
+    }))
+
+    setRunning(false)
+  }
+
+  function setScore(formatId, score) {
+    setManifests(prev => ({ ...prev, [formatId]: { ...prev[formatId], score } }))
+  }
+
+  async function archiveTest() {
+    if (!allScored || !uid || archiving) return
+    setArchiving(true)
+    try {
+      const results = {}
+      LIVE_FORMATS.forEach(f => {
+        results[f.id] = {
+          formatLabel: f.label,
+          output:      manifests[f.id]?.output || '',
+          score:       manifests[f.id]?.score  || null,
+        }
+      })
+      await createMultiManifestTest(uid, {
+        observationText: concept,
+        results,
+        preservedCount,
+        totalCount: LIVE_FORMATS.length,
+      })
+      setArchived(true)
+    } catch (e) {
+      console.error('[Multi-Manifest archive]', e)
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  return (
+    <div>
+
+      {/* Incoming Briefs */}
+      {incoming.length > 0 && !concept && (
         <div style={{ marginBottom: '24px' }}>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
             textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-            How should this be performed?
+            Incoming — {incoming.length} staged for production
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {FORMATS.map(f => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {incoming.map(obs => (
               <button
-                key={f.id}
-                onClick={() => f.available && setFormatId(f.id)}
-                disabled={!f.available}
+                key={obs.id}
+                onClick={() => { setConcept(obs.text || ''); setManifests(null) }}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  cursor: f.available ? 'pointer' : 'default',
-                  background: formatId === f.id ? '#7c3aed' : f.available ? 'var(--bg-2)' : 'var(--bg-1)',
-                  color: formatId === f.id ? '#fff' : f.available ? 'var(--text-3)' : 'var(--text-6)',
-                  border: `1px solid ${formatId === f.id ? '#8b5cf6' : f.available ? 'var(--border-1)' : 'var(--border-0)'}`,
-                  fontWeight: formatId === f.id ? 600 : 400,
-                  transition: 'all 0.15s',
-                  opacity: f.available ? 1 : 0.5,
+                  width: '100%', textAlign: 'left',
+                  background: 'var(--bg-2)',
+                  border: '1px solid var(--border-1)',
+                  borderLeft: '3px solid #a855f740',
+                  borderRadius: '0 8px 8px 0',
+                  padding: '10px 14px', cursor: 'pointer',
                 }}
               >
-                {f.icon} {f.label}
-                {!f.available && (
-                  <span style={{ fontSize: '9px', marginLeft: '5px', opacity: 0.6 }}>soon</span>
-                )}
+                <p style={{ color: '#a855f7', fontSize: '9px', fontWeight: 600,
+                  letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px' }}>
+                  Staged from Atrium
+                </p>
+                <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
+                  {(obs.text?.length ?? 0) > 90 ? obs.text.slice(0, 90) + '…' : (obs.text || '')}
+                </p>
               </button>
             ))}
           </div>
-          {selectedFormat?.available && (
-            <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '8px', fontStyle: 'italic' }}>
-              {selectedFormat.note}
-            </p>
-          )}
         </div>
+      )}
 
-        {/* Stage button */}
-        {!apiKey ? (
+      {/* Source Truth input */}
+      <div style={{ marginBottom: '16px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+          Source Truth — The Cargo
+        </p>
+        <textarea
+          value={concept}
+          onChange={e => { setConcept(e.target.value); setManifests(null); setArchived(false) }}
+          placeholder="Enter the observation. Every format will stage from this single source."
+          rows={3}
+          style={{
+            width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+            borderRadius: '8px', padding: '12px 14px', color: 'var(--text-1)',
+            fontSize: '13px', lineHeight: 1.6, resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+          }}
+        />
+      </div>
+
+      {/* Source Truth card — shown when concept exists */}
+      {concept.trim() && (
+        <div style={{
+          background: '#0a0800',
+          border: '1px solid #f59e0b30',
+          borderLeft: '3px solid #f59e0b',
+          borderRadius: '0 8px 8px 0',
+          padding: '12px 16px',
+          marginBottom: '20px',
+        }}>
+          <p style={{ color: '#f59e0b60', fontSize: '9px', letterSpacing: '0.12em',
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>
+            Source Truth · Origin: Atrium
+          </p>
+          <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7 }}>
+            {concept}
+          </p>
+        </div>
+      )}
+
+      {/* Run button */}
+      {!apiKey ? (
+        <button onClick={onConnectClaude} style={{
+          background: '#0d1a2e', border: '1px solid #1d4ed8', borderRadius: '8px',
+          padding: '10px 20px', color: '#93c5fd', fontSize: '12px', fontWeight: 600,
+          cursor: 'pointer', marginBottom: '24px',
+        }}>
+          ✦ Connect Claude to run Multi-Manifest
+        </button>
+      ) : (
+        <button onClick={runAll} disabled={!concept.trim() || running} style={{
+          background: concept.trim() && !running ? '#7c3aed' : 'var(--bg-2)',
+          border: `1px solid ${concept.trim() && !running ? '#8b5cf6' : 'var(--border-1)'}`,
+          borderRadius: '8px', padding: '10px 20px',
+          color: concept.trim() && !running ? '#fff' : 'var(--text-5)',
+          fontSize: '12px', fontWeight: 600,
+          cursor: concept.trim() && !running ? 'pointer' : 'default',
+          marginBottom: '24px', transition: 'all 0.15s',
+        }}>
+          {running ? `Staging all formats…` : '🎭 Run Multi-Manifest'}
+        </button>
+      )}
+
+      {/* Manifest panels */}
+      {manifests && (
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: '10px',
+            marginBottom: '20px',
+          }}>
+            {LIVE_FORMATS.map(f => (
+              <ManifestPanel
+                key={f.id}
+                format={f}
+                manifest={manifests[f.id]}
+                onScore={setScore}
+                isMobile={isMobile}
+              />
+            ))}
+          </div>
+
+          {/* Cargo Preservation Review */}
+          {allDone && (
+            <div style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border-1)',
+              borderRadius: '8px',
+              padding: '16px 18px',
+              marginBottom: '16px',
+            }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+                Cargo Preservation Review
+              </p>
+
+              {scoredCount < LIVE_FORMATS.length ? (
+                <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
+                  Score each format above — did it preserve the Source Truth, or did the cargo drift?
+                </p>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '20px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Preserved', count: preservedCount, color: '#10b981' },
+                      { label: 'Shifted',   count: shiftedCount,   color: '#f59e0b' },
+                      { label: 'Drifted',   count: driftedCount,   color: '#ef4444' },
+                    ].map(({ label, count, color }) => (
+                      <div key={label}>
+                        <p style={{ color, fontSize: '22px', fontWeight: 700, lineHeight: 1 }}>
+                          {count}
+                        </p>
+                        <p style={{ color: color + '90', fontSize: '9px', letterSpacing: '0.1em',
+                          textTransform: 'uppercase', fontWeight: 600 }}>
+                          {label}
+                        </p>
+                      </div>
+                    ))}
+                    <div>
+                      <p style={{ color: 'var(--text-3)', fontSize: '22px', fontWeight: 700, lineHeight: 1 }}>
+                        {LIVE_FORMATS.length}
+                      </p>
+                      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.1em',
+                        textTransform: 'uppercase', fontWeight: 600 }}>
+                        Total
+                      </p>
+                    </div>
+                  </div>
+                  <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.65,
+                    fontStyle: 'italic', marginBottom: '14px' }}>
+                    {preservedCount === LIVE_FORMATS.length
+                      ? 'Constitutional Principle #2 holds. The cargo arrived intact.'
+                      : driftedCount > 0
+                        ? `${driftedCount} format${driftedCount > 1 ? 's' : ''} lost the cargo. The hallway failed.`
+                        : `${shiftedCount} format${shiftedCount > 1 ? 's' : ''} shifted but did not drift. Note the movement.`
+                    }
+                  </p>
+                  {!archived ? (
+                    <button onClick={archiveTest} disabled={archiving} style={{
+                      background: archiving ? 'var(--bg-1)' : '#041208',
+                      border: `1px solid ${archiving ? 'var(--border-1)' : '#0a3018'}`,
+                      borderRadius: '6px', padding: '8px 16px',
+                      color: archiving ? 'var(--text-5)' : '#1a7a40',
+                      fontSize: '11px', fontWeight: 600, cursor: archiving ? 'default' : 'pointer',
+                    }}>
+                      {archiving ? 'Archiving…' : '📚 Archive to ARCHIVIST'}
+                    </button>
+                  ) : (
+                    <p style={{ color: '#10b981', fontSize: '11px', fontWeight: 600 }}>
+                      ✓ Archived — ARCHIVIST has recorded this test
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Production Wing (mode wrapper) ───────────────────────────────────────────
+
+function ProductionWing({ observations, apiKey, onConnectClaude, uid, isMobile }) {
+  const px = isMobile ? 'px-6' : 'px-10'
+  const [mode, setMode] = useState('single')
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${px} py-8`}>
+
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '28px',
+        maxWidth: mode === 'multi' ? '900px' : '580px' }}>
+        {[
+          { id: 'single', label: 'Single Manifest' },
+          { id: 'multi',  label: '🧪 Multi-Manifest' },
+        ].map(m => (
           <button
-            onClick={onConnectClaude}
+            key={m.id}
+            onClick={() => setMode(m.id)}
             style={{
-              background: '#0d1a2e', border: '1px solid #1d4ed8',
-              borderRadius: '8px', padding: '10px 20px',
-              color: '#93c5fd', fontSize: '12px', fontWeight: 600,
-              cursor: 'pointer', marginBottom: '24px',
-            }}
-          >
-            ✦ Connect Claude to stage with PACER
-          </button>
-        ) : (
-          <button
-            onClick={handleStage}
-            disabled={!concept.trim() || staging}
-            style={{
-              background: concept.trim() && !staging ? '#7c3aed' : 'var(--bg-2)',
-              border: `1px solid ${concept.trim() && !staging ? '#8b5cf6' : 'var(--border-1)'}`,
-              borderRadius: '8px', padding: '10px 20px',
-              color: concept.trim() && !staging ? '#fff' : 'var(--text-5)',
-              fontSize: '12px', fontWeight: 600,
-              cursor: concept.trim() && !staging ? 'pointer' : 'default',
-              marginBottom: '24px',
+              padding: '6px 14px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer',
+              background: mode === m.id ? '#7c3aed' : 'var(--bg-2)',
+              color:      mode === m.id ? '#fff'    : 'var(--text-4)',
+              border:     `1px solid ${mode === m.id ? '#8b5cf6' : 'var(--border-1)'}`,
+              fontWeight: mode === m.id ? 600 : 400,
               transition: 'all 0.15s',
             }}
           >
-            {staging ? 'Staging…' : '🎭 Stage this'}
+            {m.label}
           </button>
-        )}
-
-        {error && (
-          <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '16px' }}>{error}</p>
-        )}
-
-        {/* Staged output */}
-        {staged && (
-          <div style={{
-            background: 'var(--bg-2)',
-            border: '1px solid #8b5cf640',
-            borderLeft: '3px solid #8b5cf6',
-            borderRadius: '0 10px 10px 0',
-            overflow: 'hidden',
-            marginBottom: '24px',
-          }}>
-            <div style={{
-              padding: '10px 16px',
-              borderBottom: '1px solid #8b5cf620',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <p style={{ color: '#8b5cf6', fontSize: '9px', fontWeight: 700,
-                letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                {selectedFormat?.icon} {selectedFormat?.label} — Staged for Production
-              </p>
-              <button
-                onClick={handleCopy}
-                style={{
-                  background: 'none', border: '1px solid #8b5cf640',
-                  borderRadius: '4px', padding: '3px 10px',
-                  color: copied ? '#10b981' : '#8b5cf6',
-                  fontSize: '9px', fontWeight: 600, cursor: 'pointer',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <div style={{ padding: '16px' }}>
-              <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>
-                {staged}
-              </p>
-            </div>
-            {selectedFormat?.outputNote && (
-              <div style={{ padding: '10px 16px', borderTop: '1px solid #8b5cf620' }}>
-                <p style={{ color: 'var(--text-6)', fontSize: '10px', lineHeight: 1.6 }}>
-                  {selectedFormat.outputNote}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Studio roadmap */}
-        <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '20px' }}>
-          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
-            Production Wing
+        ))}
+        {mode === 'multi' && (
+          <p style={{ color: 'var(--text-6)', fontSize: '10px', alignSelf: 'center',
+            marginLeft: '8px', fontStyle: 'italic' }}>
+            Constitutional test — Principle #2
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            {[
-              { label: 'Image Studio',        status: 'active',  note: 'Visual manifestation' },
-              { label: 'Story Studio',         status: 'active',  note: 'Written manifestation' },
-              { label: 'Infographic Studio',   status: 'active',  note: 'Data manifestation' },
-              { label: 'Presentation Studio',  status: 'active',  note: 'Slide manifestation' },
-              { label: 'Motion Studio',        status: 'active',  note: 'Video manifestation' },
-              { label: 'Sound Studio',         status: 'coming',  note: 'Voice and atmosphere' },
-            ].map(({ label, status, note }) => (
-              <div key={label} style={{ minWidth: '140px' }}>
-                <p style={{
-                  fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', marginBottom: '2px',
-                  color: status === 'active' ? '#8b5cf6' : 'var(--text-6)',
-                }}>
-                  {label}
-                </p>
-                <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>{note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
+      </div>
 
+      <div style={{ maxWidth: mode === 'multi' ? '900px' : '580px' }}>
+        {mode === 'single'
+          ? <SingleManifest observations={observations} apiKey={apiKey} onConnectClaude={onConnectClaude} isMobile={isMobile} />
+          : <MultiManifestView observations={observations} apiKey={apiKey} onConnectClaude={onConnectClaude} uid={uid} isMobile={isMobile} />
+        }
       </div>
     </div>
   )
 }
 
-export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, isMobile }) {
+// ── Theater Room ──────────────────────────────────────────────────────────────
+
+export default function TheaterRoom({ graduates = [], observations = [], apiKey, onConnectClaude, uid, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
   const [view, setView] = useState('productions')
 
@@ -284,7 +709,6 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
           Where thoughts become visible.
         </p>
 
-        {/* Tab switcher */}
         <div style={{ display: 'flex', gap: '0', borderBottom: 'none', marginBottom: '-1px' }}>
           {[
             { id: 'productions', label: 'Productions' },
@@ -294,16 +718,12 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
               key={tab.id}
               onClick={() => setView(tab.id)}
               style={{
-                background: 'none',
-                border: 'none',
+                background: 'none', border: 'none',
                 borderBottom: `2px solid ${view === tab.id ? '#8b5cf6' : 'transparent'}`,
                 padding: '8px 16px',
                 color: view === tab.id ? '#8b5cf6' : 'var(--text-4)',
-                fontSize: '12px',
-                fontWeight: view === tab.id ? 600 : 400,
-                cursor: 'pointer',
-                letterSpacing: '0.03em',
-                transition: 'all 0.15s',
+                fontSize: '12px', fontWeight: view === tab.id ? 600 : 400,
+                cursor: 'pointer', letterSpacing: '0.03em', transition: 'all 0.15s',
               }}
             >
               {tab.label}
@@ -313,11 +733,16 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
       </div>
 
       {view === 'stage' ? (
-        <ProductionWing apiKey={apiKey} onConnectClaude={onConnectClaude} isMobile={isMobile} />
+        <ProductionWing
+          observations={observations}
+          apiKey={apiKey}
+          onConnectClaude={onConnectClaude}
+          uid={uid}
+          isMobile={isMobile}
+        />
       ) : (
         <div className={`flex-1 overflow-y-auto ${px} py-8`}>
 
-          {/* Discipline statement */}
           <div style={{ maxWidth: '540px', marginBottom: '36px' }}>
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
               textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
@@ -331,7 +756,6 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
             </p>
           </div>
 
-          {/* What this college teaches */}
           <div style={{ maxWidth: '540px', marginBottom: '36px' }}>
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
               textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
@@ -340,41 +764,32 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
             <div className="flex flex-col gap-3">
               {TEACHINGS.map(({ label, note }) => (
                 <div key={label} style={{ borderLeft: '2px solid #8b5cf630', paddingLeft: '14px' }}>
-                  <p style={{ color: 'var(--text-1)', fontSize: '12px',
-                    fontWeight: 600, marginBottom: '3px' }}>{label}</p>
+                  <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600, marginBottom: '3px' }}>{label}</p>
                   <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65 }}>{note}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Productions */}
           <div style={{ maxWidth: '600px', marginBottom: '36px' }}>
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
               textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
               Productions
             </p>
 
-            {/* FleetFlow: First Graduate */}
-            <div style={{
-              border: '1px solid var(--border-1)', borderLeft: '3px solid #8b5cf6',
-              borderRadius: '0 10px 10px 0', overflow: 'hidden', marginBottom: '12px',
-            }}>
+            <div style={{ border: '1px solid var(--border-1)', borderLeft: '3px solid #8b5cf6',
+              borderRadius: '0 10px 10px 0', overflow: 'hidden', marginBottom: '12px' }}>
               <div style={{ background: 'var(--bg-2)', padding: '16px 20px',
                 borderBottom: '1px solid var(--border-0)' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start',
                   justifyContent: 'space-between', gap: '12px', marginBottom: '4px' }}>
                   <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
-                    letterSpacing: '0.02em' }}>
-                    FleetFlow: First Graduate
-                  </p>
+                    letterSpacing: '0.02em' }}>FleetFlow: First Graduate</p>
                   <span style={{
                     flexShrink: 0, background: '#8b5cf615', border: '1px solid #8b5cf640',
                     borderRadius: '4px', padding: '2px 8px', color: '#8b5cf6',
                     fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
-                  }}>
-                    In Development
-                  </span>
+                  }}>In Development</span>
                 </div>
                 <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
                   Documentary · College of Transmission
@@ -388,16 +803,12 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
                 <div className="flex flex-col gap-2">
                   {FLEETFLOW_ACTS.map(({ label, title, note }) => (
                     <div key={label} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      <p style={{
-                        flexShrink: 0, color: 'var(--text-6)', fontSize: '9px',
-                        fontWeight: 600, letterSpacing: '0.08em',
-                        textTransform: 'uppercase', paddingTop: '2px', width: '36px',
-                      }}>
+                      <p style={{ flexShrink: 0, color: 'var(--text-6)', fontSize: '9px', fontWeight: 600,
+                        letterSpacing: '0.08em', textTransform: 'uppercase', paddingTop: '2px', width: '36px' }}>
                         {label}
                       </p>
                       <div>
-                        <p style={{ color: 'var(--text-2)', fontSize: '11px',
-                          fontWeight: 600, marginBottom: '2px' }}>{title}</p>
+                        <p style={{ color: 'var(--text-2)', fontSize: '11px', fontWeight: 600, marginBottom: '2px' }}>{title}</p>
                         <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.55 }}>{note}</p>
                       </div>
                     </div>
@@ -406,17 +817,13 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
               </div>
             </div>
 
-            {/* Graduate registry productions */}
             {graduates.map(g => (
-              <div key={g.id} style={{
-                border: '1px solid var(--border-1)', borderLeft: '3px solid #8b5cf6',
-                borderRadius: '0 10px 10px 0', overflow: 'hidden', marginBottom: '12px',
-              }}>
+              <div key={g.id} style={{ border: '1px solid var(--border-1)', borderLeft: '3px solid #8b5cf6',
+                borderRadius: '0 10px 10px 0', overflow: 'hidden', marginBottom: '12px' }}>
                 <div style={{ background: 'var(--bg-2)', padding: '16px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start',
                     justifyContent: 'space-between', gap: '12px', marginBottom: '4px' }}>
-                    <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700,
-                      letterSpacing: '0.02em' }}>
+                    <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, letterSpacing: '0.02em' }}>
                       {g.productionTitle || `${g.graduateName}: ${ordinal(g.sequence)} Graduate`}
                     </p>
                     <span style={{
@@ -428,26 +835,20 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
                     </span>
                   </div>
                   {g.tagline && (
-                    <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
-                      {g.tagline}
-                    </p>
+                    <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>{g.tagline}</p>
                   )}
                 </div>
               </div>
             ))}
 
-            {/* Empty slot */}
-            <div style={{
-              border: '1px dashed var(--border-0)', borderRadius: '10px',
-              padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
+            <div style={{ border: '1px dashed var(--border-0)', borderRadius: '10px',
+              padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>
                 The next production appears when the next graduate earns a plaque.
               </p>
             </div>
           </div>
 
-          {/* Footer */}
           <div style={{ maxWidth: '540px', paddingTop: '8px' }}>
             <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic', lineHeight: 1.7 }}>
               Knowledge becomes inheritance only when it reaches the next person.
