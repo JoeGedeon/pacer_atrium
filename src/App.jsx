@@ -228,13 +228,19 @@ export default function App() {
 
   function speakArrivalText(text) {
     if (!window.speechSynthesis) { console.debug('[arrival voice] speechSynthesis unavailable'); return }
-    console.debug('[arrival voice] speakArrivalText called, text length:', text?.length, 'room:', currentRoom)
-    setArrivalSpeaking(true)
+    console.debug('[arrival voice] button clicked')
+    console.debug('[arrival voice] text:', text)
+    console.debug('[arrival voice] text length:', text?.length)
+    console.debug('[arrival voice] calling speakWithVoice, room:', currentRoom)
     const greeting = getArrivalGreeting('Joe')
     const full = text ? `${greeting} ${text}` : greeting
-    speakWithVoice(full, getVoiceConfig(currentRoom), {
-      onEnd:   () => { console.debug('[arrival voice] onEnd'); setArrivalSpeaking(false); setArrivalState(null) },
-      onError: () => { console.debug('[arrival voice] onError'); setArrivalSpeaking(false) },
+    // Force system default voice (gender: null) — same path as Raw Voice Test.
+    // pickVoice() may return a voice Safari lists but cannot play.
+    const voiceConfig = { ...getVoiceConfig(currentRoom), gender: null }
+    speakWithVoice(full, voiceConfig, {
+      onStart: () => { console.debug('[arrival voice] onstart'); setArrivalSpeaking(true) },
+      onEnd:   () => { console.debug('[arrival voice] onend'); setArrivalSpeaking(false); setArrivalState(null) },
+      onError: () => { console.debug('[arrival voice] error'); setArrivalSpeaking(false) },
     })
   }
 
