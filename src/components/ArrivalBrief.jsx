@@ -27,7 +27,8 @@ function btn(primary) {
 }
 
 // mode: 'ask' | 'text' | 'voice'
-// voice renders a text card + Play button — requires user tap to unlock browser audio
+// Both 'text' and 'voice' render a card + Play button.
+// The explicit tap to open the card satisfies browser autoplay policy in all modes.
 export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking, onDismiss, onAccept, onDecline, onSpeak }) {
   const dismissed = useRef(false)
   function dismiss() { if (!dismissed.current) { dismissed.current = true; onDismiss() } }
@@ -81,8 +82,15 @@ export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking
             )}
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {mode === 'voice' && !loading && text && (
-              <button style={btn(true)} onClick={onSpeak} disabled={isSpeaking}>
+            {!loading && text && (
+              <button
+                style={btn(true)}
+                disabled={isSpeaking}
+                onClick={() => {
+                  console.debug('[arrival voice] play clicked, text length:', text?.length)
+                  onSpeak()
+                }}
+              >
                 {isSpeaking ? '🔊 Speaking…' : '▶ Play'}
               </button>
             )}

@@ -227,13 +227,14 @@ export default function App() {
   }
 
   function speakArrivalText(text) {
-    if (!window.speechSynthesis) return
+    if (!window.speechSynthesis) { console.debug('[arrival voice] speechSynthesis unavailable'); return }
+    console.debug('[arrival voice] speakArrivalText called, text length:', text?.length, 'room:', currentRoom)
     setArrivalSpeaking(true)
     const greeting = getArrivalGreeting('Joe')
     const full = text ? `${greeting} ${text}` : greeting
     speakWithVoice(full, getVoiceConfig(currentRoom), {
-      onEnd:   () => { setArrivalSpeaking(false); setArrivalState(null) },
-      onError: () => { setArrivalSpeaking(false) },
+      onEnd:   () => { console.debug('[arrival voice] onEnd'); setArrivalSpeaking(false); setArrivalState(null) },
+      onError: () => { console.debug('[arrival voice] onError'); setArrivalSpeaking(false) },
     })
   }
 
