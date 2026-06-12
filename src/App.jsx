@@ -29,6 +29,7 @@ import {
   createInstitutionEvent, listenInstitutionEvents,
   listenCreatorLogs, createCreatorLog,
   getUserProfile, createUserProfile,
+  createProduction, listenProductions, updateProduction,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 
@@ -80,6 +81,7 @@ export default function App() {
   const [kelReviews, setKelReviews]               = useState([])
   const [institutionEvents, setInstitutionEvents] = useState([])
   const [creatorLogs, setCreatorLogs]             = useState([])
+  const [productions, setProductions]             = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
 
   // Builder readiness derives from the ledger — not from local state
@@ -123,7 +125,8 @@ export default function App() {
     const unsubReviews = listenKELReviews(user.uid, setKelReviews)
     const unsubEvents  = listenInstitutionEvents(user.uid, setInstitutionEvents)
     const unsubLogs    = listenCreatorLogs(user.uid, setCreatorLogs)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs() }
+    const unsubProds   = listenProductions(user.uid, setProductions)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs(); unsubProds() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -167,6 +170,16 @@ export default function App() {
       localStorage.setItem('pacer_api_key', key)
       setApiKey(key)
     }
+  }
+
+  async function createProductionRecord(data) {
+    if (!user) return
+    await createProduction(user.uid, data)
+  }
+
+  async function updateProductionRecord(id, patch) {
+    if (!user) return
+    await updateProduction(user.uid, id, patch)
   }
 
   async function addCreatorLog(data) {
@@ -383,7 +396,19 @@ export default function App() {
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom isMobile={isMobile} />}
-        {isTheater  && <TheaterRoom graduates={graduates} observations={observations} apiKey={apiKey} onConnectClaude={() => setShowKeyGate(true)} uid={user?.uid} isMobile={isMobile} />}
+        {isTheater  && (
+          <TheaterRoom
+            graduates={graduates}
+            observations={observations}
+            productions={productions}
+            onCreateProduction={createProductionRecord}
+            onUpdateProduction={updateProductionRecord}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            uid={user?.uid}
+            isMobile={isMobile}
+          />
+        )}
         {isBusinessCenter && (
           <BusinessCenterRoom
             observations={observations}
