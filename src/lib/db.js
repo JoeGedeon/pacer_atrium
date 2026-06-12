@@ -20,8 +20,13 @@ export async function createUserProfile(uid, data) {
     campusName:    data.campusName    || null,
     outcomeChoice: data.outcomeChoice || null,
     bypass:        data.bypass        || false,
+    arrivalMode:   data.arrivalMode   || 'silent',
     createdAt:     serverTimestamp(),
   })
+}
+
+export async function updateUserProfile(uid, patch) {
+  await updateDoc(PROFILE_DOC(uid), patch)
 }
 
 // ── Collections ──────────────────────────────────────────────────────────────
