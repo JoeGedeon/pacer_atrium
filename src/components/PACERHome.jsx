@@ -59,15 +59,16 @@ function CampusAtmosphere() {
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
 
       {/* Giant blue pineapple — moon scale, not object scale. Atmosphere, not accent. */}
-      {/* Center at 62% vertical so the orb rises from below the seal, not behind it. */}
-      {/* The pineapple at the seal center must remain the brightest focal point.      */}
+      {/* Slightly right of seal center, upper-third vertical — creates a right-side   */}
+      {/* halo without crowding the lower doctrine arc. Smaller (500px) and fainter   */}
+      {/* (0.022) so it glows rather than competes. The ring text must never blur.    */}
       <div style={{
         position: 'absolute',
-        top: '62%', left: '52%',
+        top: '30%', left: '58%',
         transform: 'translate(-50%, -50%)',
-        fontSize: '620px', lineHeight: 1,
+        fontSize: '500px', lineHeight: 1,
         filter: BLUE_PINEAPPLE_FILTER,
-        opacity: 0.028,
+        opacity: 0.022,
         userSelect: 'none',
       }}>🍍</div>
 
@@ -179,7 +180,9 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
       >
 
         {/* Seal — architecture, not branding. Large enough to feel like a building. */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        {/* opacity: 1.0 — the PNG's translucent cream center handles atmosphere bleed. */}
+        {/* The outer ring and doctrine arc must be fully legible at all times.        */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
           <img
             src="/pacer-seal.png"
             alt="PACER"
@@ -187,7 +190,7 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
               width: isMobile ? '230px' : '350px',
               height: isMobile ? '230px' : '350px',
               objectFit: 'contain',
-              opacity: 0.90,
+              opacity: 1.0,
             }}
           />
         </div>
