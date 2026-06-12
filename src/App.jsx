@@ -126,10 +126,15 @@ export default function App() {
   useEffect(() => {
     if (!user) { setProfile(undefined); return }
     if (isCreator(user)) {
-      const creatorProfile = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
-      setProfile(creatorProfile)
+      const creatorBase = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
+      setProfile(creatorBase) // instant access — no loading state
       getUserProfile(user.uid).then(existing => {
-        if (!existing) createUserProfile(user.uid, creatorProfile)
+        if (!existing) {
+          createUserProfile(user.uid, creatorBase)
+        } else {
+          // Merge stored preferences (arrivalMode, etc.) back into the live profile
+          setProfile({ ...creatorBase, ...existing })
+        }
       })
       return
     }
