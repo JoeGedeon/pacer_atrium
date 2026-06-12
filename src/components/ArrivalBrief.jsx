@@ -60,6 +60,13 @@ export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking
     return (
       <div style={BACKDROP} onClick={e => { if (e.target === e.currentTarget) dismiss() }}>
         <div style={CARD}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+            <img
+              src="/pacer-seal.png"
+              alt="PACER"
+              style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '50%', opacity: 0.85 }}
+            />
+          </div>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
             textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
             Institutional Pulse

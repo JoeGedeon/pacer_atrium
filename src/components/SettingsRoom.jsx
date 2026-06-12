@@ -412,6 +412,38 @@ export default function SettingsRoom({
           ))}
         </Section>
 
+        {/* About PACER */}
+        <Section title="About PACER">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '8px' }}>
+            <img
+              src="/pacer-seal.png"
+              alt="PACER"
+              style={{
+                width: '80px', height: '80px', objectFit: 'contain',
+                borderRadius: '50%',
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.45)',
+                marginBottom: '16px',
+              }}
+            />
+            <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 700,
+              letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '8px' }}>
+              PACER
+            </p>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', fontStyle: 'italic',
+              letterSpacing: '0.06em', marginBottom: '6px' }}>
+              Reality voted. Architecture adapted.
+            </p>
+            <p style={{ color: 'var(--text-6)', fontSize: '10px', letterSpacing: '0.08em',
+              textTransform: 'uppercase', marginBottom: '20px' }}>
+              Pattern · Adaptive · Cognition · Execution · Resonance
+            </p>
+            <p style={{ color: 'var(--text-6)', fontSize: '10px', lineHeight: 1.7, textAlign: 'center',
+              borderTop: '1px solid var(--border-0)', paddingTop: '16px', width: '100%' }}>
+              Infrastructure is declared once. Behavior is inherited everywhere.
+            </p>
+          </div>
+        </Section>
+
         <p style={{ color: 'var(--text-6)', fontSize: '9px', paddingBottom: '32px' }}>
           PACER v0.7 · Atrium · Settings are device-local
         </p>
