@@ -159,31 +159,40 @@ function ActionQueue({ items, onNavigate }) {
       background: 'var(--bg-2)', border: '1px solid var(--border-1)',
       borderRadius: '10px', overflow: 'hidden',
     }}>
-      {items.map((item, i) => (
-        <button
-          key={item.id}
-          onClick={() => onNavigate?.(item.room)}
-          style={{
-            width: '100%', textAlign: 'left', background: 'none',
-            border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-            borderBottom: i < items.length - 1 ? '1px solid var(--border-0)' : 'none',
-            padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '14px',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-3)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-        >
-          <span style={{ fontSize: '15px', flexShrink: 0, width: '20px', textAlign: 'center' }}>
-            {item.icon}
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>
-              {item.label}
-            </p>
-            <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>{item.detail}</p>
-          </div>
-          <span style={{ color: 'var(--text-5)', fontSize: '13px', flexShrink: 0 }}>→</span>
-        </button>
-      ))}
+      {items.map((item, i) => {
+        const Tag = item.external ? 'a' : 'button'
+        const extraProps = item.external
+          ? { href: item.external, target: '_blank', rel: 'noopener noreferrer' }
+          : { onClick: () => onNavigate?.(item.room) }
+        return (
+          <Tag
+            key={item.id}
+            {...extraProps}
+            style={{
+              width: '100%', textAlign: 'left', background: 'none',
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              textDecoration: 'none',
+              borderBottom: i < items.length - 1 ? '1px solid var(--border-0)' : 'none',
+              padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '14px',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-3)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+          >
+            <span style={{ fontSize: '15px', flexShrink: 0, width: '20px', textAlign: 'center' }}>
+              {item.icon}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>
+                {item.label}
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.detail}
+              </p>
+            </div>
+            <span style={{ color: 'var(--text-5)', fontSize: '13px', flexShrink: 0 }}>→</span>
+          </Tag>
+        )
+      })}
     </div>
   )
 }
@@ -410,7 +419,9 @@ export default function BusinessCenterRoom({
   observations = [], graduates = [], builderReadiness = 'locked',
   museWorks = [], institutionEvents = [], creatorLogs = [],
   kelReviews = [], productions = [], apiKey = null,
-  onRequestBuilderReview, onEnterBuilderStudio, onAddLog, onNavigate, isMobile,
+  googleToken = null, emailData = null, calendarEvents = [],
+  onRequestBuilderReview, onEnterBuilderStudio, onAddLog, onNavigate,
+  onConnectGmail, onDisconnectGmail, isMobile,
 }) {
   const px = isMobile ? 'px-5' : 'px-10'
 
@@ -445,8 +456,17 @@ export default function BusinessCenterRoom({
   async function handleGeneratePulse() {
     setPulsing(true)
     try {
+      const emailCtx    = emailData    ? [
+        `${emailData.unreadCount} unread`,
+        emailData.categories.opportunities.length > 0 ? `${emailData.categories.opportunities.length} opportunities` : null,
+        emailData.categories.urgent.length > 0         ? `${emailData.categories.urgent.length} urgent` : null,
+        emailData.categories.actionRequired.length > 0 ? `${emailData.categories.actionRequired.length} require response` : null,
+      ].filter(Boolean).join(', ') : null
+      const calendarCtx = calendarEvents.length > 0
+        ? calendarEvents.map(e => `${e.timeLabel} — ${e.title}`).join('; ')
+        : null
       const result = await generateInstitutionalPulse(
-        { observations, productions, institutionEvents, creatorLogs },
+        { observations, productions, institutionEvents, creatorLogs, emailContext: emailCtx, calendarContext: calendarCtx },
         apiKey
       )
       if (result) setAiPulse(result)
@@ -460,7 +480,38 @@ export default function BusinessCenterRoom({
   const displayPulse = aiPulse || fallbackPulse
 
   // ── Action Queue ─────────────────────────────────────────────────────────────
-  const actionItems = buildActionItems(observations, productions, kelReviews)
+  const actionItems = (() => {
+    const items = buildActionItems(observations, productions, kelReviews)
+    if (emailData) {
+      const { categories } = emailData
+      if (categories.opportunities.length > 0) {
+        items.unshift({
+          id: 'email-opp', icon: '📡',
+          label: `${categories.opportunities.length} FleetFlow opportunit${categories.opportunities.length !== 1 ? 'ies' : 'y'} in inbox`,
+          detail: categories.opportunities.map(e => e.subject).slice(0, 2).join(' · '),
+          external: 'https://mail.google.com',
+        })
+      }
+      if (categories.urgent.length > 0) {
+        items.splice(categories.opportunities.length > 0 ? 1 : 0, 0, {
+          id: 'email-urgent', icon: '⚠️',
+          label: `${categories.urgent.length} urgent email${categories.urgent.length !== 1 ? 's' : ''}`,
+          detail: categories.urgent.map(e => e.subject).slice(0, 2).join(' · '),
+          external: 'https://mail.google.com',
+        })
+      }
+      const actionCount = categories.actionRequired.length
+      if (actionCount > 0) {
+        items.push({
+          id: 'email-action', icon: '✉️',
+          label: `${actionCount} email${actionCount !== 1 ? 's' : ''} require${actionCount !== 1 ? '' : 's'} response`,
+          detail: categories.actionRequired.map(e => e.subject).slice(0, 2).join(' · '),
+          external: 'https://mail.google.com',
+        })
+      }
+    }
+    return items
+  })()
 
   // ── System Health ─────────────────────────────────────────────────────────────
   const health = buildHealth(observations, productions, institutionEvents, apiKey)
@@ -489,10 +540,55 @@ export default function BusinessCenterRoom({
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
               Calendar
             </p>
-            <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>The Map</p>
+            {googleToken ? (
+              <button
+                onClick={onDisconnectGmail}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+              >
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b98160', flexShrink: 0 }} />
+                Gmail connected
+              </button>
+            ) : (
+              <button
+                onClick={onConnectGmail}
+                style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: 'var(--text-4)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
+              >
+                + Connect Gmail
+              </button>
+            )}
           </div>
-          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '18px' }}>
-            <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden' }}>
+            {/* Today's schedule from Google Calendar */}
+            {googleToken && (
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-0)' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+                  Today
+                </p>
+                {calendarEvents.length === 0 ? (
+                  <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>Nothing scheduled.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {calendarEvents.map(event => (
+                      <div key={event.id} style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                        <span style={{ color: '#3b82f6', fontSize: '11px', fontWeight: 600, flexShrink: 0, minWidth: '54px' }}>
+                          {event.timeLabel}
+                        </span>
+                        <span style={{ color: 'var(--text-2)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {event.title}
+                        </span>
+                        {event.location && (
+                          <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0 }}>· {event.location}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Internal log calendar */}
+            <div style={{ padding: '18px' }}>
+              <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
+            </div>
           </div>
         </div>
 

@@ -15,6 +15,8 @@ export default function ConversationMode({
   onConnectClaude,
   isMobile,
   onSwitchToText,
+  emailContext = null,
+  calendarContext = null,
 }) {
   const [voiceState, setVoiceState] = useState('idle')
   const [history, setHistory]       = useState([])
@@ -48,7 +50,7 @@ export default function ConversationMode({
     try {
       const response = await conversationQuery(
         text,
-        { observations, institutionEvents, dateStr: today },
+        { observations, institutionEvents, dateStr: today, emailContext, calendarContext },
         currentHistory,
         apiKey,
       )

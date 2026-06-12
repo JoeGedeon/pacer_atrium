@@ -32,6 +32,10 @@ import {
   createProduction, listenProductions, updateProduction,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
+import { requestGoogleToken, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
+import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
 const CREATOR_EMAIL = import.meta.env.VITE_CREATOR_EMAIL || 'joegedeon22@gmail.com'
 
@@ -83,6 +87,9 @@ export default function App() {
   const [creatorLogs, setCreatorLogs]             = useState([])
   const [productions, setProductions]             = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
+  const [googleTokenData, setGoogleTokenData]     = useState(null) // { access_token, expires_at }
+  const [emailData, setEmailData]                 = useState(null)
+  const [calendarEvents, setCalendarEvents]       = useState([])
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -128,6 +135,42 @@ export default function App() {
     const unsubProds   = listenProductions(user.uid, setProductions)
     return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs(); unsubProds() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Google / Gmail connect ────────────────────────────────────────────────────
+  async function handleConnectGmail() {
+    if (!GOOGLE_CLIENT_ID) return
+    try {
+      const tokenData = await requestGoogleToken(GOOGLE_CLIENT_ID)
+      setGoogleTokenData(tokenData)
+      const [email, calendar] = await Promise.allSettled([
+        fetchEmailSummary(tokenData.access_token),
+        fetchTodayEvents(tokenData.access_token),
+      ])
+      if (email.status === 'fulfilled')    setEmailData(email.value)
+      if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
+    } catch (err) {
+      console.error('[PACER Gmail]', err)
+    }
+  }
+
+  function handleDisconnectGmail() {
+    if (googleTokenData?.access_token) revokeGoogleToken(googleTokenData.access_token)
+    setGoogleTokenData(null)
+    setEmailData(null)
+    setCalendarEvents([])
+  }
+
+  // ── Refresh Google data when token is valid ──────────────────────────────────
+  useEffect(() => {
+    if (!googleTokenData || isTokenExpired(googleTokenData)) return
+    Promise.allSettled([
+      fetchEmailSummary(googleTokenData.access_token),
+      fetchTodayEvents(googleTokenData.access_token),
+    ]).then(([email, calendar]) => {
+      if (email.status === 'fulfilled')    setEmailData(email.value)
+      if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
+    })
+  }, [googleTokenData]) // eslint-disable-line
 
   async function submitObservation(obs) {
     const id = await createObservation(user.uid, {
@@ -331,6 +374,8 @@ export default function App() {
                 onConnectClaude={() => setShowKeyGate(true)}
                 isMobile={isMobile}
                 onSwitchToText={() => setAtriumMode('observe')}
+                emailContext={emailContextString(emailData)}
+                calendarContext={calendarContextString(calendarEvents)}
               />
             )
             : (
@@ -420,10 +465,15 @@ export default function App() {
             kelReviews={kelReviews}
             productions={productions}
             apiKey={apiKey}
+            googleToken={googleTokenData?.access_token || null}
+            emailData={emailData}
+            calendarEvents={calendarEvents}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             onAddLog={addCreatorLog}
             onNavigate={setCurrentRoom}
+            onConnectGmail={GOOGLE_CLIENT_ID ? handleConnectGmail : null}
+            onDisconnectGmail={handleDisconnectGmail}
             isMobile={isMobile}
           />
         )}

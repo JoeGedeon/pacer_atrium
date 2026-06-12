@@ -30,7 +30,7 @@ Return ONLY valid JSON. No markdown, no explanation:
 secondaryDestination: the next most likely destination, or null if no meaningful secondary.
 secondaryConfidence: confidence score for the secondary destination (0.0 to 1.0).`
 
-const CONVERSATION_SYSTEM = (dateStr, recentObs, recentEvents) =>
+const CONVERSATION_SYSTEM = (dateStr, recentObs, recentEvents, emailContext, calendarContext) =>
   `You are PACER — the institutional intelligence for JPG Ventures LLC, a Georgia company.
 
 JPG Ventures has two primary divisions:
@@ -42,6 +42,8 @@ PACER is also a living campus. Rooms: Atrium (observations), MUSE (manifestation
 You are speaking directly to your founder. Respond conversationally with institutional clarity and presence. Keep responses to 2-4 sentences unless asked for detail. Do not use markdown, bullets, or headers — plain prose only (this is voice output). Be direct and specific. Reference actual data from the context when answering questions about what has happened.
 
 Today: ${dateStr}
+${calendarContext ? `\nToday's Calendar:\n${calendarContext}` : ''}
+${emailContext ? `\nInbox Status:\n${emailContext}` : ''}
 
 Recent Observations (newest first):
 ${recentObs || 'None recorded yet.'}
@@ -50,13 +52,15 @@ Recent Institution Events:
 ${recentEvents || 'None recorded yet.'}`
 
 export async function generateInstitutionalPulse(context, apiKey) {
-  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [] } = context
+  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], emailContext = null, calendarContext = null } = context
 
   const summary = [
     `Observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`,
     `Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting Human Gate approval`,
     `Institution events this session: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ') || 'none'}`,
     `Calendar entries logged: ${creatorLogs.length}`,
+    emailContext    ? `Email: ${emailContext}`    : 'Email: not connected',
+    calendarContext ? `Calendar: ${calendarContext}` : 'Calendar: not connected',
   ].join('\n')
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -81,7 +85,7 @@ export async function generateInstitutionalPulse(context, apiKey) {
 }
 
 export async function conversationQuery(userText, context, history, apiKey) {
-  const { observations = [], institutionEvents = [], dateStr = '' } = context
+  const { observations = [], institutionEvents = [], dateStr = '', emailContext = null, calendarContext = null } = context
 
   const recentObs = observations.slice(0, 12).map(o => {
     const date = o.timestamp instanceof Date
@@ -113,7 +117,7 @@ export async function conversationQuery(userText, context, history, apiKey) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 350,
-      system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents),
+      system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents, emailContext, calendarContext),
       messages: [
         ...historyMessages,
         { role: 'user', content: userText },
