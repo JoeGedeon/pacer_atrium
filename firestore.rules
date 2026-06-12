@@ -16,5 +16,11 @@ service cloud.firestore {
       // Updates and deletes are reserved for PACER backend (admin SDK)
       allow update, delete: if false;
     }
+
+    // Campus stats: any authenticated user may write (increment counters);
+    // any authenticated user may read. Tighten to creator-only read post-beta.
+    match /campus_stats/{docId} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
