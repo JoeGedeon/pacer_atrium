@@ -10,6 +10,7 @@ const OBS_TYPES = [
 
 export default function ObservationStream({
   observations, onSubmit, activeObservation, onSelectObservation, uid, isMobile,
+  onSwitchToConversation,
 }) {
   const [text, setText]               = useState('')
   const [type, setType]               = useState('text')
@@ -100,7 +101,21 @@ export default function ObservationStream({
   return (
     <main className="flex flex-col flex-1 min-w-0" style={{ background: 'var(--bg-0)' }}>
       <div className={`${inputPx} pt-8 pb-6 border-b shrink-0`} style={{ borderColor: 'var(--border-1)' }}>
-        <p className="text-xs mb-4" style={{ color: 'var(--text-2)' }}>What have you noticed?</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <p className="text-xs" style={{ color: 'var(--text-2)' }}>What have you noticed?</p>
+          {onSwitchToConversation && (
+            <button
+              onClick={onSwitchToConversation}
+              style={{
+                background: 'none', border: '1px solid var(--border-2)', borderRadius: '6px',
+                padding: '4px 10px', color: '#60a5fa', fontSize: '10px', fontWeight: 600,
+                cursor: 'pointer', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '5px',
+              }}
+            >
+              🎤 Conversation
+            </button>
+          )}
+        </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
           {OBS_TYPES.map(t => (

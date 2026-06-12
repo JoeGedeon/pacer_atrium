@@ -1,9 +1,28 @@
 import {
-  collection, addDoc, updateDoc, doc,
+  collection, addDoc, updateDoc, doc, getDoc, setDoc,
   onSnapshot, query, orderBy,
   serverTimestamp, Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
+
+// ── User Profile ─────────────────────────────────────────────────────────────
+
+const PROFILE_DOC = (uid) => doc(db, 'users', uid, 'profile', 'campus')
+
+export async function getUserProfile(uid) {
+  const snap = await getDoc(PROFILE_DOC(uid))
+  return snap.exists() ? snap.data() : null
+}
+
+export async function createUserProfile(uid, data) {
+  await setDoc(PROFILE_DOC(uid), {
+    campusId:      data.campusId,
+    campusName:    data.campusName    || null,
+    outcomeChoice: data.outcomeChoice || null,
+    bypass:        data.bypass        || false,
+    createdAt:     serverTimestamp(),
+  })
+}
 
 // ── Collections ──────────────────────────────────────────────────────────────
 
@@ -195,6 +214,51 @@ export function listenCreatorLogs(uid, callback) {
         createdAt: data.createdAt?.toDate?.() ?? new Date(),
       }
     }))
+  })
+}
+
+// ── Productions — Theater production management records ──────────────────────
+
+function prodColl(uid) { return collection(db, 'users', uid, 'productions') }
+
+export async function createProduction(uid, data) {
+  const ref = await addDoc(prodColl(uid), {
+    title:               data.title               || 'Untitled Production',
+    sourceObservationId: data.sourceObservationId || null,
+    sourceText:          data.sourceText          || '',
+    sourceConstellation: data.sourceConstellation || null,
+    manifestDecision:    data.manifestDecision    || null,
+    status:              data.status              || 'incoming',
+    studio:              data.studio              || null,
+    deliveryDestination: data.deliveryDestination || null,
+    humanGateStatus:     data.humanGateStatus     || null,
+    outputs:             {},
+    notes:               data.notes              || '',
+    createdAt:           serverTimestamp(),
+    updatedAt:           serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function listenProductions(uid, callback) {
+  const q = query(prodColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id: d.id,
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
+        updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+      }
+    }))
+  })
+}
+
+export async function updateProduction(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'productions', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
   })
 }
 

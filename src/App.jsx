@@ -18,6 +18,8 @@ import BusinessCenterRoom from './components/BusinessCenterRoom'
 import BuilderStudioRoom from './components/BuilderStudioRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
+import Intake from './components/Intake'
+import ConversationMode from './components/ConversationMode'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 import {
@@ -26,7 +28,12 @@ import {
   createKELReview, listenKELReviews, updateKELReview,
   createInstitutionEvent, listenInstitutionEvents,
   listenCreatorLogs, createCreatorLog,
+  getUserProfile, createUserProfile,
+  createProduction, listenProductions, updateProduction,
 } from './lib/db'
+import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
+
+const CREATOR_EMAIL = import.meta.env.VITE_CREATOR_EMAIL || 'joegedeon22@gmail.com'
 
 async function migrateLocalStorage(uid) {
   const flagKey = `pacer_migrated_${uid}`
@@ -63,6 +70,7 @@ export default function App() {
   const isMobile = useIsMobile()
 
   const [currentRoom, setCurrentRoom]             = useState('home')
+  const [atriumMode, setAtriumMode]               = useState('observe') // 'observe' | 'conversation'
   const [observations, setObservations]           = useState([])
   const [museWorks, setMuseWorks]                 = useState([])
   const [graduates, setGraduates]                 = useState([])
@@ -73,6 +81,8 @@ export default function App() {
   const [kelReviews, setKelReviews]               = useState([])
   const [institutionEvents, setInstitutionEvents] = useState([])
   const [creatorLogs, setCreatorLogs]             = useState([])
+  const [productions, setProductions]             = useState([])
+  const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -82,11 +92,28 @@ export default function App() {
     return 'locked'
   }, [kelReviews])
 
+  const campusConfig = profile ? (CAMPUS_TEMPLATES[profile.campusId] || CAMPUS_TEMPLATES.explorer) : null
+  const visibleRooms = campusConfig?.rooms ?? null // null = all rooms (creator)
+
   // Derived: merge Firestore data with ephemeral per-session analyzing state
   const _active = observations.find(o => o.id === activeObservationId) || null
   const activeObservation = _active
     ? { ..._active, analyzing: analyzingIds.has(_active.id) }
     : null
+
+  // Load or seed campus profile once user is known
+  useEffect(() => {
+    if (!user) { setProfile(undefined); return }
+    if (user.email === CREATOR_EMAIL) {
+      const creatorProfile = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
+      setProfile(creatorProfile)
+      getUserProfile(user.uid).then(existing => {
+        if (!existing) createUserProfile(user.uid, creatorProfile)
+      })
+      return
+    }
+    getUserProfile(user.uid).then(p => setProfile(p ?? null))
+  }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Start Firestore listeners once we know the user
   useEffect(() => {
@@ -98,7 +125,8 @@ export default function App() {
     const unsubReviews = listenKELReviews(user.uid, setKelReviews)
     const unsubEvents  = listenInstitutionEvents(user.uid, setInstitutionEvents)
     const unsubLogs    = listenCreatorLogs(user.uid, setCreatorLogs)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs() }
+    const unsubProds   = listenProductions(user.uid, setProductions)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs(); unsubProds() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -142,6 +170,16 @@ export default function App() {
       localStorage.setItem('pacer_api_key', key)
       setApiKey(key)
     }
+  }
+
+  async function createProductionRecord(data) {
+    if (!user) return
+    await createProduction(user.uid, data)
+  }
+
+  async function updateProductionRecord(id, patch) {
+    if (!user) return
+    await updateProduction(user.uid, id, patch)
   }
 
   async function addCreatorLog(data) {
@@ -213,6 +251,35 @@ export default function App() {
     return <AuthGate onSignIn={signIn} onSignUp={signUp} />
   }
 
+  if (profile === undefined) {
+    return (
+      <div style={{ background: 'var(--bg-0)', height: '100vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center' }}
+      >
+        <p style={{ color: 'var(--text-6)', fontSize: '11px' }}>…</p>
+      </div>
+    )
+  }
+
+  if (profile === null) {
+    return (
+      <Intake
+        onComplete={async (outcomeId) => {
+          const opt = OUTCOME_OPTIONS.find(o => o.id === outcomeId)
+          const template = CAMPUS_TEMPLATES[opt?.template || 'explorer']
+          const newProfile = {
+            campusId:      template.id,
+            campusName:    template.name,
+            outcomeChoice: outcomeId,
+            bypass:        false,
+          }
+          await createUserProfile(user.uid, newProfile)
+          setProfile(newProfile)
+        }}
+      />
+    )
+  }
+
   return (
     <div
       style={{
@@ -237,6 +304,7 @@ export default function App() {
           hasApiKey={!!apiKey}
           onConnectClaude={() => setShowKeyGate(true)}
           isMobile={isMobile}
+          visibleRooms={visibleRooms}
         />
       )}
 
@@ -254,41 +322,55 @@ export default function App() {
         )}
 
         {isAtrium && (
-          <>
-            {(!isMobile || !activeObservation) && (
-              <ObservationStream
+          atriumMode === 'conversation'
+            ? (
+              <ConversationMode
                 observations={observations}
-                onSubmit={submitObservation}
-                activeObservation={activeObservation}
-                onSelectObservation={obs => setActiveObservationId(obs.id)}
-                uid={user?.uid}
+                institutionEvents={institutionEvents}
+                apiKey={apiKey}
+                onConnectClaude={() => setShowKeyGate(true)}
                 isMobile={isMobile}
+                onSwitchToText={() => setAtriumMode('observe')}
               />
-            )}
-            {activeObservation
-              ? (
-                <PACERProcessing
-                  observation={activeObservation}
-                  observations={observations}
-                  onRoute={routeObservation}
-                  onAcceptConstellation={acceptConstellation}
-                  hasApiKey={!!apiKey}
-                  onRequestApiKey={() => setShowKeyGate(true)}
-                  uid={user?.uid}
-                  isMobile={isMobile}
-                  onBack={isMobile ? () => setActiveObservationId(null) : null}
-                />
-              )
-              : (
-                !isMobile && (
-                  <AtriumDashboard
+            )
+            : (
+              <>
+                {(!isMobile || !activeObservation) && (
+                  <ObservationStream
                     observations={observations}
+                    onSubmit={submitObservation}
+                    activeObservation={activeObservation}
                     onSelectObservation={obs => setActiveObservationId(obs.id)}
+                    uid={user?.uid}
+                    isMobile={isMobile}
+                    onSwitchToConversation={() => setAtriumMode('conversation')}
                   />
-                )
-              )
-            }
-          </>
+                )}
+                {activeObservation
+                  ? (
+                    <PACERProcessing
+                      observation={activeObservation}
+                      observations={observations}
+                      onRoute={routeObservation}
+                      onAcceptConstellation={acceptConstellation}
+                      hasApiKey={!!apiKey}
+                      onRequestApiKey={() => setShowKeyGate(true)}
+                      uid={user?.uid}
+                      isMobile={isMobile}
+                      onBack={isMobile ? () => setActiveObservationId(null) : null}
+                    />
+                  )
+                  : (
+                    !isMobile && (
+                      <AtriumDashboard
+                        observations={observations}
+                        onSelectObservation={obs => setActiveObservationId(obs.id)}
+                      />
+                    )
+                  )
+                }
+              </>
+            )
         )}
 
         {isMuse && (
@@ -314,7 +396,19 @@ export default function App() {
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom isMobile={isMobile} />}
-        {isTheater  && <TheaterRoom graduates={graduates} observations={observations} apiKey={apiKey} onConnectClaude={() => setShowKeyGate(true)} uid={user?.uid} isMobile={isMobile} />}
+        {isTheater  && (
+          <TheaterRoom
+            graduates={graduates}
+            observations={observations}
+            productions={productions}
+            onCreateProduction={createProductionRecord}
+            onUpdateProduction={updateProductionRecord}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            uid={user?.uid}
+            isMobile={isMobile}
+          />
+        )}
         {isBusinessCenter && (
           <BusinessCenterRoom
             observations={observations}

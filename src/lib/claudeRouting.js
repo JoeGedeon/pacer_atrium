@@ -30,6 +30,75 @@ Return ONLY valid JSON. No markdown, no explanation:
 secondaryDestination: the next most likely destination, or null if no meaningful secondary.
 secondaryConfidence: confidence score for the secondary destination (0.0 to 1.0).`
 
+const CONVERSATION_SYSTEM = (dateStr, recentObs, recentEvents) =>
+  `You are PACER — the institutional intelligence for JPG Ventures LLC, a Georgia company.
+
+JPG Ventures has two primary divisions:
+- FleetFlow: Moving industry SaaS — fleet ops, job management, driver behavior, claims, documentation
+- Isles of the Awakening: Dark cinematic graphic novel — Haitian/Caribbean mythology, characters Aiziano and Vos Jr.
+
+PACER is also a living campus. Rooms: Atrium (observations), MUSE (manifestation decisions), VERA (pattern recognition), Theater (production), Business Center (cockpit), KEL (governance), Archivist Hall (memory), Doctrine (constitutional principles).
+
+You are speaking directly to your founder. Respond conversationally with institutional clarity and presence. Keep responses to 2-4 sentences unless asked for detail. Do not use markdown, bullets, or headers — plain prose only (this is voice output). Be direct and specific. Reference actual data from the context when answering questions about what has happened.
+
+Today: ${dateStr}
+
+Recent Observations (newest first):
+${recentObs || 'None recorded yet.'}
+
+Recent Institution Events:
+${recentEvents || 'None recorded yet.'}`
+
+export async function conversationQuery(userText, context, history, apiKey) {
+  const { observations = [], institutionEvents = [], dateStr = '' } = context
+
+  const recentObs = observations.slice(0, 12).map(o => {
+    const date = o.timestamp instanceof Date
+      ? o.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : ''
+    return `[${date}] ${o.type}: "${(o.text || '').slice(0, 80)}" → ${o.destination || 'unrouted'}${o.constellation ? ` (${o.constellation})` : ''}`
+  }).join('\n')
+
+  const recentEvents = institutionEvents.slice(0, 6).map(e => {
+    const date = e.createdAt instanceof Date
+      ? e.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : ''
+    return `[${date}] ${e.title}: ${(e.description || '').slice(0, 100)}`
+  }).join('\n')
+
+  const historyMessages = history.slice(-6).map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.text,
+  }))
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 350,
+      system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents),
+      messages: [
+        ...historyMessages,
+        { role: 'user', content: userText },
+      ],
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message || `HTTP ${res.status}`)
+  }
+
+  const data = await res.json()
+  return data.content?.[0]?.text?.trim() || ''
+}
+
 export async function analyzeObservation(text, apiKey) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
