@@ -58,28 +58,54 @@ export function pickVoice(gender) {
   return pool.find(v => pattern.test(v.name)) || null
 }
 
-// Single entry point for all speech in PACER — handles Chrome/Edge async voice loading.
+// Single entry point for all speech in PACER.
+// Handles Chrome/Edge async voice loading and Safari's silent voiceschanged non-fire.
 export function speakWithVoice(text, config, { onEnd, onError } = {}) {
-  if (!window.speechSynthesis) return
+  if (!window.speechSynthesis) {
+    console.debug('[PACER voice] speechSynthesis unavailable')
+    return
+  }
   const cfg = config || ROOM_VOICE_CONFIG.home
   window.speechSynthesis.cancel()
+
   const utt   = new SpeechSynthesisUtterance(text)
   utt.rate    = cfg.rate
   utt.pitch   = cfg.pitch
-  if (onEnd)   utt.onend   = onEnd
-  if (onError) utt.onerror = onError
+  utt.onstart = () => console.debug('[PACER voice] onstart fired')
+  utt.onend   = () => { console.debug('[PACER voice] onend fired'); onEnd?.() }
+  utt.onerror = (e) => { console.debug('[PACER voice] onerror:', e.error); onError?.() }
 
   const doSpeak = () => {
     const voice = pickVoice(cfg.gender)
+    const vCount = window.speechSynthesis.getVoices().length
+    console.debug(`[PACER voice] speak() — voices available: ${vCount}, selected: ${voice?.name || 'default'}`)
     if (voice) utt.voice = voice
     window.speechSynthesis.speak(utt)
   }
 
-  if (window.speechSynthesis.getVoices().length > 0) {
+  const voices = window.speechSynthesis.getVoices()
+  console.debug(`[PACER voice] init — voices: ${voices.length}, rate: ${cfg.rate}, pitch: ${cfg.pitch}`)
+
+  if (voices.length > 0) {
     doSpeak()
   } else {
-    window.speechSynthesis.onvoiceschanged = () => {
+    // Safari and some mobile browsers never fire voiceschanged after initial page load.
+    // Fallback: if the event hasn't fired within 300ms, speak with default voice anyway.
+    let resolved = false
+    const fallback = setTimeout(() => {
+      if (resolved) return
+      resolved = true
       window.speechSynthesis.onvoiceschanged = null
+      console.debug('[PACER voice] voiceschanged timeout — speaking with default voice')
+      doSpeak()
+    }, 300)
+
+    window.speechSynthesis.onvoiceschanged = () => {
+      if (resolved) return
+      resolved = true
+      clearTimeout(fallback)
+      window.speechSynthesis.onvoiceschanged = null
+      console.debug('[PACER voice] voiceschanged fired')
       doSpeak()
     }
   }

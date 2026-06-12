@@ -129,25 +129,40 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
             background: 'var(--bg-1)',
             border: '1px solid var(--border-0)',
             borderRadius: '10px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '12px',
           }}>
-            {[
-              { label: 'Visitors',     value: campusStats.visitors     || 0 },
-              { label: 'Returns',      value: campusStats.returns      || 0 },
-              { label: 'Observations', value: campusStats.observations || 0 },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ textAlign: 'center', flex: 1 }}>
-                <p style={{ color: 'var(--text-0)', fontSize: '20px', fontWeight: 700, lineHeight: 1 }}>
-                  {value}
-                </p>
-                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
-                  textTransform: 'uppercase', marginTop: '5px' }}>
-                  {label}
-                </p>
-              </div>
-            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '14px' }}>
+              {[
+                { label: 'Visitors',     value: campusStats.visitors     || 0 },
+                { label: 'Returns',      value: campusStats.returns      || 0 },
+                { label: 'Observations', value: campusStats.observations || 0 },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ textAlign: 'center', flex: 1 }}>
+                  <p style={{ color: 'var(--text-0)', fontSize: '20px', fontWeight: 700, lineHeight: 1 }}>
+                    {value}
+                  </p>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
+                    textTransform: 'uppercase', marginTop: '5px' }}>
+                    {label}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {/* Raw browser voice test — no PACER routing, no state, no AI */}
+            <button
+              onClick={() => {
+                const utt = new SpeechSynthesisUtterance('PACER voice test successful.')
+                console.debug('[PACER raw test] speak() called, voices:', window.speechSynthesis?.getVoices()?.length)
+                window.speechSynthesis?.speak(utt)
+              }}
+              style={{
+                width: '100%', fontFamily: 'inherit', cursor: 'pointer',
+                background: 'var(--bg-0)', border: '1px solid var(--border-1)',
+                borderRadius: '6px', padding: '7px 12px',
+                color: 'var(--text-5)', fontSize: '10px', letterSpacing: '0.06em',
+              }}
+            >
+              ▶ Raw Voice Test
+            </button>
           </div>
         )}
 
