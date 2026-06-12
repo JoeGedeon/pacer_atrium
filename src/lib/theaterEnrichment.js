@@ -1,17 +1,6 @@
 const MODEL = 'claude-haiku-4-5-20251001'
 
-const CREATION_TYPES = {
-  'Concept Art':       'conceptual illustration, symbolic and atmospheric',
-  'Infographic':       'clean data visualization, structured and informative',
-  'Character':         'character portrait, expressive and detailed',
-  'Environment':       'environmental scene, immersive and atmospheric',
-  'Storyboard Frame':  'single cinematic frame, narrative composition',
-  'Product Mockup':    'product visualization, professional and precise',
-  'Marketing Creative':'brand-aligned visual, bold and memorable',
-  'Blueprint':         'technical diagram, systematic and precise',
-}
-
-const SYSTEM = `You are Theater, PACER's context enrichment system for image creation.
+const PACER_CONTEXT = `You are Theater, PACER's production studio. Your role is to stage observations — to transform institutional thoughts into artifacts for audiences.
 
 PACER Institutional Context:
 - JPG Ventures LLC — systems company. Three branches from one root: preserve what matters.
@@ -22,20 +11,68 @@ PACER Institutional Context:
 - KODEX resonances: Blue (natural, originary, deep connection), Orange (fire, trauma, transformation), White (clarity, emergence), Void (absence made visible)
 - ARCHIVIST — memory layer. Institutional preservation. Deep archive.
 - Atrium — the threshold. First reception. Ancient institutional entry.
+- MUSE — the spark. Discovery. The creative director upstream from Theater.
 - Aiziano — foundational character, Blue Kodex, natural and deeply rooted
 - Vos Jr. — Orange resonance, fire and trauma, threshold crosser
 
-When given a sparse concept, enrich it into a precise, evocative image generation prompt that draws on PACER institutional context where relevant. The enriched prompt must:
-1. Preserve the user's core intent exactly
-2. Add specific visual details, mood, and institutional context where it belongs
-3. Specify style, lighting, composition, and atmosphere
-4. Be 60-160 words
-5. Read like a direct image generation prompt — vivid nouns and adjectives, no meta-commentary
+Theater does not create ideas. Theater stages them. MUSE notices. KODEX understands. Theater asks: how should the audience experience this?`
 
-Return ONLY the enriched prompt. No preamble. No explanation. No JSON. Just the prompt.`
+export const FORMATS = [
+  {
+    id: 'image',
+    icon: '🎨',
+    label: 'Image',
+    note: 'Visual manifestation',
+    available: true,
+    instruction: 'Enrich this into a vivid, precise image generation prompt. Specify style, lighting, mood, composition, and atmosphere. 60-160 words. Read like a direct image generation prompt — vivid nouns and adjectives, no meta-commentary. Return only the prompt.',
+    outputNote: 'Paste into DALL-E, Midjourney, Ideogram, Flux, or any image generator. The staging is the PACER contribution.',
+  },
+  {
+    id: 'story',
+    icon: '📖',
+    label: 'Story',
+    note: 'Written manifestation',
+    available: true,
+    instruction: 'Stage this as a narrative treatment: a 2-3 sentence premise establishing the world and stakes, the central tension or question, and the emotional arc (where does the audience end up?). Draw on PACER institutional context where it belongs. Return only the treatment — no preamble, no explanation.',
+    outputNote: 'Narrative treatment. Develop further, hand to a collaborator, or surface back to MUSE.',
+  },
+  {
+    id: 'infographic',
+    icon: '📊',
+    label: 'Infographic',
+    note: 'Data manifestation',
+    available: true,
+    instruction: 'Structure this as an infographic outline: a bold header (one striking phrase), 5-6 key insights as tight bullets, and a one-sentence closing statement. Use PACER institutional language where it belongs. Return only the structure — no preamble, no explanation.',
+    outputNote: 'Infographic structure. Drop into a slide or hand to a designer.',
+  },
+  {
+    id: 'presentation',
+    icon: '📄',
+    label: 'Presentation',
+    note: 'Slide manifestation',
+    available: true,
+    instruction: 'Outline this as a 5-slide arc: Slide 1 (Title — one striking phrase), Slides 2-4 (three beats of the core argument, one sentence each), Slide 5 (Close or call to action). Label each slide. Return only the arc — no preamble, no explanation.',
+    outputNote: 'Presentation arc. One sentence per slide. Build from here.',
+  },
+  {
+    id: 'video',
+    icon: '🎬',
+    label: 'Video',
+    note: 'Motion Studio — coming',
+    available: false,
+  },
+  {
+    id: 'audio',
+    icon: '🎵',
+    label: 'Audio',
+    note: 'Sound Studio — coming',
+    available: false,
+  },
+]
 
-export async function enrichImagePrompt(concept, creationType, apiKey) {
-  const typeContext = CREATION_TYPES[creationType] || 'visual composition'
+export async function enrichForFormat(observation, formatId, apiKey) {
+  const format = FORMATS.find(f => f.id === formatId)
+  if (!format || !format.available) throw new Error('Format not available')
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -47,11 +84,11 @@ export async function enrichImagePrompt(concept, creationType, apiKey) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 350,
-      system: SYSTEM,
+      max_tokens: 450,
+      system: PACER_CONTEXT,
       messages: [{
         role: 'user',
-        content: `Creation type: ${creationType} (${typeContext})\nConcept: "${concept}"\n\nEnrich this into a vivid image generation prompt using PACER institutional context where relevant.`,
+        content: `Observation: "${observation}"\n\n${format.instruction}`,
       }],
     }),
   })
@@ -62,7 +99,12 @@ export async function enrichImagePrompt(concept, creationType, apiKey) {
   }
 
   const data = await res.json()
-  return data.content?.[0]?.text?.trim() || concept
+  return data.content?.[0]?.text?.trim() || observation
 }
 
-export const CREATION_TYPE_OPTIONS = Object.keys(CREATION_TYPES)
+// Legacy export kept for any existing callers
+export async function enrichImagePrompt(concept, creationType, apiKey) {
+  return enrichForFormat(`${creationType}: ${concept}`, 'image', apiKey)
+}
+
+export const CREATION_TYPE_OPTIONS = ['Concept Art', 'Infographic', 'Character', 'Environment', 'Storyboard Frame', 'Product Mockup', 'Marketing Creative', 'Blueprint']
