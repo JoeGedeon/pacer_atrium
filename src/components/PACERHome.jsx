@@ -16,6 +16,24 @@ const EDGES = [
   [10, 3], [9, 0],                           // long connectors
 ]
 
+// Campus landmarks — one symbol per room. Faint glyphs, not labels.
+// Null entries are ambient connectors with no named destination.
+const NODE_GLYPH = [
+  '🛡',  // 0  VERA — sentinel
+  '💼',  // 1  Business
+  '🎭',  // 2  Theater
+  '🏝',  // 3  Isles
+  '📚',  // 4  Archivist Hall
+  '⚖',   // 5  Doctrine
+  '🧭',  // 6  KODEX — compass of the campus
+  '⚒',   // 7  K.E.L. Forge
+  '🎨',  // 8  MUSE
+  '🍍',  // 9  Atrium
+  null,   // 10 ambient
+  null,   // 11 ambient
+  null,   // 12 ambient
+]
+
 // Per-node pulse config: [duration(s), beginDelay(s), minOpacity, maxOpacity]
 // Hub (index 6) is brightest and fastest. VERA (0) barely moves.
 const NODE_PULSE = [
@@ -118,6 +136,22 @@ function CampusAtmosphere() {
             </circle>
           )
         })}
+
+        {/* Campus landmark glyphs — carved into the background, not announced */}
+        <g fontSize="4" textAnchor="middle" dominantBaseline="central"
+          opacity="0.07" style={{ userSelect: 'none', pointerEvents: 'none' }}>
+          {NODES.map(([cx, cy], i) => {
+            const glyph = NODE_GLYPH[i]
+            if (!glyph) return null
+            const isHub = i === 6
+            return (
+              <text key={i} x={cx} y={cy}
+                fontSize={isHub ? '5' : '4'}>
+                {glyph}
+              </text>
+            )
+          })}
+        </g>
       </svg>
 
     </div>
