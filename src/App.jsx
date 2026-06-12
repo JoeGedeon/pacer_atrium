@@ -418,10 +418,12 @@ export default function App() {
             institutionEvents={institutionEvents}
             creatorLogs={creatorLogs}
             kelReviews={kelReviews}
+            productions={productions}
             apiKey={apiKey}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             onAddLog={addCreatorLog}
+            onNavigate={setCurrentRoom}
             isMobile={isMobile}
           />
         )}

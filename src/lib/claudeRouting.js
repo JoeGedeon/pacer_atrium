@@ -49,6 +49,37 @@ ${recentObs || 'None recorded yet.'}
 Recent Institution Events:
 ${recentEvents || 'None recorded yet.'}`
 
+export async function generateInstitutionalPulse(context, apiKey) {
+  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [] } = context
+
+  const summary = [
+    `Observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`,
+    `Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting Human Gate approval`,
+    `Institution events this session: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ') || 'none'}`,
+    `Calendar entries logged: ${creatorLogs.length}`,
+  ].join('\n')
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 200,
+      system: 'You are PACER\'s institutional intelligence. Generate 3-5 short declarative sentences that form a complete institutional status report. Each sentence addresses a different dimension: campus activity, productions, observations, pending decisions, or FleetFlow. Report meaning, not metrics. Write as if briefing an executive who needs to know what matters right now. Example format: "Institution stable. Three productions active. One awaiting approval. FleetFlow operating normally. Two unresolved observations require routing." No preamble. No headers. Plain prose only.',
+      messages: [{ role: 'user', content: summary }],
+    }),
+  })
+
+  if (!res.ok) throw new Error('Pulse failed')
+  const data = await res.json()
+  return data.content?.[0]?.text?.trim() || ''
+}
+
 export async function conversationQuery(userText, context, history, apiKey) {
   const { observations = [], institutionEvents = [], dateStr = '' } = context
 
