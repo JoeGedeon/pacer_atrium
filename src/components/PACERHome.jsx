@@ -59,9 +59,10 @@ function CampusAtmosphere() {
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
 
       {/* Giant blue pineapple — moon scale, not object scale. Atmosphere, not accent. */}
+      {/* Shifted 15% right so the orb center sits behind E-R of the seal arc, not A-C */}
       <div style={{
         position: 'absolute',
-        top: '38%', left: '50%',
+        top: '38%', left: '65%',
         transform: 'translate(-50%, -50%)',
         fontSize: '620px', lineHeight: 1,
         filter: BLUE_PINEAPPLE_FILTER,
