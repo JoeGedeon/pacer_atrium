@@ -1,14 +1,19 @@
 // Blue Pineapple: doctrine, not decoration.
 const BLUE_PINEAPPLE_FILTER = 'hue-rotate(160deg) saturate(2) brightness(1.1)'
 
-// Constellation — memory pathways, not a map
+// Constellation — memory pathways, not a map.
+// Hub at index 6. Node index 9-12 are the newer additions.
 const NODES = [
-  [14, 15], [78, 10], [90, 44], [68, 82],
-  [20, 76], [7, 55], [50, 38], [42, 68], [62, 22],
+  [14, 15], [78, 10], [90, 44], [68, 82],   // 0-3
+  [20, 76], [7, 55],  [50, 38], [42, 68],   // 4-7
+  [62, 22], [35, 25], [82, 60], [28, 52],   // 8-11
+  [56, 90],                                  // 12
 ]
 const EDGES = [
-  [0, 6], [1, 8], [8, 6], [6, 2], [6, 7],
-  [3, 7], [4, 7], [5, 4], [5, 0],
+  [0, 6], [1, 8], [8, 6], [6, 2], [6, 7],  // original arms
+  [3, 7], [4, 7], [5, 4], [5, 0],           // original periphery
+  [9, 6], [10, 2], [11, 7], [12, 7],        // new branches
+  [10, 3], [9, 0],                           // long connectors
 ]
 
 // Fixed atmospheric layer — mounts with PACERHome, unmounts on navigation.
@@ -28,13 +33,31 @@ function CampusAtmosphere() {
         userSelect: 'none',
       }}>🍍</div>
 
-      {/* Constellation — faint memory network, only noticed after a moment */}
+      {/* Palm silhouette — upper right, counterweight to the centered pineapple */}
+      <div style={{
+        position: 'absolute',
+        top: '-30px', right: '-20px',
+        fontSize: '260px', lineHeight: 1,
+        opacity: 0.035,
+        transform: 'rotate(12deg)',
+        userSelect: 'none',
+      }}>🌴</div>
+
+      {/* Constellation + maritime arcs */}
       <svg
         viewBox="0 0 100 100"
         preserveAspectRatio="xMidYMid slice"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.08 }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
-        <g stroke="#6366f1" strokeWidth="0.12" fill="#6366f1">
+        {/* Navigation arcs — very faint, like old maritime charts */}
+        <g fill="none" stroke="#6366f1" strokeWidth="0.09" opacity="0.05">
+          <path d="M 0 22 Q 50 8 100 22" />
+          <path d="M 0 78 Q 50 92 100 78" />
+          <path d="M 20 0 Q 8 50 20 100" />
+        </g>
+
+        {/* Memory network */}
+        <g stroke="#6366f1" strokeWidth="0.12" fill="#6366f1" opacity="0.09">
           {EDGES.map(([a, b], i) => (
             <line
               key={i}
@@ -43,7 +66,7 @@ function CampusAtmosphere() {
             />
           ))}
           {NODES.map(([cx, cy], i) => (
-            <circle key={i} cx={cx} cy={cy} r={i === 6 ? 1.0 : 0.65} />
+            <circle key={i} cx={cx} cy={cy} r={i === 6 ? 1.0 : 0.6} />
           ))}
         </g>
       </svg>
