@@ -59,17 +59,17 @@ function CampusAtmosphere() {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
 
-      {/* Giant blue pineapple — moon scale, not object scale. Atmosphere, not accent. */}
-      {/* Center behind the E-R arc of the seal (~64% horizontal), upper-third        */}
-      {/* vertical. Orb and constellation hub are co-located so the composition       */}
-      {/* reads as one system with a shared anchor, not three separate layers.        */}
+      {/* Giant blue pineapple — the spirit behind the crest.                        */}
+      {/* Spine centered at left:50% to align with the pineapple inside the seal.   */}
+      {/* The constellation hub at SVG [64,32] is the moon/atmosphere; this is       */}
+      {/* the institutional double — crest above, spirit below, same vertical axis. */}
       <div style={{
         position: 'absolute',
-        top: '28%', left: '64%',
+        top: '35%', left: '50%',
         transform: 'translate(-50%, -50%)',
         fontSize: '500px', lineHeight: 1,
         filter: BLUE_PINEAPPLE_FILTER,
-        opacity: 0.022,
+        opacity: 0.025,
         userSelect: 'none',
       }}>🍍</div>
 
