@@ -40,10 +40,18 @@ export default function PACERVoice({ apiKey, observations, institutionEvents, em
       const context = { observations, institutionEvents, dateStr, emailContext, calendarContext }
       console.debug('[PACER voice-in] calling conversationQuery')
       const reply = await conversationQuery(text, context, [], apiKey)
-      console.debug('[PACER voice-in] reply received, length:', reply?.length)
-      setResponse(reply)
-      console.debug('[PACER voice-in] calling speakWithVoice')
-      speakWithVoice(reply, getVoiceConfig('home'), {
+      console.debug('[PACER voice-in] reply typeof:', typeof reply)
+      console.debug('[PACER voice-in] reply value:', reply)
+      const replyText = typeof reply === 'string' ? reply : String(reply ?? '')
+      if (!replyText.trim()) {
+        console.error('[PACER voice-in] reply is empty or non-string — not speaking')
+        setError('No response received from campus.')
+        setVoiceState('idle')
+        return
+      }
+      setResponse(replyText)
+      console.debug('[PACER voice-in] calling speakWithVoice, replyText length:', replyText.length)
+      speakWithVoice(replyText, getVoiceConfig('home'), {
         onStart: () => { console.debug('[PACER voice-in] onstart'); setVoiceState('speaking') },
         onEnd:   () => { console.debug('[PACER voice-in] onend'); setVoiceState('idle') },
         onError: () => { console.debug('[PACER voice-in] speech error'); setVoiceState('idle') },
