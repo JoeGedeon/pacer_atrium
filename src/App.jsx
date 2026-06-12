@@ -100,10 +100,11 @@ export default function App() {
   const [calendarEvents, setCalendarEvents]       = useState([])
 
   // ── Arrival Protocol ──────────────────────────────────────────────────────────
-  const [arrivalState, setArrivalState]   = useState(null) // null | 'asking' | 'text' | 'voice'
-  const [arrivalText, setArrivalText]     = useState('')
+  const [arrivalState, setArrivalState]     = useState(null) // null | 'asking' | 'text' | 'voice'
+  const [arrivalText, setArrivalText]       = useState('')
   const [arrivalLoading, setArrivalLoading] = useState(false)
-  const hasArrived                        = useRef(false)
+  const [arrivalSpeaking, setArrivalSpeaking] = useState(false)
+  const hasArrived                          = useRef(false)
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -208,14 +209,17 @@ export default function App() {
     return parts.join(' ') || 'Campus is operational.'
   }
 
-  function speakText(text) {
+  function speakArrivalText(text) {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
-    const utt = new SpeechSynthesisUtterance(text)
+    setArrivalSpeaking(true)
+    const greeting = getArrivalGreeting('Joe')
+    const full = text ? `${greeting} ${text}` : greeting
+    const utt = new SpeechSynthesisUtterance(full)
     utt.rate  = 0.92
     utt.pitch = 1.0
-    utt.onend   = () => setArrivalState(null)
-    utt.onerror = () => setArrivalState(null)
+    utt.onend   = () => { setArrivalSpeaking(false); setArrivalState(null) }
+    utt.onerror = () => { setArrivalSpeaking(false) }
     window.speechSynthesis.speak(utt)
   }
 
@@ -228,20 +232,15 @@ export default function App() {
     const timer = setTimeout(async () => {
       if (mode === 'ask') {
         setArrivalState('asking')
-      } else if (mode === 'text') {
-        setArrivalState('text')
+      } else if (mode === 'text' || mode === 'voice') {
+        // voice shows text card + Play button — browser autoplay policy requires a tap
+        setArrivalState(mode)
         setArrivalLoading(true)
         const text = await buildArrivalText()
         setArrivalText(text || '')
         setArrivalLoading(false)
-      } else if (mode === 'voice') {
-        const text = await buildArrivalText()
-        const greeting = getArrivalGreeting(profile.campusName ? 'Joe' : '')
-        const full = text ? `${greeting} ${text}` : greeting
-        setArrivalState('voice')
-        speakText(full)
       }
-    }, 700) // allow Firestore first-load to settle
+    }, 700)
     return () => clearTimeout(timer)
   }, [profile?.campusId]) // eslint-disable-line
 
@@ -614,9 +613,11 @@ export default function App() {
           greeting={getArrivalGreeting('Joe')}
           text={arrivalText}
           loading={arrivalLoading}
-          onDismiss={() => setArrivalState(null)}
+          isSpeaking={arrivalSpeaking}
+          onDismiss={() => { window.speechSynthesis?.cancel(); setArrivalSpeaking(false); setArrivalState(null) }}
           onAccept={handleArrivalAccept}
           onDecline={() => setArrivalState(null)}
+          onSpeak={() => speakArrivalText(arrivalText)}
         />
       )}
     </div>
