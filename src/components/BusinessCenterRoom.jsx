@@ -548,13 +548,17 @@ export default function BusinessCenterRoom({
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b98160', flexShrink: 0 }} />
                 Gmail connected
               </button>
-            ) : (
+            ) : onConnectGmail ? (
               <button
                 onClick={onConnectGmail}
                 style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: 'var(--text-4)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
               >
                 + Connect Gmail
               </button>
+            ) : (
+              <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                Set VITE_GOOGLE_CLIENT_ID to connect
+              </span>
             )}
           </div>
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden' }}>
