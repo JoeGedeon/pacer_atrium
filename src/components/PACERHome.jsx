@@ -142,33 +142,20 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         }}
       >
 
-        {/* Official Seal — Arrival Hall. Crest, not badge. */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+        {/* Seal — large enough to dominate, transparent enough to belong to the page */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
           <img
             src="/pacer-seal.png"
             alt="PACER"
-            style={{ width: '88px', height: '88px', objectFit: 'contain' }}
+            style={{ width: isMobile ? '160px' : '210px', height: isMobile ? '160px' : '210px', objectFit: 'contain' }}
           />
         </div>
 
-        <p style={{ color: 'var(--text-5)', fontSize: '10px', letterSpacing: '0.12em',
-          textTransform: 'uppercase', marginBottom: '20px' }}>
-          Reality voted. Architecture adapted.
-        </p>
-
-        <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '6px' }}>
-          There is room. Come in.
-        </p>
-
-        <p style={{ color: 'var(--text-4)', fontSize: '12px', marginBottom: '32px' }}>
-          Come in with respect.
-        </p>
-
         <p style={{
-          color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.8,
-          fontStyle: 'italic', marginBottom: '40px',
+          color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8,
+          fontStyle: 'italic', marginBottom: '36px',
           borderTop: '1px solid var(--border-0)', borderBottom: '1px solid var(--border-0)',
-          padding: '16px 0',
+          padding: '14px 0',
         }}>
           How do we preserve what matters while moving it forward?
         </p>
