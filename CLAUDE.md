@@ -20,6 +20,31 @@ These phrases are institutional doctrine. Do not rewrite, paraphrase, or "improv
 - **"Nothing important should be lost in the hallway."** — closing line of The Last Inch Principle. Do not rewrite.
 - **The five duties of The Last Inch Principle** (exact names, no paraphrasing): Identify the Path · Clear the Obstruction · Protect the Cargo · Document the Journey · Deliver the Outcome.
 
+### MUSE Institutional Mandate (locked June 2026)
+
+The five-line wall plaque. Do not rewrite, expand, or "improve":
+
+> Inspect the cargo.
+> Protect the truth.
+> Choose the path.
+> Recommend the journey.
+> Do not touch the wheel.
+
+The five questions MUSE asks at the border (exact names, no paraphrasing):
+- What is this?
+- Is it intact?
+- Where does it belong?
+- Should it travel?
+- Is now the right time?
+
+MUSE decisions (five, exact labels): Manifest · Do Not Manifest · Route to Business · Route to Doctrine · Archive Only
+
+**These are recommendations, not authorizations. The Human Gate retains authority. Theater retains execution.**
+
+**The moment MUSE touches the wheel, the separation of powers collapses.**
+
+MUSE role boundary: MUSE does not create. MUSE does not approve. MUSE does not execute. MUSE inspects.
+
 ---
 
 ## PACER Campus Rule #001

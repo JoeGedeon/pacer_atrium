@@ -124,10 +124,10 @@ const CHARTER_WINGS = [
     rooms: [
       {
         icon: '🎭',
-        name: 'Muse',
-        purpose: 'Creates possibilities.',
-        authority: ['Ideation', 'Exploration', 'Creative synthesis'],
-        cannot: ['Validate', 'Approve', 'Execute'],
+        name: 'MUSE',
+        purpose: 'Inspects observations before manifestation. Creative Director. Customs Officer. Sits between Governance and Theater — part of neither.',
+        authority: ['Manifest Decision', 'Routing recommendation', 'Cargo inspection', 'Timing judgment'],
+        cannot: ['Create', 'Generate', 'Approve', 'Execute', 'Touch the wheel'],
       },
       {
         icon: '✨',
@@ -199,6 +199,36 @@ const CHARTER_WINGS = [
     ],
   },
 ]
+
+const MUSE_MANDATE = {
+  title: 'MUSE — Institutional Mandate',
+  locked: 'June 2026',
+  plaque: [
+    'Inspect the cargo.',
+    'Protect the truth.',
+    'Choose the path.',
+    'Recommend the journey.',
+    'Do not touch the wheel.',
+  ],
+  role: 'Creative Director · Customs Officer',
+  description: 'MUSE exists to evaluate observations before manifestation. MUSE does not create. MUSE does not approve. MUSE does not execute. MUSE inspects.',
+  questions: [
+    'What is this?',
+    'Is it intact?',
+    'Where does it belong?',
+    'Should it travel?',
+    'Is now the right time?',
+  ],
+  decisions: [
+    { key: 'manifest',        label: 'Manifest',          note: 'Cargo is worth protecting through production.' },
+    { key: 'do_not_manifest', label: 'Do Not Manifest',   note: 'No container preserves this intact. Do not ship damaged goods.' },
+    { key: 'route_business',  label: 'Route to Business', note: 'Wrong studio for this cargo. Redirect to operational execution.' },
+    { key: 'route_doctrine',  label: 'Route to Doctrine', note: 'Carries a principle or constitutional insight. Doctrine should receive it.' },
+    { key: 'archive_only',    label: 'Archive Only',      note: 'Worth preserving. The destination is not ready. Timing matters.' },
+  ],
+  boundary: 'These are recommendations, not authorizations. The Human Gate retains authority. Theater retains execution. MUSE protects the cargo before the journey begins.',
+  warning: 'The moment MUSE touches the wheel, the separation of powers collapses.',
+}
 
 const HUMAN_GATE = {
   purpose: 'Every path crosses it. The center of PACER is not Muse, not K.E.L., not Theater, not Business. The center is the Human Gate.',
@@ -560,6 +590,114 @@ export default function DoctrineRoom({ isMobile }) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* MUSE Institutional Mandate */}
+      <section style={{ maxWidth: '600px', marginBottom: '40px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+          Room Mandates
+        </p>
+        <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic',
+          marginBottom: '20px' }}>
+          Constitutional law for individual rooms. Locked. Not subject to revision.
+        </p>
+
+        <div style={{
+          border: '1px solid #8b5cf640',
+          borderLeft: '3px solid #8b5cf6',
+          borderRadius: '0 10px 10px 0',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{ background: '#08050f', padding: '16px 20px',
+            borderBottom: '1px solid #8b5cf620' }}>
+            <div style={{ display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+              <p style={{ color: '#8b5cf6', fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                🎭 {MUSE_MANDATE.title}
+              </p>
+              <span style={{ color: 'var(--text-6)', fontSize: '9px',
+                letterSpacing: '0.08em', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                Locked {MUSE_MANDATE.locked}
+              </span>
+            </div>
+            <p style={{ color: '#8b5cf690', fontSize: '10px', letterSpacing: '0.1em',
+              textTransform: 'uppercase', marginBottom: '14px' }}>
+              {MUSE_MANDATE.role}
+            </p>
+
+            {/* Wall plaque */}
+            <div style={{ borderLeft: '2px solid #8b5cf640', paddingLeft: '14px',
+              marginBottom: '14px' }}>
+              {MUSE_MANDATE.plaque.map((line, i) => (
+                <p key={i} style={{
+                  color: i === 4 ? '#8b5cf6' : 'var(--text-1)',
+                  fontSize: i === 4 ? '13px' : '13px',
+                  fontWeight: i === 4 ? 700 : 500,
+                  lineHeight: 1.9,
+                  fontStyle: 'italic',
+                }}>
+                  {line}
+                </p>
+              ))}
+            </div>
+
+            <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7 }}>
+              {MUSE_MANDATE.description}
+            </p>
+          </div>
+
+          {/* Five questions */}
+          <div style={{ background: 'var(--bg-1)', padding: '14px 20px',
+            borderBottom: '1px solid #8b5cf615' }}>
+            <p style={{ color: '#8b5cf660', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+              Five Questions at the Border
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {MUSE_MANDATE.questions.map((q, i) => (
+                <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
+                  <span style={{ color: '#8b5cf640', fontSize: '10px',
+                    fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+                  <p style={{ color: 'var(--text-3)', fontSize: '12px' }}>{q}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Five decisions */}
+          <div style={{ background: 'var(--bg-1)', padding: '14px 20px',
+            borderBottom: '1px solid #8b5cf615' }}>
+            <p style={{ color: '#8b5cf660', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+              Five Decisions MUSE May Return
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {MUSE_MANDATE.decisions.map(d => (
+                <div key={d.key} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ color: '#8b5cf6cc', fontSize: '11px', fontWeight: 600,
+                    flexShrink: 0, minWidth: '130px' }}>{d.label}</span>
+                  <p style={{ color: 'var(--text-4)', fontSize: '11px',
+                    lineHeight: 1.6 }}>{d.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Boundary + warning */}
+          <div style={{ background: 'var(--bg-0)', padding: '14px 20px' }}>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.7,
+              marginBottom: '10px' }}>
+              {MUSE_MANDATE.boundary}
+            </p>
+            <p style={{ color: '#8b5cf6', fontSize: '11px', fontWeight: 600,
+              fontStyle: 'italic' }}>
+              {MUSE_MANDATE.warning}
+            </p>
+          </div>
         </div>
       </section>
 
