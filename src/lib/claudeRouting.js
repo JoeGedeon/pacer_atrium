@@ -49,6 +49,37 @@ ${recentObs || 'None recorded yet.'}
 Recent Institution Events:
 ${recentEvents || 'None recorded yet.'}`
 
+export async function generateInstitutionalPulse(context, apiKey) {
+  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [] } = context
+
+  const summary = [
+    `Observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`,
+    `Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting Human Gate approval`,
+    `Institution events this session: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ') || 'none'}`,
+    `Calendar entries logged: ${creatorLogs.length}`,
+  ].join('\n')
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 80,
+      system: 'You are PACER\'s institutional intelligence. Generate exactly one sentence (maximum 28 words) summarizing the current state of the campus. Be specific, use actual numbers, write in present tense. Answer: "What is the state of the campus right now?" in a way that directs the founder\'s attention. No preamble.',
+      messages: [{ role: 'user', content: summary }],
+    }),
+  })
+
+  if (!res.ok) throw new Error('Pulse failed')
+  const data = await res.json()
+  return data.content?.[0]?.text?.trim() || ''
+}
+
 export async function conversationQuery(userText, context, history, apiKey) {
   const { observations = [], institutionEvents = [], dateStr = '' } = context
 
