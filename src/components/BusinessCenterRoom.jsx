@@ -62,14 +62,35 @@ function groupEventsByDate(events) {
 // ── Static pulse fallback ─────────────────────────────────────────────────────
 
 function staticPulse({ totalObs, pendingCount, stagedCount, constitutionalTests, apiConnected, recentEventCount, calendarEntries, humanGateApprovals }) {
-  if (totalObs === 0) return 'The Atrium is quiet. The campus is ready to receive its first observation.'
-  if (!apiConnected) return `${totalObs} observation${totalObs !== 1 ? 's' : ''} captured. Connect Claude to enable MUSE analysis and institutional intelligence.`
-  if (pendingCount > 5 && pendingCount > stagedCount * 3) return `${pendingCount} observations are awaiting routing decisions. Human Gate attention may be the current bottleneck.`
-  if (stagedCount > 0 && constitutionalTests > 0) return `Campus is active. ${stagedCount} observation${stagedCount !== 1 ? 's' : ''} staged for Theater. Constitutional testing is on the record.`
-  if (stagedCount > 0) return `${stagedCount} observation${stagedCount !== 1 ? 's' : ''} staged for production. The pipeline is moving.`
-  if (humanGateApprovals > 0) return `${humanGateApprovals} Human Gate approval${humanGateApprovals !== 1 ? 's' : ''} on record. Institutional governance is active.`
-  if (recentEventCount > 3) return 'Institutional activity is elevated. Multiple governance events recorded in recent sessions.'
-  return `${totalObs} observation${totalObs !== 1 ? 's' : ''} in memory. Campus is operational.`
+  const parts = []
+  if (totalObs === 0) {
+    parts.push('The Atrium is quiet.')
+    parts.push('The campus is ready to receive its first observation.')
+    if (!apiConnected) parts.push('Connect Claude to activate institutional intelligence.')
+    return parts.join(' ')
+  }
+  parts.push(totalObs === 1 ? 'One observation in memory.' : `${totalObs} observations on record.`)
+  if (!apiConnected) {
+    parts.push('Claude is not connected — MUSE analysis unavailable.')
+  } else if (pendingCount > 0) {
+    parts.push(`${pendingCount} observation${pendingCount !== 1 ? 's' : ''} awaiting routing.`)
+  } else {
+    parts.push('All observations routed.')
+  }
+  if (stagedCount > 0) {
+    parts.push(`${stagedCount} production${stagedCount !== 1 ? 's' : ''} staged for Theater.`)
+  } else {
+    parts.push('No productions staged.')
+  }
+  if (humanGateApprovals > 0) {
+    parts.push(`Human Gate has issued ${humanGateApprovals} approval${humanGateApprovals !== 1 ? 's' : ''}.`)
+  }
+  if (recentEventCount > 3) {
+    parts.push('Institutional activity is elevated.')
+  } else if (recentEventCount > 0) {
+    parts.push('Campus is operational.')
+  }
+  return parts.join(' ')
 }
 
 // ── Action Queue ──────────────────────────────────────────────────────────────
@@ -462,35 +483,16 @@ export default function BusinessCenterRoom({
 
       <div className={`flex-1 overflow-y-auto ${px} py-6`}>
 
-        {/* ── INSTITUTIONAL PULSE ─────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '20px' }}>
+        {/* ── CALENDAR (CENTERPIECE) ──────────────────────────────────────── */}
+        <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Institutional Pulse
+              Calendar
             </p>
-            {apiKey && (
-              <button
-                onClick={handleGeneratePulse}
-                disabled={pulsing}
-                style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: pulsing ? 'var(--text-6)' : 'var(--text-4)', fontSize: '10px', cursor: pulsing ? 'default' : 'pointer', letterSpacing: '0.04em' }}
-              >
-                {pulsing ? '…' : '↺ Refresh'}
-              </button>
-            )}
+            <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>The Map</p>
           </div>
-          <div style={{
-            background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-            borderLeft: '3px solid #3b82f6', borderRadius: '0 10px 10px 0',
-            padding: '18px 22px',
-          }}>
-            <p style={{ color: pulsing ? 'var(--text-4)' : 'var(--text-1)', fontSize: '15px', lineHeight: 1.75, fontStyle: 'italic', fontWeight: 500, transition: 'color 0.3s' }}>
-              {pulsing ? 'Reading the campus…' : displayPulse}
-            </p>
-            {aiPulse && (
-              <p style={{ color: '#3b82f640', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '8px', fontWeight: 600 }}>
-                ● AI Generated
-              </p>
-            )}
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '18px' }}>
+            <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
           </div>
         </div>
 
@@ -509,56 +511,44 @@ export default function BusinessCenterRoom({
           <ActionQueue items={actionItems} onNavigate={onNavigate} />
         </div>
 
+        {/* ── INSTITUTIONAL PULSE ─────────────────────────────────────────── */}
+        <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+              Institutional Pulse
+            </p>
+            {apiKey && (
+              <button
+                onClick={handleGeneratePulse}
+                disabled={pulsing}
+                style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: pulsing ? 'var(--text-6)' : 'var(--text-4)', fontSize: '10px', cursor: pulsing ? 'default' : 'pointer', letterSpacing: '0.04em' }}
+              >
+                {pulsing ? '…' : '↺ Refresh'}
+              </button>
+            )}
+          </div>
+          <div style={{
+            background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+            borderLeft: '3px solid #3b82f6', borderRadius: '0 10px 10px 0',
+            padding: '20px 24px',
+          }}>
+            <p style={{ color: pulsing ? 'var(--text-4)' : 'var(--text-1)', fontSize: '13px', lineHeight: 1.9, fontStyle: 'italic', fontWeight: 400, transition: 'color 0.3s' }}>
+              {pulsing ? 'Reading the campus…' : displayPulse}
+            </p>
+            {aiPulse && (
+              <p style={{ color: '#3b82f640', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '10px', fontWeight: 600 }}>
+                ● AI Generated
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* ── SYSTEM HEALTH ───────────────────────────────────────────────── */}
         <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
             System Health
           </p>
           <SystemHealth health={health} isMobile={isMobile} />
-        </div>
-
-        {/* ── CREATOR TIMELINE + CALENDAR ─────────────────────────────────── */}
-        <div style={{
-          maxWidth: '600px', marginBottom: '24px',
-          display: isMobile ? 'block' : 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '16px', alignItems: 'start',
-        }}>
-          {/* Timeline */}
-          {recentEvents.length > 0 && (
-            <div style={{ marginBottom: isMobile ? '20px' : '0' }}>
-              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-                Creator Timeline
-              </p>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden', maxHeight: '360px', overflowY: 'auto' }}>
-                {groupedEvents.map(([dateLabel, events], gi) => (
-                  <div key={dateLabel} style={{ borderBottom: gi < groupedEvents.length - 1 ? '1px solid var(--border-0)' : 'none', padding: '12px 16px' }}>
-                    <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '7px' }}>
-                      {dateLabel}
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {events.map(e => (
-                        <div key={e.id} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
-                          <span style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '1px', flexShrink: 0 }}>·</span>
-                          <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>{e.title}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Calendar Widget */}
-          <div>
-            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-              Calendar
-            </p>
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '14px' }}>
-              <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
-            </div>
-          </div>
         </div>
 
         {/* ── FLEETFLOW GATEWAY ───────────────────────────────────────────── */}
@@ -605,6 +595,32 @@ export default function BusinessCenterRoom({
 
         {/* ── DIVIDER ─────────────────────────────────────────────────────── */}
         <div style={{ maxWidth: '600px', borderTop: '1px solid var(--border-0)', marginBottom: '32px' }} />
+
+        {/* ── CREATOR TIMELINE ────────────────────────────────────────────── */}
+        {recentEvents.length > 0 && (
+          <div style={{ maxWidth: '600px', marginBottom: '32px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+              Creator Timeline
+            </p>
+            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden', maxHeight: '360px', overflowY: 'auto' }}>
+              {groupedEvents.map(([dateLabel, events], gi) => (
+                <div key={dateLabel} style={{ borderBottom: gi < groupedEvents.length - 1 ? '1px solid var(--border-0)' : 'none', padding: '12px 16px' }}>
+                  <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '7px' }}>
+                    {dateLabel}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {events.map(e => (
+                      <div key={e.id} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
+                        <span style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '1px', flexShrink: 0 }}>·</span>
+                        <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>{e.title}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── COLLEGE OF OPERATIONS ───────────────────────────────────────── */}
         <div style={{ maxWidth: '600px', marginBottom: '32px' }}>

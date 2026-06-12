@@ -69,8 +69,8 @@ export async function generateInstitutionalPulse(context, apiKey) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 80,
-      system: 'You are PACER\'s institutional intelligence. Generate exactly one sentence (maximum 28 words) summarizing the current state of the campus. Be specific, use actual numbers, write in present tense. Answer: "What is the state of the campus right now?" in a way that directs the founder\'s attention. No preamble.',
+      max_tokens: 200,
+      system: 'You are PACER\'s institutional intelligence. Generate 3-5 short declarative sentences that form a complete institutional status report. Each sentence addresses a different dimension: campus activity, productions, observations, pending decisions, or FleetFlow. Report meaning, not metrics. Write as if briefing an executive who needs to know what matters right now. Example format: "Institution stable. Three productions active. One awaiting approval. FleetFlow operating normally. Two unresolved observations require routing." No preamble. No headers. Plain prose only.',
       messages: [{ role: 'user', content: summary }],
     }),
   })
