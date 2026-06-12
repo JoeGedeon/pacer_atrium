@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { enrichImagePrompt, CREATION_TYPE_OPTIONS } from '../lib/theaterEnrichment'
+import { enrichForFormat, FORMATS } from '../lib/theaterEnrichment'
 
 const TEACHINGS = [
   {
@@ -21,42 +21,44 @@ const TEACHINGS = [
 ]
 
 const FLEETFLOW_ACTS = [
-  { label: 'Act I',   title: 'The Problem',      note: 'Thirty years in moving. Broken communication, missed invoices, claims, repeated mistakes. The reality that kept grading the work.' },
-  { label: 'Act II',  title: 'The Discipline',   note: 'Observation. Memory. Accountability. Operational stewardship. The lessons learned before the software existed.' },
-  { label: 'Act III', title: 'The Forge',         note: 'The building of FleetFlow. The testing. The failures. The iterations. The moments where reality said: not good enough.' },
-  { label: 'Act IV',  title: 'The Graduate',      note: 'FleetFlow — not as a product. As evidence. Proof that the discipline survived contact with reality.' },
-  { label: 'Act V',   title: 'The Next Builder',  note: 'The door. Builder Studio. The empty plaque. The resident walking toward the forge.' },
+  { label: 'Act I',   title: 'The Problem',     note: 'Thirty years in moving. Broken communication, missed invoices, claims, repeated mistakes. The reality that kept grading the work.' },
+  { label: 'Act II',  title: 'The Discipline',  note: 'Observation. Memory. Accountability. Operational stewardship. The lessons learned before the software existed.' },
+  { label: 'Act III', title: 'The Forge',        note: 'The building of FleetFlow. The testing. The failures. The iterations. The moments where reality said: not good enough.' },
+  { label: 'Act IV',  title: 'The Graduate',     note: 'FleetFlow — not as a product. As evidence. Proof that the discipline survived contact with reality.' },
+  { label: 'Act V',   title: 'The Next Builder', note: 'The door. Builder Studio. The empty plaque. The resident walking toward the forge.' },
 ]
 
 const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
 function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
 
-function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
+function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
-  const [creationType, setCreationType] = useState('Concept Art')
-  const [concept, setConcept]           = useState('')
-  const [enriched, setEnriched]         = useState('')
-  const [enriching, setEnriching]       = useState(false)
-  const [error, setError]               = useState(null)
-  const [copied, setCopied]             = useState(false)
+  const [formatId, setFormatId] = useState('image')
+  const [concept, setConcept]   = useState('')
+  const [staged, setStaged]     = useState('')
+  const [staging, setStaging]   = useState(false)
+  const [error, setError]       = useState(null)
+  const [copied, setCopied]     = useState(false)
 
-  async function handleEnrich() {
+  const selectedFormat = FORMATS.find(f => f.id === formatId)
+
+  async function handleStage() {
     if (!concept.trim()) return
-    setEnriching(true)
+    setStaging(true)
     setError(null)
-    setEnriched('')
+    setStaged('')
     try {
-      const result = await enrichImagePrompt(concept, creationType, apiKey)
-      setEnriched(result)
+      const result = await enrichForFormat(concept, formatId, apiKey)
+      setStaged(result)
     } catch (e) {
       setError(e.message)
     } finally {
-      setEnriching(false)
+      setStaging(false)
     }
   }
 
   function handleCopy() {
-    navigator.clipboard.writeText(enriched).then(() => {
+    navigator.clipboard.writeText(staged).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
     })
@@ -66,55 +68,27 @@ function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
     <div className={`flex-1 overflow-y-auto ${px} py-8`}>
       <div style={{ maxWidth: '580px' }}>
 
-        {/* Explanation */}
+        {/* Framing */}
         <div style={{ marginBottom: '32px' }}>
           <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8, marginBottom: '10px' }}>
-            You provide the concept. PACER provides the context. Theater produces the prompt.
+            The stage is ready.
           </p>
           <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
-            A sparse idea becomes institutionally enriched — carrying PACER's world, vocabulary, and visual doctrine into any image generator you use.
+            MUSE notices. KODEX understands. Theater asks: how should the audience experience this?
+            Bring an observation — Theater stages it.
           </p>
         </div>
 
-        {/* Creation type */}
+        {/* Observation input */}
         <div style={{ marginBottom: '20px' }}>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-            Creation Type
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {CREATION_TYPE_OPTIONS.map(t => (
-              <button
-                key={t}
-                onClick={() => setCreationType(t)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '20px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  background: creationType === t ? '#8b5cf6' : 'var(--bg-2)',
-                  color:      creationType === t ? '#fff'    : 'var(--text-3)',
-                  border:     creationType === t ? '1px solid #8b5cf6' : '1px solid var(--border-1)',
-                  fontWeight: creationType === t ? 600 : 400,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Concept input */}
-        <div style={{ marginBottom: '16px' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
             textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-            Concept
+            Observation
           </p>
           <textarea
             value={concept}
             onChange={e => setConcept(e.target.value)}
-            placeholder="Blue Pineapple Atrium   /   FleetFlow gate   /   Aiziano in the Isles   /   etc."
+            placeholder="FleetFlow ↔ Isles = movement as narrative   /   Blue Pineapple threshold   /   Governance is the comparison between declared and observed state"
             rows={3}
             style={{
               width: '100%',
@@ -129,11 +103,50 @@ function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
               outline: 'none',
               fontFamily: 'inherit',
             }}
-            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleEnrich() }}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleStage() }}
           />
         </div>
 
-        {/* Enrich button */}
+        {/* Format selection */}
+        <div style={{ marginBottom: '24px' }}>
+          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+            How should this be performed?
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {FORMATS.map(f => (
+              <button
+                key={f.id}
+                onClick={() => f.available && setFormatId(f.id)}
+                disabled={!f.available}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  cursor: f.available ? 'pointer' : 'default',
+                  background: formatId === f.id ? '#7c3aed' : f.available ? 'var(--bg-2)' : 'var(--bg-1)',
+                  color: formatId === f.id ? '#fff' : f.available ? 'var(--text-3)' : 'var(--text-6)',
+                  border: `1px solid ${formatId === f.id ? '#8b5cf6' : f.available ? 'var(--border-1)' : 'var(--border-0)'}`,
+                  fontWeight: formatId === f.id ? 600 : 400,
+                  transition: 'all 0.15s',
+                  opacity: f.available ? 1 : 0.5,
+                }}
+              >
+                {f.icon} {f.label}
+                {!f.available && (
+                  <span style={{ fontSize: '9px', marginLeft: '5px', opacity: 0.6 }}>soon</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {selectedFormat?.available && (
+            <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '8px', fontStyle: 'italic' }}>
+              {selectedFormat.note}
+            </p>
+          )}
+        </div>
+
+        {/* Stage button */}
         {!apiKey ? (
           <button
             onClick={onConnectClaude}
@@ -144,24 +157,24 @@ function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
               cursor: 'pointer', marginBottom: '24px',
             }}
           >
-            ✦ Connect Claude to enrich with PACER context
+            ✦ Connect Claude to stage with PACER
           </button>
         ) : (
           <button
-            onClick={handleEnrich}
-            disabled={!concept.trim() || enriching}
+            onClick={handleStage}
+            disabled={!concept.trim() || staging}
             style={{
-              background: concept.trim() && !enriching ? '#7c3aed' : 'var(--bg-2)',
-              border: `1px solid ${concept.trim() && !enriching ? '#8b5cf6' : 'var(--border-1)'}`,
+              background: concept.trim() && !staging ? '#7c3aed' : 'var(--bg-2)',
+              border: `1px solid ${concept.trim() && !staging ? '#8b5cf6' : 'var(--border-1)'}`,
               borderRadius: '8px', padding: '10px 20px',
-              color: concept.trim() && !enriching ? '#fff' : 'var(--text-5)',
+              color: concept.trim() && !staging ? '#fff' : 'var(--text-5)',
               fontSize: '12px', fontWeight: 600,
-              cursor: concept.trim() && !enriching ? 'pointer' : 'default',
+              cursor: concept.trim() && !staging ? 'pointer' : 'default',
               marginBottom: '24px',
               transition: 'all 0.15s',
             }}
           >
-            {enriching ? 'Enriching…' : '✦ Enrich with PACER'}
+            {staging ? 'Staging…' : '🎭 Stage this'}
           </button>
         )}
 
@@ -169,8 +182,8 @@ function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
           <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '16px' }}>{error}</p>
         )}
 
-        {/* Enriched prompt output */}
-        {enriched && (
+        {/* Staged output */}
+        {staged && (
           <div style={{
             background: 'var(--bg-2)',
             border: '1px solid #8b5cf640',
@@ -186,7 +199,7 @@ function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
             }}>
               <p style={{ color: '#8b5cf6', fontSize: '9px', fontWeight: 700,
                 letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                PACER-Enriched Prompt — {creationType}
+                {selectedFormat?.icon} {selectedFormat?.label} — Staged for Production
               </p>
               <button
                 onClick={handleCopy}
@@ -202,41 +215,47 @@ function ImageStudio({ apiKey, onConnectClaude, isMobile }) {
               </button>
             </div>
             <div style={{ padding: '16px' }}>
-              <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.85 }}>
-                {enriched}
+              <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>
+                {staged}
               </p>
             </div>
-            <div style={{ padding: '10px 16px', borderTop: '1px solid #8b5cf620' }}>
-              <p style={{ color: 'var(--text-6)', fontSize: '10px', lineHeight: 1.6 }}>
-                Paste this prompt into DALL-E, Midjourney, Ideogram, Flux, or any image generator.
-                The enrichment is the PACER contribution. The generation step is yours.
-              </p>
-            </div>
+            {selectedFormat?.outputNote && (
+              <div style={{ padding: '10px 16px', borderTop: '1px solid #8b5cf620' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '10px', lineHeight: 1.6 }}>
+                  {selectedFormat.outputNote}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Phase indicator */}
-        <div style={{
-          borderTop: '1px solid var(--border-0)', paddingTop: '20px',
-          display: 'flex', gap: '16px',
-        }}>
-          {[
-            { label: 'Image Studio', status: 'active',  note: 'PACER-enriched prompts' },
-            { label: 'Storyboard',   status: 'coming',  note: 'Narrative-first scene builder' },
-            { label: 'Motion',       status: 'coming',  note: 'Video generation pipeline' },
-            { label: 'Sound',        status: 'coming',  note: 'Voice and atmosphere' },
-          ].map(({ label, status, note }) => (
-            <div key={label} style={{ flex: 1 }}>
-              <p style={{
-                fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em',
-                textTransform: 'uppercase', marginBottom: '3px',
-                color: status === 'active' ? '#8b5cf6' : 'var(--text-6)',
-              }}>
-                {label}
-              </p>
-              <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>{note}</p>
-            </div>
-          ))}
+        {/* Studio roadmap */}
+        <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '20px' }}>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+            Production Wing
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            {[
+              { label: 'Image Studio',        status: 'active',  note: 'Visual manifestation' },
+              { label: 'Story Studio',         status: 'active',  note: 'Written manifestation' },
+              { label: 'Infographic Studio',   status: 'active',  note: 'Data manifestation' },
+              { label: 'Presentation Studio',  status: 'active',  note: 'Slide manifestation' },
+              { label: 'Motion Studio',        status: 'active',  note: 'Video manifestation' },
+              { label: 'Sound Studio',         status: 'coming',  note: 'Voice and atmosphere' },
+            ].map(({ label, status, note }) => (
+              <div key={label} style={{ minWidth: '140px' }}>
+                <p style={{
+                  fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em',
+                  textTransform: 'uppercase', marginBottom: '2px',
+                  color: status === 'active' ? '#8b5cf6' : 'var(--text-6)',
+                }}>
+                  {label}
+                </p>
+                <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>{note}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
       </div>
@@ -262,14 +281,14 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
           letterSpacing: '0.08em', marginBottom: '6px' }}>Theater</h2>
         <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
           marginBottom: '16px' }}>
-          Look what survived.
+          Where thoughts become visible.
         </p>
 
         {/* Tab switcher */}
         <div style={{ display: 'flex', gap: '0', borderBottom: 'none', marginBottom: '-1px' }}>
           {[
             { id: 'productions', label: 'Productions' },
-            { id: 'studio',      label: '🎨 Image Studio' },
+            { id: 'stage',       label: '🎭 Production Wing' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -293,8 +312,8 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
         </div>
       </div>
 
-      {view === 'studio' ? (
-        <ImageStudio apiKey={apiKey} onConnectClaude={onConnectClaude} isMobile={isMobile} />
+      {view === 'stage' ? (
+        <ProductionWing apiKey={apiKey} onConnectClaude={onConnectClaude} isMobile={isMobile} />
       ) : (
         <div className={`flex-1 overflow-y-auto ${px} py-8`}>
 

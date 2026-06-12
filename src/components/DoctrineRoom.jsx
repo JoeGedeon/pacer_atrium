@@ -89,6 +89,109 @@ const CANONIZATIONS = [
   },
 ]
 
+const CHARTER_WINGS = [
+  {
+    id: 'threshold',
+    name: 'Threshold Wing',
+    rooms: [
+      {
+        icon: '🍍',
+        name: 'Atrium',
+        purpose: 'Receives observations. Makes no judgments. Rejects nothing.',
+        authority: ['Intake'],
+        cannot: ['Recommend', 'Approve', 'Execute', 'Manifest'],
+      },
+    ],
+  },
+  {
+    id: 'cognitive',
+    name: 'Cognitive Wing',
+    rooms: [
+      {
+        icon: '🎭',
+        name: 'Muse',
+        purpose: 'Creates possibilities.',
+        authority: ['Ideation', 'Exploration', 'Creative synthesis'],
+        cannot: ['Validate', 'Approve', 'Execute'],
+      },
+      {
+        icon: '✨',
+        name: 'VERA',
+        purpose: 'Witnesses reality.',
+        authority: ['Verification', 'Evidence', 'Observation integrity'],
+        cannot: ['Imagine', 'Recommend', 'Execute'],
+      },
+      {
+        icon: '📍',
+        name: 'K.E.L.',
+        purpose: 'Points at the map. Does not touch the wheel.',
+        authority: ['Recommendation', 'Prioritization', 'Readiness review'],
+        cannot: ['Approve', 'Execute', 'Override humans'],
+      },
+    ],
+  },
+  {
+    id: 'production',
+    name: 'Production Wing',
+    rooms: [
+      {
+        icon: '🎬',
+        name: 'Theater',
+        purpose: 'Receives staged observations. Asks: how should this be experienced?',
+        authority: ['Manifestation'],
+        cannot: ['Govern', 'Validate', 'Execute operations'],
+        studios: ['Image Studio', 'Story Studio', 'Infographic Studio', 'Presentation Studio', 'Motion Studio', 'Sound Studio'],
+      },
+    ],
+  },
+  {
+    id: 'operational',
+    name: 'Operational Wing',
+    rooms: [
+      {
+        icon: '🏢',
+        name: 'Business',
+        purpose: 'Receives approved decisions. Asks: how does this become action?',
+        authority: ['Execution bridge', 'FleetFlow integration', 'Operational deployment'],
+        cannot: ['Generate doctrine', 'Rewrite recommendations'],
+      },
+    ],
+  },
+  {
+    id: 'memory',
+    name: 'Memory Wing',
+    rooms: [
+      {
+        icon: '📚',
+        name: 'Archivist Hall',
+        purpose: 'Preserves. Retrieves. Maintains historical continuity.',
+        authority: ['Preservation', 'Retrieval', 'Historical continuity'],
+        cannot: ['Recommend', 'Execute', 'Manifest'],
+      },
+    ],
+  },
+  {
+    id: 'governance',
+    name: 'Governance Wing',
+    rooms: [
+      {
+        icon: '📜',
+        name: 'Doctrine',
+        purpose: 'Holds the institutional constitution.',
+        authority: ['Principles', 'Constitutional records', 'Institutional law'],
+        cannot: ['Execute'],
+      },
+    ],
+  },
+]
+
+const HUMAN_GATE = {
+  purpose: 'Every path crosses it. The center of PACER is not Muse, not K.E.L., not Theater, not Business. The center is the Human Gate.',
+  authority: ['Approve', 'Deny', 'Override', 'Escalate'],
+  cannot: ['Rewrite reality'],
+  note: 'Most AI systems are trying to remove the human. PACER makes the human more important. The system becomes smarter specifically because it refuses to remove accountability. In a world determined to automate responsibility out of existence, that is a surprisingly radical design choice.',
+}
+
 const TAG_COLORS = {
   Foundation:   '#f59e0b',
   Governance:   '#3b82f6',
@@ -121,6 +224,7 @@ export default function DoctrineRoom({ isMobile }) {
           {' · '}{CANDIDATE_PRINCIPLES.length} candidate
           {' · '}{PRINCIPLES.length} principles
           {' · '}{CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}
+          {' · '}{CHARTER_WINGS.length} wings chartered
         </p>
       </div>
 
@@ -288,6 +392,123 @@ export default function DoctrineRoom({ isMobile }) {
               <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '12px' }}>
                 {entry.realm}
               </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Governance Charter */}
+      <section style={{ maxWidth: '600px', marginBottom: '40px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+          Governance Charter
+        </p>
+        <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic',
+          marginBottom: '20px' }}>
+          Who is allowed to do what. Established June 2026.
+        </p>
+
+        {/* Human Gate — center of the campus */}
+        <div style={{
+          border: '1px solid #f59e0b40',
+          borderLeft: '3px solid #f59e0b',
+          borderRadius: '0 10px 10px 0',
+          overflow: 'hidden',
+          marginBottom: '20px',
+        }}>
+          <div style={{ background: '#0a0800', padding: '14px 18px',
+            borderBottom: '1px solid #f59e0b20' }}>
+            <p style={{ color: '#f59e0b', fontSize: '9px', fontWeight: 700,
+              letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>
+              👤 The Human Gate — Steward
+            </p>
+            <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7 }}>
+              {HUMAN_GATE.purpose}
+            </p>
+          </div>
+          <div style={{ background: 'var(--bg-1)', padding: '12px 18px',
+            display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <div>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                textTransform: 'uppercase', marginBottom: '6px' }}>Authority</p>
+              <div className="flex flex-col gap-1">
+                {HUMAN_GATE.authority.map(a => (
+                  <p key={a} style={{ color: '#10b981', fontSize: '11px' }}>+ {a}</p>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                textTransform: 'uppercase', marginBottom: '6px' }}>Cannot</p>
+              <div className="flex flex-col gap-1">
+                {HUMAN_GATE.cannot.map(c => (
+                  <p key={c} style={{ color: '#ef444480', fontSize: '11px' }}>− {c}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ background: 'var(--bg-0)', padding: '12px 18px',
+            borderTop: '1px solid #f59e0b20' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
+              {HUMAN_GATE.note}
+            </p>
+          </div>
+        </div>
+
+        {/* Wings */}
+        <div className="flex flex-col gap-4">
+          {CHARTER_WINGS.map(wing => (
+            <div key={wing.id}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+                textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+                {wing.name}
+              </p>
+              <div className="flex flex-col gap-2">
+                {wing.rooms.map(room => (
+                  <div key={room.name} style={{
+                    background: 'var(--bg-2)',
+                    border: '1px solid var(--border-1)',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-0)' }}>
+                      <p style={{ color: 'var(--text-1)', fontSize: '12px',
+                        fontWeight: 600, marginBottom: '3px' }}>
+                        {room.icon} {room.name}
+                      </p>
+                      <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
+                        {room.purpose}
+                      </p>
+                      {room.studios && (
+                        <p style={{ color: 'var(--text-6)', fontSize: '10px',
+                          marginTop: '6px', fontStyle: 'italic' }}>
+                          Contains: {room.studios.join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ padding: '10px 16px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                      <div>
+                        <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                          textTransform: 'uppercase', marginBottom: '5px' }}>Authority</p>
+                        <div className="flex flex-col gap-1">
+                          {room.authority.map(a => (
+                            <p key={a} style={{ color: '#10b98199', fontSize: '11px' }}>+ {a}</p>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                          textTransform: 'uppercase', marginBottom: '5px' }}>Cannot</p>
+                        <div className="flex flex-col gap-1">
+                          {room.cannot.map(c => (
+                            <p key={c} style={{ color: '#ef444460', fontSize: '11px' }}>− {c}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
