@@ -2,11 +2,12 @@
 const BLUE_PINEAPPLE_FILTER = 'hue-rotate(160deg) saturate(2) brightness(1.1)'
 
 // Constellation — memory pathways, not a map.
-// Hub at index 6 (KODEX). Each node has its own breathing rhythm.
+// Hub at index 6 (KODEX) — shifted right to align with the atmospheric orb
+// behind the E-R arc of the seal. Nodes converge toward that anchor, not center.
 const NODES = [
   [14, 15], [78, 10], [90, 44], [68, 82],   // 0-3
-  [20, 76], [7, 55],  [50, 38], [42, 68],   // 4-7
-  [62, 22], [35, 25], [82, 60], [28, 52],   // 8-11
+  [20, 76], [7, 55],  [64, 32], [42, 68],   // 4-7  (hub moved: 50,38 → 64,32)
+  [72, 18], [35, 25], [82, 60], [28, 52],   // 8-11 (MUSE moved: 62,22 → 72,18)
   [56, 90],                                  // 12
 ]
 const EDGES = [
@@ -59,12 +60,12 @@ function CampusAtmosphere() {
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
 
       {/* Giant blue pineapple — moon scale, not object scale. Atmosphere, not accent. */}
-      {/* Slightly right of seal center, upper-third vertical — creates a right-side   */}
-      {/* halo without crowding the lower doctrine arc. Smaller (500px) and fainter   */}
-      {/* (0.022) so it glows rather than competes. The ring text must never blur.    */}
+      {/* Center behind the E-R arc of the seal (~64% horizontal), upper-third        */}
+      {/* vertical. Orb and constellation hub are co-located so the composition       */}
+      {/* reads as one system with a shared anchor, not three separate layers.        */}
       <div style={{
         position: 'absolute',
-        top: '30%', left: '58%',
+        top: '28%', left: '64%',
         transform: 'translate(-50%, -50%)',
         fontSize: '500px', lineHeight: 1,
         filter: BLUE_PINEAPPLE_FILTER,
@@ -195,10 +196,17 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
           />
         </div>
 
+        {/* Threshold — the pause between crest and doctrine */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '12px', marginBottom: '20px' }}>
+          <div style={{ width: '48px', height: '1px', background: 'var(--border-0)' }} />
+          <span style={{ color: 'var(--text-5)', fontSize: '7px' }}>◆</span>
+          <div style={{ width: '48px', height: '1px', background: 'var(--border-0)' }} />
+        </div>
+
         <p style={{
           color: 'var(--text-1)', fontSize: '13px', lineHeight: 1.8,
           fontStyle: 'italic', marginBottom: '40px',
-          marginTop: '8px',
         }}>
           How do we preserve what matters while moving it forward?
         </p>
