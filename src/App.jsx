@@ -323,6 +323,7 @@ export default function App() {
             museWorks={museWorks}
             institutionEvents={institutionEvents}
             creatorLogs={creatorLogs}
+            kelReviews={kelReviews}
             apiKey={apiKey}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
