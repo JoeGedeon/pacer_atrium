@@ -1,9 +1,28 @@
 import {
   collection, addDoc, updateDoc, doc, getDoc, setDoc,
   onSnapshot, query, orderBy,
-  serverTimestamp, Timestamp,
+  serverTimestamp, Timestamp, increment,
 } from 'firebase/firestore'
 import { db } from './firebase'
+
+// ── Campus Stats — creator-only counters for beta observation ─────────────────
+// Firestore rule required: authenticated users may write; creator UID may read.
+
+const STATS_DOC = doc(db, 'campus_stats', 'summary')
+
+export async function incrementCampusStat(field) {
+  try {
+    await setDoc(STATS_DOC, { [field]: increment(1) }, { merge: true })
+  } catch (_) { /* best-effort — never block user flows */ }
+}
+
+export function listenCampusStats(callback) {
+  return onSnapshot(
+    STATS_DOC,
+    snap => callback(snap.exists() ? snap.data() : { visitors: 0, returns: 0, observations: 0 }),
+    () => callback({ visitors: 0, returns: 0, observations: 0 }),
+  )
+}
 
 // ── User Profile ─────────────────────────────────────────────────────────────
 
@@ -16,12 +35,13 @@ export async function getUserProfile(uid) {
 
 export async function createUserProfile(uid, data) {
   await setDoc(PROFILE_DOC(uid), {
-    campusId:      data.campusId,
-    campusName:    data.campusName    || null,
-    outcomeChoice: data.outcomeChoice || null,
-    bypass:        data.bypass        || false,
-    arrivalMode:   data.arrivalMode   || 'silent',
-    createdAt:     serverTimestamp(),
+    campusId:          data.campusId,
+    campusName:        data.campusName        || null,
+    outcomeChoice:     data.outcomeChoice     || null,
+    bypass:            data.bypass            || false,
+    arrivalMode:       data.arrivalMode       || 'silent',
+    hasSeenOnboarding: data.bypass ? true : false, // creator skips onboarding
+    createdAt:         serverTimestamp(),
   })
 }
 
