@@ -149,13 +149,55 @@ const ARRIVAL_OPTIONS = [
   { id: 'voice',   label: 'Voice Brief',  note: 'PACER greets you and reads the briefing aloud on arrival.' },
 ]
 
+const PULSE_OPTIONS = [
+  { id: 'off',   label: 'Off',        note: 'No automatic pulse. PACER remains quiet unless summoned.' },
+  { id: 'text',  label: 'Text Brief', note: 'A brief card surfaces campus changes since your last session.' },
+  { id: 'voice', label: 'Voice',      note: 'PACER delivers the pulse aloud.' },
+]
+
+function OptionList({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {options.map(opt => (
+        <button
+          key={opt.id}
+          onClick={() => onChange(opt.id)}
+          style={{
+            width: '100%', textAlign: 'left', background: value === opt.id ? '#0f172a' : 'var(--bg-2)',
+            border: `1px solid ${value === opt.id ? '#3b82f660' : 'var(--border-0)'}`,
+            borderRadius: '8px', padding: '12px 16px', cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'flex-start', gap: '12px',
+          }}
+        >
+          <span style={{
+            marginTop: '2px', flexShrink: 0, width: '12px', height: '12px',
+            borderRadius: '50%', border: `2px solid ${value === opt.id ? '#3b82f6' : 'var(--border-1)'}`,
+            background: value === opt.id ? '#3b82f6' : 'none',
+            display: 'inline-block',
+          }} />
+          <div>
+            <p style={{ color: value === opt.id ? 'var(--text-1)' : 'var(--text-3)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>
+              {opt.label}
+            </p>
+            <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.55 }}>
+              {opt.note}
+            </p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function SettingsRoom({
   user, theme, onThemeChange, apiKey, onApiKeyChange, onSignOut, isMobile,
   arrivalMode = 'silent', onArrivalModeChange,
+  middayPulseMode = 'off', onMiddayPulseModeChange,
+  eveningReviewMode = 'off', onEveningReviewModeChange,
 }) {
   const anthropicConnected  = !!apiKey
-  const [arrivalSaved, setArrivalSaved] = useState(false)
-  const arrivalSavedTimer = useRef(null)
+  const [rhythmSaved, setRhythmSaved] = useState(false)
+  const rhythmSavedTimer = useRef(null)
   const [testingRoom, setTestingRoom] = useState(null)
 
   const VOICE_ROOMS = ['atrium', 'muse', 'vera', 'kel', 'content', 'businesscenter', 'archive', 'doctrine']
@@ -173,12 +215,15 @@ export default function SettingsRoom({
     })
   }
 
-  function handleArrivalChange(mode) {
-    onArrivalModeChange?.(mode)
-    setArrivalSaved(true)
-    clearTimeout(arrivalSavedTimer.current)
-    arrivalSavedTimer.current = setTimeout(() => setArrivalSaved(false), 2500)
+  function markRhythmSaved() {
+    setRhythmSaved(true)
+    clearTimeout(rhythmSavedTimer.current)
+    rhythmSavedTimer.current = setTimeout(() => setRhythmSaved(false), 2500)
   }
+
+  function handleArrivalChange(mode) { onArrivalModeChange?.(mode); markRhythmSaved() }
+  function handleMiddayChange(mode)  { onMiddayPulseModeChange?.(mode); markRhythmSaved() }
+  function handleEveningChange(mode) { onEveningReviewModeChange?.(mode); markRhythmSaved() }
 
   function saveAnthropicKey(key) {
     localStorage.setItem('pacer_api_key', key)
@@ -221,47 +266,64 @@ export default function SettingsRoom({
           </Row>
         </Section>
 
-        {/* Arrival */}
-        <Section title="Arrival">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+        {/* Campus Rhythm */}
+        <Section title="Campus Rhythm">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
             <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
-              When you enter the campus, how would you like to be received?
+              Configure when the institution speaks. PACER is silent unless invited, scheduled, or necessary.
             </p>
-            {arrivalSaved && (
+            {rhythmSaved && (
               <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600, flexShrink: 0, marginLeft: '10px' }}>
                 ✓ Saved
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {ARRIVAL_OPTIONS.map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => handleArrivalChange(opt.id)}
-                style={{
-                  width: '100%', textAlign: 'left', background: arrivalMode === opt.id ? '#0f172a' : 'var(--bg-2)',
-                  border: `1px solid ${arrivalMode === opt.id ? '#3b82f660' : 'var(--border-0)'}`,
-                  borderRadius: '8px', padding: '12px 16px', cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'flex-start', gap: '12px',
-                }}
-              >
-                <span style={{
-                  marginTop: '2px', flexShrink: 0, width: '12px', height: '12px',
-                  borderRadius: '50%', border: `2px solid ${arrivalMode === opt.id ? '#3b82f6' : 'var(--border-1)'}`,
-                  background: arrivalMode === opt.id ? '#3b82f6' : 'none',
-                  display: 'inline-block',
-                }} />
-                <div>
-                  <p style={{ color: arrivalMode === opt.id ? 'var(--text-1)' : 'var(--text-3)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>
-                    {opt.label}
-                  </p>
-                  <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.55 }}>
-                    {opt.note}
-                  </p>
-                </div>
-              </button>
-            ))}
+
+          <p style={{ color: 'var(--text-4)', fontSize: '11px', fontWeight: 600, marginBottom: '8px' }}>
+            Arrival Brief
+          </p>
+          <p style={{ color: 'var(--text-6)', fontSize: '10px', marginBottom: '10px' }}>
+            First session of the day. Institution speaks first.
+          </p>
+          <OptionList options={ARRIVAL_OPTIONS} value={arrivalMode} onChange={handleArrivalChange} />
+
+          <p style={{ color: 'var(--text-4)', fontSize: '11px', fontWeight: 600, marginBottom: '8px', marginTop: '24px' }}>
+            Midday Pulse
+          </p>
+          <p style={{ color: 'var(--text-6)', fontSize: '10px', marginBottom: '10px' }}>
+            Around noon, if new observations or events have arrived since morning.
+          </p>
+          <OptionList options={PULSE_OPTIONS} value={middayPulseMode} onChange={handleMiddayChange} />
+
+          <p style={{ color: 'var(--text-4)', fontSize: '11px', fontWeight: 600, marginBottom: '8px', marginTop: '24px' }}>
+            Evening Review
+          </p>
+          <p style={{ color: 'var(--text-6)', fontSize: '10px', marginBottom: '10px' }}>
+            End of day. What moved, what stalled, what requires tomorrow's attention.
+          </p>
+          <OptionList options={PULSE_OPTIONS} value={eveningReviewMode} onChange={handleEveningChange} />
+
+          <p style={{ color: 'var(--text-4)', fontSize: '11px', fontWeight: 600, marginBottom: '8px', marginTop: '24px' }}>
+            Voice Interaction
+          </p>
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-2)',
+            border: '1px solid var(--border-0)', gap: '12px',
+          }}>
+            <div>
+              <p style={{ color: 'var(--text-2)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>
+                Push-to-Talk
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.55 }}>
+                Mic button appears on the home screen. Resident speaks first.
+              </p>
+            </div>
+            <GovernancePill on={true} />
           </div>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px', marginTop: '8px' }}>
+            Wake phrase activation planned for a future update.
+          </p>
         </Section>
 
         {/* Voice */}

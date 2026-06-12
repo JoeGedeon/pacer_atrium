@@ -626,6 +626,16 @@ export default function App() {
               updateUserProfile(user.uid, { arrivalMode: mode })
               setProfile(prev => prev ? { ...prev, arrivalMode: mode } : prev)
             }}
+            middayPulseMode={profile?.middayPulseMode || 'off'}
+            onMiddayPulseModeChange={mode => {
+              updateUserProfile(user.uid, { middayPulseMode: mode })
+              setProfile(prev => prev ? { ...prev, middayPulseMode: mode } : prev)
+            }}
+            eveningReviewMode={profile?.eveningReviewMode || 'off'}
+            onEveningReviewModeChange={mode => {
+              updateUserProfile(user.uid, { eveningReviewMode: mode })
+              setProfile(prev => prev ? { ...prev, eveningReviewMode: mode } : prev)
+            }}
           />
         )}
 
