@@ -220,7 +220,16 @@ export default function App() {
     utt.pitch = 1.0
     utt.onend   = () => { setArrivalSpeaking(false); setArrivalState(null) }
     utt.onerror = () => { setArrivalSpeaking(false) }
-    window.speechSynthesis.speak(utt)
+    // Chrome/Edge load voices asynchronously — speak() silently fails if the list is empty
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      window.speechSynthesis.speak(utt)
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null
+        window.speechSynthesis.speak(utt)
+      }
+    }
   }
 
   useEffect(() => {

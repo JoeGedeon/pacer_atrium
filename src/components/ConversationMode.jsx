@@ -65,7 +65,16 @@ export default function ConversationMode({
       utterance.pitch = 1.0
       utterance.onend   = () => setVoiceState('idle')
       utterance.onerror = () => setVoiceState('idle')
-      window.speechSynthesis.speak(utterance)
+      // Chrome/Edge load voices asynchronously — speak() silently fails if the list is empty
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length > 0) {
+        window.speechSynthesis.speak(utterance)
+      } else {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null
+          window.speechSynthesis.speak(utterance)
+        }
+      }
     } catch (e) {
       setError(e.message)
       setVoiceState('idle')
