@@ -176,12 +176,17 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         }}
       >
 
-        {/* Seal — large enough to dominate, transparent enough to belong to the page */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
+        {/* Seal — architecture, not branding. Large enough to feel like a building. */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
           <img
             src="/pacer-seal.png"
             alt="PACER"
-            style={{ width: isMobile ? '160px' : '210px', height: isMobile ? '160px' : '210px', objectFit: 'contain' }}
+            style={{
+              width: isMobile ? '200px' : '300px',
+              height: isMobile ? '200px' : '300px',
+              objectFit: 'contain',
+              opacity: 0.90,
+            }}
           />
         </div>
 
