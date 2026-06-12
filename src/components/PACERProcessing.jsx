@@ -5,6 +5,7 @@ const ROUTES = [
   { id: 'FleetFlow',              label: 'FleetFlow',              description: 'Operational Systems',                  color: '#3b82f6', activeBg: '#0d1f3c', activeBorder: '#1d3f6e' },
   { id: 'Isles of the Awakening', label: 'Isles of the Awakening', description: 'Worlds · Lore · Characters',            color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
   { id: 'Doctrine',               label: 'Doctrine',               description: 'Principles · Frameworks · Architecture', color: '#f59e0b', activeBg: '#1c1200', activeBorder: '#5c3a00' },
+  { id: 'Theater',                label: 'Theater',                description: 'Stage for Production · Manifestation',  color: '#a855f7', activeBg: '#130a20', activeBorder: '#6b21a8' },
   { id: 'Content',                label: 'Content',                description: 'Media · Assets · Publishing',           color: '#8b5cf6', activeBg: '#130c24', activeBorder: '#3b1f7a' },
   { id: 'Archive',                label: 'Archive',                description: 'Preserve Without Routing',              color: '#6b7280', activeBg: '#0f1117', activeBorder: '#374151' },
 ]
@@ -13,6 +14,7 @@ const ROUTE_COLORS = {
   'FleetFlow':              '#3b82f6',
   'Isles of the Awakening': '#10b981',
   'Doctrine':               '#f59e0b',
+  'Theater':                '#a855f7',
   'Content':                '#8b5cf6',
   'Archive':                '#6b7280',
 }
@@ -23,6 +25,7 @@ const STATIC_NEXT = {
   FleetFlow:                ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
   'Isles of the Awakening': ['What character embodies this?', 'Where does this fit the mythology?', 'What emotion does this carry?'],
   Doctrine:                 ['Is this a principle or an exception?', 'What rule would prevent this?', 'Who needs to know this?'],
+  Theater:                  ['What format serves this best?', 'Who is the audience?', 'What should they feel after experiencing it?'],
   Content:                  ['What is the headline?', 'Who is the audience?', 'What format fits this best?'],
   Archive:                  ['When should this resurface?', 'What would make this relevant again?', 'Who should find this?'],
 }
@@ -314,6 +317,49 @@ export default function PACERProcessing({
           </div>
         )}
       </div>
+
+      {routed && observation.destination === 'Theater' && (
+        <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border-1)' }}>
+          <div style={{
+            background: '#0d0b14',
+            border: '1px solid #a855f740',
+            borderLeft: '3px solid #a855f7',
+            borderRadius: '0 8px 8px 0',
+            overflow: 'hidden',
+          }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid #a855f720',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={{ color: '#a855f7', fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                Staging Passport
+              </p>
+              <p style={{ color: '#a855f760', fontSize: '9px', letterSpacing: '0.08em' }}>
+                IN PRODUCTION
+              </p>
+            </div>
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+              {[
+                { label: 'Origin',      value: 'Atrium',     check: true  },
+                { label: 'K.E.L.',      value: observation.claude ? 'Reviewed' : 'Pending', check: !!observation.claude },
+                { label: 'Human Gate',  value: 'Approved',   check: true  },
+                { label: 'Destination', value: 'Theater',    check: null  },
+              ].map(({ label, value, check }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>{label}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <p style={{ color: check === null ? '#a855f7' : 'var(--text-3)', fontSize: '10px' }}>{value}</p>
+                    {check !== null && (
+                      <p style={{ color: check ? '#10b981' : 'var(--text-6)', fontSize: '10px' }}>
+                        {check ? '✓' : '—'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-5">
         <p className="text-xs mb-3" style={{ color: 'var(--text-5)' }}>Send to campus:</p>

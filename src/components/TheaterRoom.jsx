@@ -31,7 +31,7 @@ const FLEETFLOW_ACTS = [
 const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
 function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
 
-function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
+function ProductionWing({ observations, apiKey, onConnectClaude, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
   const [formatId, setFormatId] = useState('image')
   const [concept, setConcept]   = useState('')
@@ -39,6 +39,8 @@ function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
   const [staging, setStaging]   = useState(false)
   const [error, setError]       = useState(null)
   const [copied, setCopied]     = useState(false)
+
+  const incoming = (observations || []).filter(o => o.destination === 'Theater')
 
   const selectedFormat = FORMATS.find(f => f.id === formatId)
 
@@ -67,6 +69,48 @@ function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
   return (
     <div className={`flex-1 overflow-y-auto ${px} py-8`}>
       <div style={{ maxWidth: '580px' }}>
+
+        {/* Incoming Briefs */}
+        {incoming.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+              Incoming — {incoming.length} staged for production
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {incoming.map(obs => (
+                <button
+                  key={obs.id}
+                  onClick={() => setConcept(obs.text || '')}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    background: concept === obs.text ? '#130a20' : 'var(--bg-2)',
+                    border: `1px solid ${concept === obs.text ? '#a855f7' : 'var(--border-1)'}`,
+                    borderLeft: `3px solid ${concept === obs.text ? '#a855f7' : '#a855f740'}`,
+                    borderRadius: '0 8px 8px 0',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <p style={{ color: '#a855f7', fontSize: '9px', fontWeight: 600,
+                      letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                      Staged from Atrium
+                    </p>
+                    <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>
+                      {obs.constellation || obs.type || 'observation'}
+                    </p>
+                  </div>
+                  <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
+                    {(obs.text?.length ?? 0) > 90 ? obs.text.slice(0, 90) + '…' : (obs.text || '')}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Framing */}
         <div style={{ marginBottom: '32px' }}>
@@ -263,7 +307,7 @@ function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
   )
 }
 
-export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, isMobile }) {
+export default function TheaterRoom({ graduates = [], observations = [], apiKey, onConnectClaude, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
   const [view, setView] = useState('productions')
 
@@ -313,7 +357,7 @@ export default function TheaterRoom({ graduates = [], apiKey, onConnectClaude, i
       </div>
 
       {view === 'stage' ? (
-        <ProductionWing apiKey={apiKey} onConnectClaude={onConnectClaude} isMobile={isMobile} />
+        <ProductionWing observations={observations} apiKey={apiKey} onConnectClaude={onConnectClaude} isMobile={isMobile} />
       ) : (
         <div className={`flex-1 overflow-y-auto ${px} py-8`}>
 
