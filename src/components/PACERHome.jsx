@@ -2,7 +2,7 @@
 const BLUE_PINEAPPLE_FILTER = 'hue-rotate(160deg) saturate(2) brightness(1.1)'
 
 // Constellation — memory pathways, not a map.
-// Hub at index 6. Node index 9-12 are the newer additions.
+// Hub at index 6 (KODEX). Each node has its own breathing rhythm.
 const NODES = [
   [14, 15], [78, 10], [90, 44], [68, 82],   // 0-3
   [20, 76], [7, 55],  [50, 38], [42, 68],   // 4-7
@@ -14,6 +14,24 @@ const EDGES = [
   [3, 7], [4, 7], [5, 4], [5, 0],           // original periphery
   [9, 6], [10, 2], [11, 7], [12, 7],        // new branches
   [10, 3], [9, 0],                           // long connectors
+]
+
+// Per-node pulse config: [duration(s), beginDelay(s), minOpacity, maxOpacity]
+// Hub (index 6) is brightest and fastest. VERA (0) barely moves.
+const NODE_PULSE = [
+  [9.0, 0.0,  0.4, 0.70],  // 0  VERA — sentinel, almost still
+  [5.5, 1.2,  0.4, 0.88],  // 1  Business
+  [6.0, 0.7,  0.4, 0.85],  // 2  Theater
+  [7.0, 2.1,  0.3, 0.80],  // 3  Isles — organic drift
+  [7.5, 0.4,  0.5, 0.85],  // 4  Archivist — memory never sleeps
+  [8.0, 3.0,  0.4, 0.88],  // 5  Doctrine — slow, deliberate
+  [4.8, 0.0,  0.5, 1.00],  // 6  KODEX hub — brightest
+  [4.5, 1.8,  0.5, 0.95],  // 7  KEL Forge — quick pulse
+  [5.5, 2.5,  0.4, 0.90],  // 8  MUSE
+  [5.0, 0.5,  0.4, 1.00],  // 9  Atrium — warm welcome
+  [6.5, 3.5,  0.4, 0.80],  // 10
+  [7.5, 1.0,  0.4, 0.80],  // 11
+  [6.5, 4.0,  0.3, 0.75],  // 12
 ]
 
 // Fixed atmospheric layer — mounts with PACERHome, unmounts on navigation.
@@ -49,6 +67,17 @@ function CampusAtmosphere() {
         preserveAspectRatio="xMidYMid slice"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
+        <defs>
+          {/* Soft glow filter for pulsing nodes */}
+          <filter id="node-glow" x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
         {/* Navigation arcs — very faint, like old maritime charts */}
         <g fill="none" stroke="#6366f1" strokeWidth="0.09" opacity="0.05">
           <path d="M 0 22 Q 50 8 100 22" />
@@ -56,19 +85,39 @@ function CampusAtmosphere() {
           <path d="M 20 0 Q 8 50 20 100" />
         </g>
 
-        {/* Memory network */}
-        <g stroke="#6366f1" strokeWidth="0.12" fill="#6366f1" opacity="0.09">
+        {/* Static edges */}
+        <g stroke="#6366f1" strokeWidth="0.12" opacity="0.09">
           {EDGES.map(([a, b], i) => (
-            <line
-              key={i}
+            <line key={i}
               x1={NODES[a][0]} y1={NODES[a][1]}
               x2={NODES[b][0]} y2={NODES[b][1]}
             />
           ))}
-          {NODES.map(([cx, cy], i) => (
-            <circle key={i} cx={cx} cy={cy} r={i === 6 ? 1.0 : 0.6} />
-          ))}
         </g>
+
+        {/* Breathing nodes — each on its own rhythm */}
+        {NODES.map(([cx, cy], i) => {
+          const isHub = i === 6
+          const r = isHub ? 1.0 : 0.62
+          const [dur, begin, minOp, maxOp] = NODE_PULSE[i] || [6, 0, 0.4, 0.8]
+          const rPeak = r * (isHub ? 1.65 : 1.4)
+          const durStr = `${dur}s`
+          const beginStr = `${begin}s`
+          return (
+            <circle key={i} cx={cx} cy={cy} fill="#6366f1"
+              filter={isHub ? 'url(#node-glow)' : undefined}
+            >
+              <animate attributeName="r"
+                values={`${r};${rPeak};${r}`}
+                dur={durStr} begin={beginStr}
+                repeatCount="indefinite" calcMode="ease" />
+              <animate attributeName="opacity"
+                values={`${minOp};${maxOp};${minOp}`}
+                dur={durStr} begin={beginStr}
+                repeatCount="indefinite" calcMode="ease" />
+            </circle>
+          )
+        })}
       </svg>
 
     </div>
