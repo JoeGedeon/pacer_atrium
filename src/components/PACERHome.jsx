@@ -60,12 +60,12 @@ function CampusAtmosphere() {
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
 
       {/* Giant blue pineapple — the spirit behind the crest.                        */}
-      {/* Spine centered at left:50% to align with the pineapple inside the seal.   */}
-      {/* The constellation hub at SVG [64,32] is the moon/atmosphere; this is       */}
-      {/* the institutional double — crest above, spirit below, same vertical axis. */}
+      {/* Spine centered with seal pineapple. left:48% corrects a ~20-25px visual   */}
+      {/* rightward drift from emoji bounding box asymmetry. All three axes should   */}
+      {/* share one vertical: pineapple crown → seal pineapple → mission center.    */}
       <div style={{
         position: 'absolute',
-        top: '35%', left: '50%',
+        top: '35%', left: '48%',
         transform: 'translate(-50%, -50%)',
         fontSize: '500px', lineHeight: 1,
         filter: BLUE_PINEAPPLE_FILTER,
@@ -196,17 +196,10 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
           />
         </div>
 
-        {/* Threshold — the pause between crest and doctrine */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: '12px', marginBottom: '20px' }}>
-          <div style={{ width: '48px', height: '1px', background: 'var(--border-0)' }} />
-          <span style={{ color: 'var(--text-5)', fontSize: '7px' }}>◆</span>
-          <div style={{ width: '48px', height: '1px', background: 'var(--border-0)' }} />
-        </div>
-
         <p style={{
           color: 'var(--text-1)', fontSize: '13px', lineHeight: 1.8,
           fontStyle: 'italic', marginBottom: '40px',
+          marginTop: '4px',
         }}>
           How do we preserve what matters while moving it forward?
         </p>
