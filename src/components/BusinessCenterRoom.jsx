@@ -93,57 +93,10 @@ function groupEventsByDate(events) {
   return Object.entries(groups)
 }
 
-function Dot({ ok }) {
-  return (
-    <span style={{
-      display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%',
-      background: ok ? '#10b981' : '#f59e0b',
-      marginRight: '8px', marginTop: '1px', flexShrink: 0,
-    }} />
-  )
-}
-
-function HealthRow({ label, value, ok = true }) {
-  return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '7px 0', borderBottom: '1px solid var(--border-0)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Dot ok={ok} />
-        <span style={{ color: 'var(--text-4)', fontSize: '12px' }}>{label}</span>
-      </div>
-      <span style={{
-        color: ok ? 'var(--text-1)' : '#f59e0b',
-        fontSize: '12px', fontWeight: 600, fontVariantNumeric: 'tabular-nums',
-      }}>{value}</span>
-    </div>
-  )
-}
-
-function MetricTile({ label, value, note }) {
-  const isDash = value === '—'
-  return (
-    <div style={{
-      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-      borderRadius: '8px', padding: '14px 16px',
-    }}>
-      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.1em',
-        textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>{label}</p>
-      <p style={{
-        color: isDash ? 'var(--text-6)' : 'var(--text-0)',
-        fontSize: '20px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginBottom: '2px',
-      }}>{value}</p>
-      {note && (
-        <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', lineHeight: 1.5 }}>
-          {note}
-        </p>
-      )}
-    </div>
-  )
-}
-
-function generatePulse({ totalObs, pendingCount, stagedCount, constitutionalTests, apiConnected, recentEventCount }) {
+function generatePulse({
+  totalObs, pendingCount, stagedCount, constitutionalTests,
+  apiConnected, recentEventCount, calendarEntries, humanGateApprovals,
+}) {
   if (totalObs === 0) {
     return 'The Atrium is quiet. The campus is ready to receive its first observation.'
   }
@@ -153,16 +106,41 @@ function generatePulse({ totalObs, pendingCount, stagedCount, constitutionalTest
   if (pendingCount > 5 && pendingCount > stagedCount * 3) {
     return `${pendingCount} observations are awaiting routing decisions. Human Gate attention may be the current bottleneck.`
   }
+  if (calendarEntries > 0 && stagedCount > 0) {
+    return `${stagedCount} observation${stagedCount !== 1 ? 's' : ''} staged for Theater. Creator activity is logged. The institution is moving.`
+  }
   if (stagedCount > 0 && constitutionalTests > 0) {
     return `Campus is active. ${stagedCount} observation${stagedCount !== 1 ? 's' : ''} staged for Theater. Constitutional testing is on the record.`
   }
   if (stagedCount > 0) {
     return `${stagedCount} observation${stagedCount !== 1 ? 's' : ''} staged for production. The pipeline is moving.`
   }
+  if (humanGateApprovals > 0) {
+    return `${humanGateApprovals} Human Gate approval${humanGateApprovals !== 1 ? 's' : ''} on record. Institutional governance is active.`
+  }
   if (recentEventCount > 3) {
     return 'Institutional activity is elevated. Multiple governance events recorded in recent sessions.'
   }
   return `${totalObs} observation${totalObs !== 1 ? 's' : ''} in memory. Campus is operational.`
+}
+
+// ── Wing metric row ───────────────────────────────────────────────────────────
+
+function WingRow({ label, value }) {
+  const isDash = value === '—'
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '6px 0', borderBottom: '1px solid var(--border-0)',
+    }}>
+      <span style={{ color: 'var(--text-4)', fontSize: '11px' }}>{label}</span>
+      <span style={{
+        color: isDash ? 'var(--text-6)' : 'var(--text-1)',
+        fontSize: '12px', fontWeight: isDash ? 400 : 600,
+        fontVariantNumeric: 'tabular-nums',
+      }}>{value}</span>
+    </div>
+  )
 }
 
 // ── Creator Calendar ──────────────────────────────────────────────────────────
@@ -225,8 +203,7 @@ function CreatorCalendar({ logs = [], onAddLog }) {
   const inputStyle = {
     width: '100%', background: 'var(--bg-0)', border: '1px solid var(--border-1)',
     borderRadius: '6px', padding: '8px 12px', color: 'var(--text-1)',
-    fontSize: '12px', outline: 'none', boxSizing: 'border-box',
-    fontFamily: 'inherit',
+    fontSize: '12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   }
 
   return (
@@ -266,11 +243,11 @@ function CreatorCalendar({ logs = [], onAddLog }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
         {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-          const dateKey    = toDateKey(calYear, calMonth, day)
-          const entries    = logsByDate[dateKey] || []
-          const isToday    = dateKey === todayKey
-          const isSel      = dateKey === selectedDate
-          const typeIds    = [...new Set(entries.map(l => l.type))].slice(0, 4)
+          const dateKey = toDateKey(calYear, calMonth, day)
+          const entries = logsByDate[dateKey] || []
+          const isToday = dateKey === todayKey
+          const isSel   = dateKey === selectedDate
+          const typeIds = [...new Set(entries.map(l => l.type))].slice(0, 4)
 
           return (
             <div
@@ -278,8 +255,7 @@ function CreatorCalendar({ logs = [], onAddLog }) {
               onClick={() => { setSelectedDate(dateKey); setShowForm(false) }}
               style={{
                 background: isSel ? '#1e293b' : 'var(--bg-2)',
-                border: isToday
-                  ? '1px solid #3b82f660'
+                border: isToday ? '1px solid #3b82f660'
                   : isSel ? '1px solid #3b82f640'
                   : '1px solid var(--border-0)',
                 borderRadius: '6px', padding: '5px 2px 4px',
@@ -329,7 +305,7 @@ function CreatorCalendar({ logs = [], onAddLog }) {
                   background: '#052e16', border: '1px solid #10b981',
                   borderRadius: '6px', color: '#10b981', fontSize: '11px',
                   fontWeight: 600, padding: '5px 12px', cursor: 'pointer',
-                  letterSpacing: '0.04em', flexShrink: 0,
+                  letterSpacing: '0.04em', flexShrink: 0, fontFamily: 'inherit',
                 }}
               >
                 + Add Entry
@@ -337,16 +313,13 @@ function CreatorCalendar({ logs = [], onAddLog }) {
             )}
           </div>
 
-          {/* Existing entries */}
           {dayLogs.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px',
               marginBottom: showForm ? '16px' : '0' }}>
               {dayLogs.map(log => {
                 const t = ENTRY_TYPES.find(x => x.id === log.type)
                 return (
-                  <div key={log.id} style={{
-                    borderLeft: '2px solid var(--border-1)', paddingLeft: '10px',
-                  }}>
+                  <div key={log.id} style={{ borderLeft: '2px solid var(--border-1)', paddingLeft: '10px' }}>
                     <p style={{ color: 'var(--text-2)', fontSize: '12px',
                       fontWeight: 600, marginBottom: '2px' }}>
                       {t?.icon} {log.title}
@@ -373,7 +346,6 @@ function CreatorCalendar({ logs = [], onAddLog }) {
             </p>
           )}
 
-          {/* Add form */}
           {showForm && (
             <div style={{
               paddingTop: dayLogs.length > 0 ? '14px' : '0',
@@ -422,12 +394,7 @@ function CreatorCalendar({ logs = [], onAddLog }) {
                   {saving ? 'Saving…' : 'Save Entry'}
                 </button>
                 <button
-                  onClick={() => {
-                    setShowForm(false)
-                    setNewTitle('')
-                    setNewBody('')
-                    setNewRoom('')
-                  }}
+                  onClick={() => { setShowForm(false); setNewTitle(''); setNewBody(''); setNewRoom('') }}
                   style={{
                     background: 'none', border: '1px solid var(--border-1)',
                     borderRadius: '6px', color: 'var(--text-4)',
@@ -451,26 +418,27 @@ function CreatorCalendar({ logs = [], onAddLog }) {
 export default function BusinessCenterRoom({
   observations = [], graduates = [], builderReadiness = 'locked',
   museWorks = [], institutionEvents = [], creatorLogs = [],
-  apiKey = null, onRequestBuilderReview, onEnterBuilderStudio,
-  onAddLog, isMobile,
+  kelReviews = [], apiKey = null,
+  onRequestBuilderReview, onEnterBuilderStudio, onAddLog, isMobile,
 }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
   // ── Cockpit metrics ────────────────────────────────────────────────────────
-  const totalObs        = observations.length
-  const pendingCount    = observations.filter(o => !o.destination).length
-  const stagedToTheater = observations.filter(o => o.destination === 'Theater').length
-  const archiveCount    = observations.filter(o =>
-    o.status === 'archived' || (o.destination || '').toLowerCase().includes('archive')
-  ).length
+  const totalObs          = observations.length
+  const pendingCount      = observations.filter(o => !o.destination).length
+  const stagedToTheater   = observations.filter(o => o.destination === 'Theater').length
   const constitutionalTests = institutionEvents.filter(e => e.eventType === 'multi_manifest_test_completed').length
-  const apiConnected    = !!apiKey
-  const recentEvents    = institutionEvents.slice(0, 12)
-  const groupedEvents   = groupEventsByDate(recentEvents)
+  const humanGateApprovals  = kelReviews.filter(r => r.status === 'approved').length
+  const calendarEntries   = creatorLogs.length
+  const apiConnected      = !!apiKey
+  const recentEvents      = institutionEvents.slice(0, 12)
+  const groupedEvents     = groupEventsByDate(recentEvents)
 
   const pulse = generatePulse({
     totalObs, pendingCount, stagedCount: stagedToTheater,
-    constitutionalTests, apiConnected, recentEventCount: recentEvents.length,
+    constitutionalTests, apiConnected,
+    recentEventCount: recentEvents.length,
+    calendarEntries, humanGateApprovals,
   })
 
   return (
@@ -494,88 +462,86 @@ export default function BusinessCenterRoom({
 
       <div className={`flex-1 overflow-y-auto ${px} py-8`}>
 
-        {/* ── INSTITUTIONAL PULSE ─────────────────────────────────────────── */}
+        {/* ── CREATOR COCKPIT ─────────────────────────────────────────────── */}
         <div style={{ maxWidth: '600px', marginBottom: '32px' }}>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-            Institutional Pulse
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+            Creator Cockpit
           </p>
+
+          {/* Three wings */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: '10px',
+            marginBottom: '14px',
+          }}>
+            {/* FleetFlow Wing */}
+            <div style={{
+              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+              borderTop: '2px solid #10b98140', borderRadius: '0 0 8px 8px',
+              padding: '14px 14px 12px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '11px' }}>🚚</span>
+                <p style={{ color: 'var(--text-3)', fontSize: '10px', fontWeight: 700,
+                  letterSpacing: '0.1em', textTransform: 'uppercase' }}>FleetFlow</p>
+              </div>
+              <WingRow label="Active Companies"  value="—" />
+              <WingRow label="Active Jobs"        value="—" />
+              <WingRow label="Revenue This Month" value="—" />
+              <WingRow label="Revenue Recovered"  value="—" />
+            </div>
+
+            {/* PACER Wing */}
+            <div style={{
+              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+              borderTop: '2px solid #a855f740', borderRadius: '0 0 8px 8px',
+              padding: '14px 14px 12px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '11px' }}>🍍</span>
+                <p style={{ color: 'var(--text-3)', fontSize: '10px', fontWeight: 700,
+                  letterSpacing: '0.1em', textTransform: 'uppercase' }}>PACER</p>
+              </div>
+              <WingRow label="Observations"     value={totalObs} />
+              <WingRow label="Pending MUSE"     value={pendingCount} />
+              <WingRow label="Manifest Decisions" value="—" />
+              <WingRow label="Archive Only"     value="—" />
+            </div>
+
+            {/* Institution Wing */}
+            <div style={{
+              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+              borderTop: '2px solid #f59e0b40', borderRadius: '0 0 8px 8px',
+              padding: '14px 14px 12px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '11px' }}>🏛️</span>
+                <p style={{ color: 'var(--text-3)', fontSize: '10px', fontWeight: 700,
+                  letterSpacing: '0.1em', textTransform: 'uppercase' }}>Institution</p>
+              </div>
+              <WingRow label="Calendar Entries"    value={calendarEntries} />
+              <WingRow label="New Doctrine"         value="—" />
+              <WingRow label="Constitutional Tests" value={constitutionalTests} />
+              <WingRow label="HG Approvals"         value={humanGateApprovals} />
+            </div>
+          </div>
+
+          {/* Institutional Pulse — the center card */}
           <div style={{
             background: 'var(--bg-2)', border: '1px solid var(--border-1)',
             borderLeft: '3px solid #3b82f6', borderRadius: '0 10px 10px 0',
-            padding: '20px 24px',
+            padding: '22px 26px',
           }}>
-            <p style={{ color: 'var(--text-1)', fontSize: '15px',
-              lineHeight: 1.7, fontStyle: 'italic' }}>
+            <p style={{ color: '#3b82f660', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+              Institutional Pulse
+            </p>
+            <p style={{ color: 'var(--text-1)', fontSize: '16px', lineHeight: 1.7,
+              fontStyle: 'italic', fontWeight: 500 }}>
               {pulse}
             </p>
-          </div>
-        </div>
-
-        {/* ── SYSTEM HEALTH ───────────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '32px' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-            System Health
-          </p>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-            gap: '14px',
-          }}>
-            <div style={{
-              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-              borderRadius: '10px', padding: '16px 18px',
-            }}>
-              <p style={{ color: 'var(--text-3)', fontSize: '10px', fontWeight: 700,
-                letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                PACER Health
-              </p>
-              <HealthRow label="Observations Captured" value={totalObs} />
-              <HealthRow label="Pending Routing" value={pendingCount} ok={pendingCount < 10} />
-              <HealthRow label="Staged to Theater" value={stagedToTheater} />
-              <HealthRow label="Archive Count" value={archiveCount} />
-              <HealthRow label="Works in Progress" value={museWorks.length} />
-            </div>
-            <div style={{
-              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-              borderRadius: '10px', padding: '16px 18px',
-            }}>
-              <p style={{ color: 'var(--text-3)', fontSize: '10px', fontWeight: 700,
-                letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Campus Health
-              </p>
-              <HealthRow label="API Connection"
-                value={apiConnected ? 'Connected' : 'Not Connected'}
-                ok={apiConnected} />
-              <HealthRow label="Authentication" value="Active" />
-              <HealthRow label="All Rooms" value="Reachable" />
-              <HealthRow label="Firestore" value="Active" />
-              <HealthRow label="Storage" value="Active" />
-            </div>
-          </div>
-        </div>
-
-        {/* ── INSTITUTIONAL HEALTH ────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '32px' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-            Institutional Health
-          </p>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
-            gap: '10px',
-          }}>
-            <MetricTile label="Observations" value={totalObs} />
-            <MetricTile label="Staged to Theater" value={stagedToTheater} />
-            <MetricTile label="Constitutional Tests" value={constitutionalTests} />
-            <MetricTile label="Manifest Decisions" value="—"
-              note="Wires when MUSE records persist" />
-            <MetricTile label="Manifestation Refusal Rate" value="—"
-              note="Requires MUSE decision records" />
-            <MetricTile label="Human Gate Queue" value={pendingCount}
-              note="Pending routing decisions" />
           </div>
         </div>
 
