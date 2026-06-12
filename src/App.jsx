@@ -18,6 +18,7 @@ import BusinessCenterRoom from './components/BusinessCenterRoom'
 import BuilderStudioRoom from './components/BuilderStudioRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
+import Intake from './components/Intake'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation } from './lib/claudeRouting'
 import {
@@ -26,7 +27,11 @@ import {
   createKELReview, listenKELReviews, updateKELReview,
   createInstitutionEvent, listenInstitutionEvents,
   listenCreatorLogs, createCreatorLog,
+  getUserProfile, createUserProfile,
 } from './lib/db'
+import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
+
+const CREATOR_EMAIL = import.meta.env.VITE_CREATOR_EMAIL || 'joegedeon22@gmail.com'
 
 async function migrateLocalStorage(uid) {
   const flagKey = `pacer_migrated_${uid}`
@@ -73,6 +78,7 @@ export default function App() {
   const [kelReviews, setKelReviews]               = useState([])
   const [institutionEvents, setInstitutionEvents] = useState([])
   const [creatorLogs, setCreatorLogs]             = useState([])
+  const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -82,11 +88,28 @@ export default function App() {
     return 'locked'
   }, [kelReviews])
 
+  const campusConfig = profile ? (CAMPUS_TEMPLATES[profile.campusId] || CAMPUS_TEMPLATES.explorer) : null
+  const visibleRooms = campusConfig?.rooms ?? null // null = all rooms (creator)
+
   // Derived: merge Firestore data with ephemeral per-session analyzing state
   const _active = observations.find(o => o.id === activeObservationId) || null
   const activeObservation = _active
     ? { ..._active, analyzing: analyzingIds.has(_active.id) }
     : null
+
+  // Load or seed campus profile once user is known
+  useEffect(() => {
+    if (!user) { setProfile(undefined); return }
+    if (user.email === CREATOR_EMAIL) {
+      const creatorProfile = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
+      setProfile(creatorProfile)
+      getUserProfile(user.uid).then(existing => {
+        if (!existing) createUserProfile(user.uid, creatorProfile)
+      })
+      return
+    }
+    getUserProfile(user.uid).then(p => setProfile(p ?? null))
+  }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Start Firestore listeners once we know the user
   useEffect(() => {
@@ -213,6 +236,35 @@ export default function App() {
     return <AuthGate onSignIn={signIn} onSignUp={signUp} />
   }
 
+  if (profile === undefined) {
+    return (
+      <div style={{ background: 'var(--bg-0)', height: '100vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center' }}
+      >
+        <p style={{ color: 'var(--text-6)', fontSize: '11px' }}>…</p>
+      </div>
+    )
+  }
+
+  if (profile === null) {
+    return (
+      <Intake
+        onComplete={async (outcomeId) => {
+          const opt = OUTCOME_OPTIONS.find(o => o.id === outcomeId)
+          const template = CAMPUS_TEMPLATES[opt?.template || 'explorer']
+          const newProfile = {
+            campusId:      template.id,
+            campusName:    template.name,
+            outcomeChoice: outcomeId,
+            bypass:        false,
+          }
+          await createUserProfile(user.uid, newProfile)
+          setProfile(newProfile)
+        }}
+      />
+    )
+  }
+
   return (
     <div
       style={{
@@ -237,6 +289,7 @@ export default function App() {
           hasApiKey={!!apiKey}
           onConnectClaude={() => setShowKeyGate(true)}
           isMobile={isMobile}
+          visibleRooms={visibleRooms}
         />
       )}
 

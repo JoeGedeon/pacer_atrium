@@ -1,9 +1,28 @@
 import {
-  collection, addDoc, updateDoc, doc,
+  collection, addDoc, updateDoc, doc, getDoc, setDoc,
   onSnapshot, query, orderBy,
   serverTimestamp, Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
+
+// ── User Profile ─────────────────────────────────────────────────────────────
+
+const PROFILE_DOC = (uid) => doc(db, 'users', uid, 'profile', 'campus')
+
+export async function getUserProfile(uid) {
+  const snap = await getDoc(PROFILE_DOC(uid))
+  return snap.exists() ? snap.data() : null
+}
+
+export async function createUserProfile(uid, data) {
+  await setDoc(PROFILE_DOC(uid), {
+    campusId:      data.campusId,
+    campusName:    data.campusName    || null,
+    outcomeChoice: data.outcomeChoice || null,
+    bypass:        data.bypass        || false,
+    createdAt:     serverTimestamp(),
+  })
+}
 
 // ── Collections ──────────────────────────────────────────────────────────────
 

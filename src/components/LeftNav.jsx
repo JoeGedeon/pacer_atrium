@@ -15,8 +15,12 @@ const PACER_ROOMS = [
 
 export default function LeftNav({
   currentRoom, onSelect, theme, onThemeChange,
-  user, onSignOut, hasApiKey, onConnectClaude, isMobile,
+  user, onSignOut, hasApiKey, onConnectClaude, isMobile, visibleRooms,
 }) {
+  const rooms = visibleRooms
+    ? PACER_ROOMS.filter(r => visibleRooms.includes(r.id))
+    : PACER_ROOMS
+
   if (isMobile) {
     return (
       <nav
@@ -27,7 +31,7 @@ export default function LeftNav({
           height: '60px',
         }}
       >
-        {PACER_ROOMS.map(room => {
+        {rooms.map(room => {
           const isActive = currentRoom === room.id
           return (
             <button
@@ -78,7 +82,7 @@ export default function LeftNav({
       </div>
 
       <ul className="flex flex-col gap-0.5">
-        {PACER_ROOMS.map(room => {
+        {rooms.map(room => {
           const isActive = currentRoom === room.id
           return (
             <li key={room.id}>
