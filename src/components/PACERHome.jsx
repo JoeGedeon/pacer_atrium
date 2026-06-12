@@ -1,21 +1,76 @@
 // Blue Pineapple: doctrine, not decoration.
 const BLUE_PINEAPPLE_FILTER = 'hue-rotate(160deg) saturate(2) brightness(1.1)'
 
+// Constellation — memory pathways, not a map
+const NODES = [
+  [14, 15], [78, 10], [90, 44], [68, 82],
+  [20, 76], [7, 55], [50, 38], [42, 68], [62, 22],
+]
+const EDGES = [
+  [0, 6], [1, 8], [8, 6], [6, 2], [6, 7],
+  [3, 7], [4, 7], [5, 4], [5, 0],
+]
+
+// Fixed atmospheric layer — mounts with PACERHome, unmounts on navigation.
+// No interaction, no scroll effect. Environmental storytelling.
+function CampusAtmosphere() {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+
+      {/* Giant blue pineapple watermark — symbol, not logo */}
+      <div style={{
+        position: 'absolute',
+        top: '40%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '440px', lineHeight: 1,
+        filter: BLUE_PINEAPPLE_FILTER,
+        opacity: 0.045,
+        userSelect: 'none',
+      }}>🍍</div>
+
+      {/* Constellation — faint memory network, only noticed after a moment */}
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.08 }}
+      >
+        <g stroke="#6366f1" strokeWidth="0.12" fill="#6366f1">
+          {EDGES.map(([a, b], i) => (
+            <line
+              key={i}
+              x1={NODES[a][0]} y1={NODES[a][1]}
+              x2={NODES[b][0]} y2={NODES[b][1]}
+            />
+          ))}
+          {NODES.map(([cx, cy], i) => (
+            <circle key={i} cx={cx} cy={cy} r={i === 6 ? 1.0 : 0.65} />
+          ))}
+        </g>
+      </svg>
+
+    </div>
+  )
+}
+
 export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile }) {
   return (
     <div
       className="flex-1 flex flex-col items-center overflow-y-auto"
       style={{ background: 'var(--bg-0)' }}
     >
+      <CampusAtmosphere />
+
       <div
         className="text-center w-full"
         style={{
           maxWidth: isMobile ? '420px' : '680px',
           padding: isMobile ? '48px 24px 40px' : '64px 48px 48px',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
 
-        {/* Official Seal — Arrival Hall. Crest, not badge. No frame, no shadow, no elevation. */}
+        {/* Official Seal — Arrival Hall. Crest, not badge. */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <img
             src="/pacer-seal.png"
