@@ -25,6 +25,7 @@ import {
   listenMuseWorks, createKELDecision, listenGraduates,
   createKELReview, listenKELReviews, updateKELReview,
   createInstitutionEvent, listenInstitutionEvents,
+  listenCreatorLogs, createCreatorLog,
 } from './lib/db'
 
 async function migrateLocalStorage(uid) {
@@ -71,6 +72,7 @@ export default function App() {
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
   const [institutionEvents, setInstitutionEvents] = useState([])
+  const [creatorLogs, setCreatorLogs]             = useState([])
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -95,7 +97,8 @@ export default function App() {
     const unsubGrad    = listenGraduates(user.uid, setGraduates)
     const unsubReviews = listenKELReviews(user.uid, setKelReviews)
     const unsubEvents  = listenInstitutionEvents(user.uid, setInstitutionEvents)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents() }
+    const unsubLogs    = listenCreatorLogs(user.uid, setCreatorLogs)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submitObservation(obs) {
@@ -139,6 +142,11 @@ export default function App() {
       localStorage.setItem('pacer_api_key', key)
       setApiKey(key)
     }
+  }
+
+  async function addCreatorLog(data) {
+    if (!user) return
+    await createCreatorLog(user.uid, data)
   }
 
   async function recordKELDecision(decisionData) {
@@ -289,6 +297,9 @@ export default function App() {
             works={museWorks}
             uid={user?.uid}
             onSurface={submitObservation}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            onNavigate={setCurrentRoom}
             isMobile={isMobile}
           />
         )}
@@ -309,8 +320,13 @@ export default function App() {
             observations={observations}
             graduates={graduates}
             builderReadiness={builderReadiness}
+            museWorks={museWorks}
+            institutionEvents={institutionEvents}
+            creatorLogs={creatorLogs}
+            apiKey={apiKey}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
+            onAddLog={addCreatorLog}
             isMobile={isMobile}
           />
         )}
