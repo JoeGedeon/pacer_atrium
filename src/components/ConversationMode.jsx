@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { conversationQuery } from '../lib/claudeRouting'
+import { speakWithVoice } from '../lib/roomVoice'
 
 const STATE_CONFIG = {
   idle:      { color: '#1d4ed8', label: 'Tap to speak',          icon: '🎤', pulse: false },
@@ -17,6 +18,7 @@ export default function ConversationMode({
   onSwitchToText,
   emailContext = null,
   calendarContext = null,
+  voiceConfig = null,
 }) {
   const [voiceState, setVoiceState] = useState('idle')
   const [history, setHistory]       = useState([])
@@ -59,22 +61,10 @@ export default function ConversationMode({
 
       setHistory(prev => [...prev, { role: 'pacer', text: response, id: Date.now() + 1 }])
       setVoiceState('speaking')
-
-      const utterance = new SpeechSynthesisUtterance(response)
-      utterance.rate  = 0.92
-      utterance.pitch = 1.0
-      utterance.onend   = () => setVoiceState('idle')
-      utterance.onerror = () => setVoiceState('idle')
-      // Chrome/Edge load voices asynchronously — speak() silently fails if the list is empty
-      const voices = window.speechSynthesis.getVoices()
-      if (voices.length > 0) {
-        window.speechSynthesis.speak(utterance)
-      } else {
-        window.speechSynthesis.onvoiceschanged = () => {
-          window.speechSynthesis.onvoiceschanged = null
-          window.speechSynthesis.speak(utterance)
-        }
-      }
+      speakWithVoice(response, voiceConfig, {
+        onEnd:   () => setVoiceState('idle'),
+        onError: () => setVoiceState('idle'),
+      })
     } catch (e) {
       setError(e.message)
       setVoiceState('idle')

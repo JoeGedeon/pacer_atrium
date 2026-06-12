@@ -35,6 +35,7 @@ import {
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
+import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -211,25 +212,13 @@ export default function App() {
 
   function speakArrivalText(text) {
     if (!window.speechSynthesis) return
-    window.speechSynthesis.cancel()
     setArrivalSpeaking(true)
     const greeting = getArrivalGreeting('Joe')
     const full = text ? `${greeting} ${text}` : greeting
-    const utt = new SpeechSynthesisUtterance(full)
-    utt.rate  = 0.92
-    utt.pitch = 1.0
-    utt.onend   = () => { setArrivalSpeaking(false); setArrivalState(null) }
-    utt.onerror = () => { setArrivalSpeaking(false) }
-    // Chrome/Edge load voices asynchronously — speak() silently fails if the list is empty
-    const voices = window.speechSynthesis.getVoices()
-    if (voices.length > 0) {
-      window.speechSynthesis.speak(utt)
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.onvoiceschanged = null
-        window.speechSynthesis.speak(utt)
-      }
-    }
+    speakWithVoice(full, getVoiceConfig(currentRoom), {
+      onEnd:   () => { setArrivalSpeaking(false); setArrivalState(null) },
+      onError: () => { setArrivalSpeaking(false) },
+    })
   }
 
   useEffect(() => {
@@ -478,6 +467,7 @@ export default function App() {
                 onSwitchToText={() => setAtriumMode('observe')}
                 emailContext={emailContextString(emailData)}
                 calendarContext={calendarContextString(calendarEvents)}
+                voiceConfig={getVoiceConfig('atrium')}
               />
             )
             : (
