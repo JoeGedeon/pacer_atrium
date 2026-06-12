@@ -289,6 +289,9 @@ export default function App() {
             works={museWorks}
             uid={user?.uid}
             onSurface={submitObservation}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            onNavigate={setCurrentRoom}
             isMobile={isMobile}
           />
         )}
