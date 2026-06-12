@@ -453,6 +453,7 @@ export default function App() {
           <PACERHome
             onEnter={room => setCurrentRoom(room)}
             observationCount={observations.length}
+            onMorningBrief={handleArrivalAccept}
           />
         )}
 
