@@ -168,6 +168,36 @@ export function listenInstitutionEvents(uid, callback) {
   })
 }
 
+// ── Creator Logs — timestamped logbook entries ────────────────────────────────
+
+function logColl(uid) { return collection(db, 'users', uid, 'creator_logs') }
+
+export async function createCreatorLog(uid, data) {
+  await addDoc(logColl(uid), {
+    date:       data.date,
+    type:       data.type,
+    title:      data.title,
+    body:       data.body       || '',
+    linkedRoom: data.linkedRoom || null,
+    createdAt:  serverTimestamp(),
+    createdBy:  uid,
+  })
+}
+
+export function listenCreatorLogs(uid, callback) {
+  const q = query(logColl(uid), orderBy('createdAt', 'asc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id: d.id,
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
+      }
+    }))
+  })
+}
+
 // ── Multi-Manifest Tests — constitutional preservation tests ──────────────────
 
 export async function createMultiManifestTest(uid, data) {

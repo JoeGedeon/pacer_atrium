@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 // VITE_FLEETFLOW_URL must be set in your .env / Netlify environment variables.
 const FLEETFLOW_URL = import.meta.env.VITE_FLEETFLOW_URL || null
 
@@ -34,14 +36,52 @@ const FLEETFLOW_FUTURE_METRICS = [
   'Missed Charges Detected',
 ]
 
+const ENTRY_TYPES = [
+  { id: 'insight',   label: 'Insight',        icon: '🍍' },
+  { id: 'market',    label: 'Market Signal',  icon: '📡' },
+  { id: 'build',     label: 'Build Event',    icon: '🔨' },
+  { id: 'fleetflow', label: 'FleetFlow',      icon: '🚚' },
+  { id: 'theater',   label: 'Theater',        icon: '🎭' },
+  { id: 'doctrine',  label: 'Doctrine',       icon: '📜' },
+  { id: 'outreach',  label: 'Outreach',       icon: '📞' },
+  { id: 'stress',    label: 'Stress / Issue', icon: '⚠️' },
+  { id: 'milestone', label: 'Milestone',      icon: '✅' },
+  { id: 'system',    label: 'System Health',  icon: '⚙️' },
+  { id: 'personal',  label: 'Personal Note',  icon: '📝' },
+]
+
+const LINKED_ROOMS = [
+  '', 'Atrium', 'MUSE', 'Theater', 'Doctrine',
+  'Business', 'FleetFlow', 'Archivist Hall', 'K.E.L.', 'VERA', 'Personal',
+]
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth',
+  'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
+function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
+
+function toDateKey(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function formatDateLabel(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString([], {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  })
+}
+
 function formatDateFull(date) {
   if (!date) return 'Unknown Date'
   const d = date instanceof Date ? date : new Date(date)
   return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
 }
-
-const ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
-function ordinal(n) { return ORDINALS[n - 1] ?? `#${n}` }
 
 function groupEventsByDate(events) {
   const groups = {}
@@ -125,14 +165,298 @@ function generatePulse({ totalObs, pendingCount, stagedCount, constitutionalTest
   return `${totalObs} observation${totalObs !== 1 ? 's' : ''} in memory. Campus is operational.`
 }
 
+// ── Creator Calendar ──────────────────────────────────────────────────────────
+
+function CreatorCalendar({ logs = [], onAddLog }) {
+  const today    = new Date()
+  const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate())
+
+  const [calYear, setCalYear]   = useState(today.getFullYear())
+  const [calMonth, setCalMonth] = useState(today.getMonth())
+  const [selectedDate, setSelectedDate] = useState(todayKey)
+  const [showForm, setShowForm] = useState(false)
+  const [newType, setNewType]   = useState('insight')
+  const [newTitle, setNewTitle] = useState('')
+  const [newBody, setNewBody]   = useState('')
+  const [newRoom, setNewRoom]   = useState('')
+  const [saving, setSaving]     = useState(false)
+
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+  const firstDay    = new Date(calYear, calMonth, 1).getDay()
+
+  const logsByDate = {}
+  logs.forEach(log => {
+    if (!logsByDate[log.date]) logsByDate[log.date] = []
+    logsByDate[log.date].push(log)
+  })
+
+  const dayLogs = (logsByDate[selectedDate] || []).slice()
+    .sort((a, b) => a.createdAt - b.createdAt)
+
+  function prevMonth() {
+    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
+    else setCalMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) }
+    else setCalMonth(m => m + 1)
+  }
+
+  async function handleSave() {
+    if (!newTitle.trim() || !selectedDate) return
+    setSaving(true)
+    try {
+      await onAddLog({
+        date: selectedDate,
+        type: newType,
+        title: newTitle.trim(),
+        body: newBody.trim(),
+        linkedRoom: newRoom || null,
+      })
+      setNewTitle('')
+      setNewBody('')
+      setNewRoom('')
+      setShowForm(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputStyle = {
+    width: '100%', background: 'var(--bg-0)', border: '1px solid var(--border-1)',
+    borderRadius: '6px', padding: '8px 12px', color: 'var(--text-1)',
+    fontSize: '12px', outline: 'none', boxSizing: 'border-box',
+    fontFamily: 'inherit',
+  }
+
+  return (
+    <div>
+      {/* Month navigation */}
+      <div style={{ display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', marginBottom: '10px' }}>
+        <button onClick={prevMonth} style={{
+          background: 'none', border: '1px solid var(--border-1)',
+          borderRadius: '6px', color: 'var(--text-3)',
+          fontSize: '15px', padding: '3px 10px', cursor: 'pointer',
+        }}>‹</button>
+        <p style={{ color: 'var(--text-2)', fontSize: '13px',
+          fontWeight: 600, letterSpacing: '0.06em' }}>
+          {MONTH_NAMES[calMonth]} {calYear}
+        </p>
+        <button onClick={nextMonth} style={{
+          background: 'none', border: '1px solid var(--border-1)',
+          borderRadius: '6px', color: 'var(--text-3)',
+          fontSize: '15px', padding: '3px 10px', cursor: 'pointer',
+        }}>›</button>
+      </div>
+
+      {/* Day letter headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: '3px', marginBottom: '3px' }}>
+        {DAY_LETTERS.map((d, i) => (
+          <p key={i} style={{ color: 'var(--text-6)', fontSize: '9px',
+            textAlign: 'center', letterSpacing: '0.06em',
+            fontWeight: 600, padding: '2px 0' }}>
+            {d}
+          </p>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
+        {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+          const dateKey    = toDateKey(calYear, calMonth, day)
+          const entries    = logsByDate[dateKey] || []
+          const isToday    = dateKey === todayKey
+          const isSel      = dateKey === selectedDate
+          const typeIds    = [...new Set(entries.map(l => l.type))].slice(0, 4)
+
+          return (
+            <div
+              key={day}
+              onClick={() => { setSelectedDate(dateKey); setShowForm(false) }}
+              style={{
+                background: isSel ? '#1e293b' : 'var(--bg-2)',
+                border: isToday
+                  ? '1px solid #3b82f660'
+                  : isSel ? '1px solid #3b82f640'
+                  : '1px solid var(--border-0)',
+                borderRadius: '6px', padding: '5px 2px 4px',
+                cursor: 'pointer', minHeight: '40px',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: '3px',
+              }}
+            >
+              <span style={{
+                color: isToday ? '#3b82f6' : isSel ? 'var(--text-1)' : 'var(--text-3)',
+                fontSize: '11px', fontWeight: isToday ? 700 : 400,
+              }}>
+                {day}
+              </span>
+              {typeIds.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap',
+                  gap: '1px', justifyContent: 'center', lineHeight: 1 }}>
+                  {typeIds.map(id => {
+                    const t = ENTRY_TYPES.find(x => x.id === id)
+                    return t
+                      ? <span key={id} style={{ fontSize: '7px' }}>{t.icon}</span>
+                      : null
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Day drawer */}
+      {selectedDate && (
+        <div style={{
+          marginTop: '12px', padding: '16px 18px',
+          background: 'var(--bg-1)', border: '1px solid var(--border-1)',
+          borderRadius: '10px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between',
+            alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+            <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 600 }}>
+              {formatDateLabel(selectedDate)}
+            </p>
+            {!showForm && (
+              <button
+                onClick={() => setShowForm(true)}
+                style={{
+                  background: '#052e16', border: '1px solid #10b981',
+                  borderRadius: '6px', color: '#10b981', fontSize: '11px',
+                  fontWeight: 600, padding: '5px 12px', cursor: 'pointer',
+                  letterSpacing: '0.04em', flexShrink: 0,
+                }}
+              >
+                + Add Entry
+              </button>
+            )}
+          </div>
+
+          {/* Existing entries */}
+          {dayLogs.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px',
+              marginBottom: showForm ? '16px' : '0' }}>
+              {dayLogs.map(log => {
+                const t = ENTRY_TYPES.find(x => x.id === log.type)
+                return (
+                  <div key={log.id} style={{
+                    borderLeft: '2px solid var(--border-1)', paddingLeft: '10px',
+                  }}>
+                    <p style={{ color: 'var(--text-2)', fontSize: '12px',
+                      fontWeight: 600, marginBottom: '2px' }}>
+                      {t?.icon} {log.title}
+                    </p>
+                    {log.body && (
+                      <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
+                        {log.body}
+                      </p>
+                    )}
+                    {log.linkedRoom && (
+                      <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '3px' }}>
+                        → {log.linkedRoom}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {dayLogs.length === 0 && !showForm && (
+            <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>
+              Nothing logged for this day yet.
+            </p>
+          )}
+
+          {/* Add form */}
+          {showForm && (
+            <div style={{
+              paddingTop: dayLogs.length > 0 ? '14px' : '0',
+              borderTop: dayLogs.length > 0 ? '1px solid var(--border-0)' : 'none',
+              display: 'flex', flexDirection: 'column', gap: '8px',
+            }}>
+              <select value={newType} onChange={e => setNewType(e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer' }}>
+                {ENTRY_TYPES.map(t => (
+                  <option key={t.id} value={t.id}>{t.icon}  {t.label}</option>
+                ))}
+              </select>
+              <input
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                placeholder="Title (required)"
+                style={inputStyle}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSave() }}
+              />
+              <textarea
+                value={newBody}
+                onChange={e => setNewBody(e.target.value)}
+                placeholder="Notes (optional)"
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+              <select value={newRoom} onChange={e => setNewRoom(e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer' }}>
+                {LINKED_ROOMS.map((r, i) => (
+                  <option key={i} value={r}>{r || '— No linked room —'}</option>
+                ))}
+              </select>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleSave}
+                  disabled={!newTitle.trim() || saving}
+                  style={{
+                    background: !newTitle.trim() || saving ? 'var(--bg-2)' : '#052e16',
+                    border: '1px solid #10b98160', borderRadius: '6px',
+                    color: !newTitle.trim() || saving ? 'var(--text-5)' : '#10b981',
+                    fontSize: '12px', fontWeight: 600, padding: '8px 16px',
+                    cursor: !newTitle.trim() || saving ? 'default' : 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {saving ? 'Saving…' : 'Save Entry'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowForm(false)
+                    setNewTitle('')
+                    setNewBody('')
+                    setNewRoom('')
+                  }}
+                  style={{
+                    background: 'none', border: '1px solid var(--border-1)',
+                    borderRadius: '6px', color: 'var(--text-4)',
+                    fontSize: '12px', padding: '8px 14px',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── BusinessCenterRoom ────────────────────────────────────────────────────────
+
 export default function BusinessCenterRoom({
   observations = [], graduates = [], builderReadiness = 'locked',
-  museWorks = [], institutionEvents = [], apiKey = null,
-  onRequestBuilderReview, onEnterBuilderStudio, isMobile,
+  museWorks = [], institutionEvents = [], creatorLogs = [],
+  apiKey = null, onRequestBuilderReview, onEnterBuilderStudio,
+  onAddLog, isMobile,
 }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
-  // ── Cockpit metrics ──────────────────────────────────────────────────────────
+  // ── Cockpit metrics ────────────────────────────────────────────────────────
   const totalObs        = observations.length
   const pendingCount    = observations.filter(o => !o.destination).length
   const stagedToTheater = observations.filter(o => o.destination === 'Theater').length
@@ -199,7 +523,6 @@ export default function BusinessCenterRoom({
             gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
             gap: '14px',
           }}>
-            {/* PACER Health */}
             <div style={{
               background: 'var(--bg-2)', border: '1px solid var(--border-1)',
               borderRadius: '10px', padding: '16px 18px',
@@ -209,14 +532,11 @@ export default function BusinessCenterRoom({
                 PACER Health
               </p>
               <HealthRow label="Observations Captured" value={totalObs} />
-              <HealthRow label="Pending Routing"
-                value={pendingCount}
-                ok={pendingCount < 10} />
+              <HealthRow label="Pending Routing" value={pendingCount} ok={pendingCount < 10} />
               <HealthRow label="Staged to Theater" value={stagedToTheater} />
               <HealthRow label="Archive Count" value={archiveCount} />
               <HealthRow label="Works in Progress" value={museWorks.length} />
             </div>
-            {/* Campus Health */}
             <div style={{
               background: 'var(--bg-2)', border: '1px solid var(--border-1)',
               borderRadius: '10px', padding: '16px 18px',
@@ -276,8 +596,8 @@ export default function BusinessCenterRoom({
                     ? '1px solid var(--border-0)' : 'none',
                   padding: '14px 18px',
                 }}>
-                  <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600,
-                    letterSpacing: '0.08em', marginBottom: '8px' }}>
+                  <p style={{ color: 'var(--text-4)', fontSize: '10px',
+                    fontWeight: 600, letterSpacing: '0.08em', marginBottom: '8px' }}>
                     {dateLabel}
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -296,6 +616,19 @@ export default function BusinessCenterRoom({
             </div>
           </div>
         )}
+
+        {/* ── CREATOR CALENDAR ────────────────────────────────────────────── */}
+        <div style={{ maxWidth: '600px', marginBottom: '40px' }}>
+          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+            Creator Calendar
+          </p>
+          <p style={{ color: 'var(--text-6)', fontSize: '10px',
+            fontStyle: 'italic', marginBottom: '14px' }}>
+            What happened today that matters?
+          </p>
+          <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
+        </div>
 
         {/* ── FLEETFLOW WING ──────────────────────────────────────────────── */}
         <div style={{ maxWidth: '600px', marginBottom: '40px' }}>
@@ -499,7 +832,7 @@ export default function BusinessCenterRoom({
                   display: 'inline-block', background: '#1a0a00',
                   border: '1px solid #f59e0b', borderRadius: '6px', padding: '10px 22px',
                   color: '#f59e0b', fontSize: '12px', letterSpacing: '0.06em',
-                  fontWeight: 700, cursor: 'pointer',
+                  fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
                 Enter Builder Studio →
@@ -509,7 +842,8 @@ export default function BusinessCenterRoom({
               <div style={{
                 display: 'inline-block', border: '1px solid #3b82f640',
                 borderRadius: '6px', padding: '10px 22px', color: '#3b82f6',
-                fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600,
+                fontSize: '11px', letterSpacing: '0.08em',
+                textTransform: 'uppercase', fontWeight: 600,
               }}>
                 Under KEL Review
               </div>
@@ -518,7 +852,8 @@ export default function BusinessCenterRoom({
               <div style={{
                 display: 'inline-block', border: '1px solid var(--border-1)',
                 borderRadius: '6px', padding: '10px 22px', color: 'var(--text-5)',
-                fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600,
+                fontSize: '11px', letterSpacing: '0.1em',
+                textTransform: 'uppercase', fontWeight: 600,
               }}>
                 Door Closed
               </div>
@@ -540,7 +875,8 @@ export default function BusinessCenterRoom({
                   style={{
                     background: 'none', border: '1px solid var(--border-1)',
                     borderRadius: '6px', padding: '8px 16px', color: 'var(--text-3)',
-                    fontSize: '11px', letterSpacing: '0.04em', cursor: 'pointer',
+                    fontSize: '11px', letterSpacing: '0.04em',
+                    cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
                   Request Builder Review
