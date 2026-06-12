@@ -259,18 +259,35 @@ export default function DoctrineRoom({ isMobile }) {
       style={{ background: 'var(--bg-0)', padding: `32px ${px}` }}
     >
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '40px' }}>
+
+        {/* Official Seal — constitutional space only */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
+          <img
+            src="/pacer-seal.png"
+            alt="PACER Official Seal"
+            style={{
+              width: '132px',
+              height: '132px',
+              objectFit: 'contain',
+              borderRadius: '50%',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.4)',
+            }}
+          />
+        </div>
+
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px', textAlign: 'center' }}>
           College of Understanding
         </p>
         <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
-          letterSpacing: '0.08em', marginBottom: '6px' }}>Doctrine</h2>
+          letterSpacing: '0.08em', marginBottom: '6px', textAlign: 'center' }}>Doctrine</h2>
         <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
-          marginBottom: '6px' }}>
-          The institution governs itself.
+          marginBottom: '6px', textAlign: 'center' }}>
+          Principles governing memory, understanding, and action.
         </p>
-        <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+        <p style={{ color: 'var(--text-6)', fontSize: '11px', textAlign: 'center',
+          marginBottom: '0', paddingBottom: '28px', borderBottom: '1px solid var(--border-0)' }}>
           {CONSTITUTIONAL_PRINCIPLES.length} constitutional
           {' · '}{CANDIDATE_PRINCIPLES.length} candidate
           {' · '}{PRINCIPLES.length} principles
