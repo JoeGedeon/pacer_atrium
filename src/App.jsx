@@ -312,6 +312,9 @@ export default function App() {
             observations={observations}
             graduates={graduates}
             builderReadiness={builderReadiness}
+            museWorks={museWorks}
+            institutionEvents={institutionEvents}
+            apiKey={apiKey}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             isMobile={isMobile}
