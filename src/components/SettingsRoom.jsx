@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import ThemeToggle from './ThemeToggle'
 
 function Section({ title, children }) {
@@ -152,7 +152,16 @@ export default function SettingsRoom({
   user, theme, onThemeChange, apiKey, onApiKeyChange, onSignOut, isMobile,
   arrivalMode = 'silent', onArrivalModeChange,
 }) {
-  const anthropicConnected = !!apiKey
+  const anthropicConnected  = !!apiKey
+  const [arrivalSaved, setArrivalSaved] = useState(false)
+  const arrivalSavedTimer = useRef(null)
+
+  function handleArrivalChange(mode) {
+    onArrivalModeChange?.(mode)
+    setArrivalSaved(true)
+    clearTimeout(arrivalSavedTimer.current)
+    arrivalSavedTimer.current = setTimeout(() => setArrivalSaved(false), 2500)
+  }
 
   function saveAnthropicKey(key) {
     localStorage.setItem('pacer_api_key', key)
@@ -197,14 +206,21 @@ export default function SettingsRoom({
 
         {/* Arrival */}
         <Section title="Arrival">
-          <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7, marginBottom: '14px' }}>
-            When you enter the campus, how would you like to be received?
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7 }}>
+              When you enter the campus, how would you like to be received?
+            </p>
+            {arrivalSaved && (
+              <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600, flexShrink: 0, marginLeft: '10px' }}>
+                ✓ Saved
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {ARRIVAL_OPTIONS.map(opt => (
               <button
                 key={opt.id}
-                onClick={() => onArrivalModeChange?.(opt.id)}
+                onClick={() => handleArrivalChange(opt.id)}
                 style={{
                   width: '100%', textAlign: 'left', background: arrivalMode === opt.id ? '#0f172a' : 'var(--bg-2)',
                   border: `1px solid ${arrivalMode === opt.id ? '#3b82f660' : 'var(--border-0)'}`,
