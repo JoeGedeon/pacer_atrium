@@ -6,6 +6,21 @@ const CONSTITUTIONAL_PRINCIPLES = [
     ratified: 'June 2026',
     note: 'An observation may be correct. A meaning may be profound. A philosophy may be beautiful. None of these advance the institution until something changes in the repository. This principle applies to itself: it was named in conversation, then given a room, because a principle that lives only in conversation violates the principle.',
   },
+  {
+    number: 2,
+    title: 'The Last Inch Principle',
+    text: 'A successful system is not measured by what it creates. A successful system is measured by what arrives.',
+    ratified: 'June 2026',
+    duties: [
+      { n: 1, name: 'Identify the Path',      desc: 'Determine where something needs to go and what stands between origin and destination.' },
+      { n: 2, name: 'Clear the Obstruction',  desc: 'Expose friction, conflicts, bottlenecks, and barriers that prevent movement.' },
+      { n: 3, name: 'Protect the Cargo',      desc: 'Preserve the integrity of the observation, truth, decision, or artifact while it travels through the system.' },
+      { n: 4, name: 'Document the Journey',   desc: 'Record what happened, why it happened, and how it arrived.' },
+      { n: 5, name: 'Deliver the Outcome',    desc: 'Ensure the intended result reaches its destination intact and usable.' },
+    ],
+    note: 'Most failures do not occur at the point of creation. Most failures occur during transit. An idea can be correct and still arrive damaged. A truth can be observed and still fail to reach the people who need it. A decision can be approved and still fail in execution. The responsibility of a system is not merely to create value. The responsibility of a system is to preserve value while it moves. These duties apply equally to ideas, decisions, records, people, projects, and physical objects.',
+    closing: 'The observation that enters the system should be recognizable when it leaves. Nothing important should be lost in the hallway.',
+  },
 ]
 
 const CANDIDATE_PRINCIPLES = [
@@ -259,11 +274,45 @@ export default function DoctrineRoom({ isMobile }) {
                   lineHeight: 1.6 }}>
                   {p.text}
                 </p>
+                {p.duties && (
+                  <div style={{ marginTop: '16px', paddingTop: '14px',
+                    borderTop: '1px solid #f59e0b15' }}>
+                    <p style={{ color: '#f59e0b50', fontSize: '9px', letterSpacing: '0.12em',
+                      textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+                      Five Operational Duties
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {p.duties.map(d => (
+                        <div key={d.n} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                          <p style={{ color: '#f59e0b50', fontSize: '10px', fontWeight: 700,
+                            flexShrink: 0, minWidth: '16px', paddingTop: '1px' }}>
+                            {d.n}.
+                          </p>
+                          <div>
+                            <p style={{ color: '#f59e0bcc', fontSize: '11px',
+                              fontWeight: 600, marginBottom: '2px' }}>
+                              {d.name}
+                            </p>
+                            <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>
+                              {d.desc}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div style={{ background: 'var(--bg-1)', padding: '14px 20px' }}>
                 <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.7 }}>
                   {p.note}
                 </p>
+                {p.closing && (
+                  <p style={{ color: '#f59e0b90', fontSize: '11px', fontStyle: 'italic',
+                    marginTop: '12px', lineHeight: 1.7 }}>
+                    {p.closing}
+                  </p>
+                )}
               </div>
             </div>
           ))}

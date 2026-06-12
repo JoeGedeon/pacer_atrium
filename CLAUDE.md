@@ -16,6 +16,9 @@ These phrases are institutional doctrine. Do not rewrite, paraphrase, or "improv
 - **"Archivist Hall"** — mixed case. Not ARCHIVIST HALL, not Archie Hall, not Archive Hall.
 - **"K.E.L."** — Knowledge Execution Layer. Not CLAW (prior name, retired May 30, 2026).
 - **"ARCHIVIST"** — memory layer. Not JARVIS (prior name, retired May 30, 2026).
+- **"A successful system is not measured by what it creates. A successful system is measured by what arrives."** — Constitutional Principle #2, The Last Inch Principle.
+- **"Nothing important should be lost in the hallway."** — closing line of The Last Inch Principle. Do not rewrite.
+- **The five duties of The Last Inch Principle** (exact names, no paraphrasing): Identify the Path · Clear the Obstruction · Protect the Cargo · Document the Journey · Deliver the Outcome.
 
 ---
 
