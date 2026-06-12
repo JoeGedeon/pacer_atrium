@@ -38,6 +38,7 @@ import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
+import PACERVoice from './components/PACERVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -632,6 +633,17 @@ export default function App() {
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
+
+      {/* ── Push-to-talk voice — home screen only ─────────────────────────── */}
+      {isHome && (
+        <PACERVoice
+          apiKey={apiKey}
+          observations={observations}
+          institutionEvents={institutionEvents}
+          emailContext={emailContextString(emailData)}
+          calendarContext={calendarContextString(calendarEvents)}
+        />
+      )}
 
       {/* ── Onboarding orientation — first-time non-creator visitors ─────── */}
       {profile && profile.hasSeenOnboarding === false && !isCreator(user) && (
