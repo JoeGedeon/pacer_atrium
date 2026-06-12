@@ -37,7 +37,14 @@ import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContex
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
-const CREATOR_EMAIL = import.meta.env.VITE_CREATOR_EMAIL || 'joegedeon22@gmail.com'
+const CREATOR_EMAIL = (import.meta.env.VITE_CREATOR_EMAIL || 'jgedeon22@gmail.com').toLowerCase()
+const CREATOR_UID   = import.meta.env.VITE_CREATOR_UID   || null
+
+function isCreator(user) {
+  if (!user) return false
+  if (CREATOR_UID && user.uid === CREATOR_UID) return true
+  return user.email?.toLowerCase() === CREATOR_EMAIL
+}
 
 async function migrateLocalStorage(uid) {
   const flagKey = `pacer_migrated_${uid}`
@@ -111,7 +118,7 @@ export default function App() {
   // Load or seed campus profile once user is known
   useEffect(() => {
     if (!user) { setProfile(undefined); return }
-    if (user.email === CREATOR_EMAIL) {
+    if (isCreator(user)) {
       const creatorProfile = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
       setProfile(creatorProfile)
       getUserProfile(user.uid).then(existing => {
