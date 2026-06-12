@@ -58,14 +58,14 @@ function CampusAtmosphere() {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
 
-      {/* Giant blue pineapple watermark — symbol, not logo */}
+      {/* Giant blue pineapple — moon scale, not object scale. Atmosphere, not accent. */}
       <div style={{
         position: 'absolute',
-        top: '40%', left: '50%',
+        top: '38%', left: '50%',
         transform: 'translate(-50%, -50%)',
-        fontSize: '440px', lineHeight: 1,
+        fontSize: '620px', lineHeight: 1,
         filter: BLUE_PINEAPPLE_FILTER,
-        opacity: 0.045,
+        opacity: 0.028,
         userSelect: 'none',
       }}>🍍</div>
 
@@ -192,9 +192,8 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
 
         <p style={{
           color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8,
-          fontStyle: 'italic', marginBottom: '36px',
-          borderTop: '1px solid var(--border-0)', borderBottom: '1px solid var(--border-0)',
-          padding: '14px 0',
+          fontStyle: 'italic', marginBottom: '40px',
+          marginTop: '8px',
         }}>
           How do we preserve what matters while moving it forward?
         </p>
