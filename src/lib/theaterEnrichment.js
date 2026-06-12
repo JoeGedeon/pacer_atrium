@@ -58,8 +58,10 @@ export const FORMATS = [
     id: 'video',
     icon: '🎬',
     label: 'Video',
-    note: 'Motion Studio — coming',
-    available: false,
+    note: 'Motion manifestation',
+    available: true,
+    instruction: 'Stage this as a video treatment: a one-sentence logline, a 3-act structure (setup, development, resolution — 1-2 sentences each), pacing direction (slow/atmospheric, urgent/kinetic, etc.), and audio/visual tone. Draw on PACER institutional context where it belongs. Return only the treatment — no preamble, no explanation.',
+    outputNote: 'Video treatment. Use to prompt Runway, Sora, or any video generation tool. Hand to a director or develop into a full script.',
   },
   {
     id: 'audio',

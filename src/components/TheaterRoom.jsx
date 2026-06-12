@@ -241,7 +241,7 @@ function ProductionWing({ apiKey, onConnectClaude, isMobile }) {
               { label: 'Story Studio',         status: 'active',  note: 'Written manifestation' },
               { label: 'Infographic Studio',   status: 'active',  note: 'Data manifestation' },
               { label: 'Presentation Studio',  status: 'active',  note: 'Slide manifestation' },
-              { label: 'Motion Studio',        status: 'coming',  note: 'Video generation pipeline' },
+              { label: 'Motion Studio',        status: 'active',  note: 'Video manifestation' },
               { label: 'Sound Studio',         status: 'coming',  note: 'Voice and atmosphere' },
             ].map(({ label, status, note }) => (
               <div key={label} style={{ minWidth: '140px' }}>
