@@ -303,7 +303,7 @@ export default function App() {
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
         {isDoctrine && <DoctrineRoom isMobile={isMobile} />}
-        {isTheater  && <TheaterRoom graduates={graduates} isMobile={isMobile} />}
+        {isTheater  && <TheaterRoom graduates={graduates} apiKey={apiKey} onConnectClaude={() => setShowKeyGate(true)} isMobile={isMobile} />}
         {isBusinessCenter && (
           <BusinessCenterRoom
             observations={observations}
