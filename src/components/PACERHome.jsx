@@ -182,8 +182,8 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
             src="/pacer-seal.png"
             alt="PACER"
             style={{
-              width: isMobile ? '200px' : '300px',
-              height: isMobile ? '200px' : '300px',
+              width: isMobile ? '230px' : '350px',
+              height: isMobile ? '230px' : '350px',
               objectFit: 'contain',
               opacity: 0.90,
             }}
@@ -191,7 +191,7 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         </div>
 
         <p style={{
-          color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8,
+          color: 'var(--text-1)', fontSize: '13px', lineHeight: 1.8,
           fontStyle: 'italic', marginBottom: '40px',
           marginTop: '8px',
         }}>
