@@ -266,13 +266,7 @@ export default function DoctrineRoom({ isMobile }) {
           <img
             src="/pacer-seal.png"
             alt="PACER Official Seal"
-            style={{
-              width: '132px',
-              height: '132px',
-              objectFit: 'contain',
-              borderRadius: '50%',
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.4)',
-            }}
+            style={{ width: '132px', height: '132px', objectFit: 'contain' }}
           />
         </div>
 

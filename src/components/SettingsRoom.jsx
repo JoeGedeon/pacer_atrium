@@ -480,12 +480,7 @@ export default function SettingsRoom({
             <img
               src="/pacer-seal.png"
               alt="PACER"
-              style={{
-                width: '80px', height: '80px', objectFit: 'contain',
-                borderRadius: '50%',
-                boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.45)',
-                marginBottom: '16px',
-              }}
+              style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '16px' }}
             />
             <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 700,
               letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '8px' }}>

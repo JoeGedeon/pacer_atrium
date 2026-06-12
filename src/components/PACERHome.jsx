@@ -15,29 +15,30 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         }}
       >
 
-        {/* Official Seal — Arrival Hall. The seal identifies the institution. The text names the place. */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+        {/* Official Seal — Arrival Hall. Crest, not badge. No frame, no shadow, no elevation. */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <img
             src="/pacer-seal.png"
             alt="PACER"
-            style={{
-              width: '80px', height: '80px', objectFit: 'contain',
-              borderRadius: '50%',
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.45)',
-            }}
+            style={{ width: '88px', height: '88px', objectFit: 'contain' }}
           />
         </div>
 
-        <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '6px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '10px', letterSpacing: '0.12em',
+          textTransform: 'uppercase', marginBottom: '20px' }}>
+          Reality voted. Architecture adapted.
+        </p>
+
+        <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '6px' }}>
           There is room. Come in.
         </p>
 
-        <p style={{ color: 'var(--text-5)', fontSize: '12px', marginBottom: '32px' }}>
+        <p style={{ color: 'var(--text-4)', fontSize: '12px', marginBottom: '32px' }}>
           Come in with respect.
         </p>
 
         <p style={{
-          color: 'var(--text-6)', fontSize: '12px', lineHeight: 1.8,
+          color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.8,
           fontStyle: 'italic', marginBottom: '40px',
           borderTop: '1px solid var(--border-0)', borderBottom: '1px solid var(--border-0)',
           padding: '16px 0',

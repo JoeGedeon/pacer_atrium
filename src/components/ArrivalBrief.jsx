@@ -64,7 +64,7 @@ export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking
             <img
               src="/pacer-seal.png"
               alt="PACER"
-              style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '50%', opacity: 0.85 }}
+              style={{ width: '44px', height: '44px', objectFit: 'contain' }}
             />
           </div>
           <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
