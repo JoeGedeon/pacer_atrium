@@ -61,12 +61,26 @@ export function pickVoice(gender) {
 // Single entry point for all speech in PACER.
 // Handles Chrome/Edge async voice loading and Safari's silent voiceschanged non-fire.
 export function speakWithVoice(text, config, { onStart, onEnd, onError } = {}) {
+  console.debug('[PACER voice] speakWithVoice called, text type:', typeof text, 'text length:', text?.length)
+  console.debug('[PACER voice] config:', JSON.stringify(config))
   if (!window.speechSynthesis) {
     console.debug('[PACER voice] speechSynthesis unavailable')
     return
   }
   const cfg = config || ROOM_VOICE_CONFIG.home
+  console.debug('[PACER voice] cfg.rate:', cfg?.rate, 'cfg.pitch:', cfg?.pitch)
+  if (!cfg || cfg.rate === undefined || cfg.pitch === undefined) {
+    console.error('[PACER voice] INVALID CONFIG — missing rate or pitch:', cfg)
+    onError?.()
+    return
+  }
   window.speechSynthesis.cancel()
+
+  if (typeof text !== 'string' || !text) {
+    console.error('[PACER voice] INVALID TEXT — not a non-empty string:', text)
+    onError?.()
+    return
+  }
 
   const utt   = new SpeechSynthesisUtterance(text)
   utt.rate    = cfg.rate

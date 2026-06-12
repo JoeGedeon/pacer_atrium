@@ -33,18 +33,25 @@ export default function PACERVoice({ apiKey, observations, institutionEvents, em
 
     setVoiceState('thinking')
     try {
+      console.debug('[PACER voice-in] transcript:', text)
+      console.debug('[PACER voice-in] observations count:', observations?.length)
+      console.debug('[PACER voice-in] apiKey present:', !!apiKey)
       const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
       const context = { observations, institutionEvents, dateStr, emailContext, calendarContext }
+      console.debug('[PACER voice-in] calling conversationQuery')
       const reply = await conversationQuery(text, context, [], apiKey)
+      console.debug('[PACER voice-in] reply received, length:', reply?.length)
       setResponse(reply)
+      console.debug('[PACER voice-in] calling speakWithVoice')
       speakWithVoice(reply, getVoiceConfig('home'), {
-        onStart: () => setVoiceState('speaking'),
-        onEnd:   () => setVoiceState('idle'),
-        onError: () => setVoiceState('idle'),
+        onStart: () => { console.debug('[PACER voice-in] onstart'); setVoiceState('speaking') },
+        onEnd:   () => { console.debug('[PACER voice-in] onend'); setVoiceState('idle') },
+        onError: () => { console.debug('[PACER voice-in] speech error'); setVoiceState('idle') },
       })
-    } catch (e) {
-      console.debug('[PACER voice-in] query error:', e.message)
-      setError(e.message)
+    } catch (err) {
+      console.error('[PACER voice-in] CRASH:', err)
+      console.error('[PACER voice-in] stack:', err?.stack)
+      setError(err?.message || String(err))
       setVoiceState('idle')
     }
   }

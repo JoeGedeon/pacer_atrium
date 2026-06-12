@@ -228,21 +228,30 @@ export default function App() {
   }
 
   function speakArrivalText(text) {
-    if (!window.speechSynthesis) { console.debug('[arrival voice] speechSynthesis unavailable'); return }
-    console.debug('[arrival voice] button clicked')
-    console.debug('[arrival voice] text:', text)
-    console.debug('[arrival voice] text length:', text?.length)
-    console.debug('[arrival voice] calling speakWithVoice, room:', currentRoom)
-    const greeting = getArrivalGreeting('Joe')
-    const full = text ? `${greeting} ${text}` : greeting
-    // Force system default voice (gender: null) — same path as Raw Voice Test.
-    // pickVoice() may return a voice Safari lists but cannot play.
-    const voiceConfig = { ...getVoiceConfig(currentRoom), gender: null }
-    speakWithVoice(full, voiceConfig, {
-      onStart: () => { console.debug('[arrival voice] onstart'); setArrivalSpeaking(true) },
-      onEnd:   () => { console.debug('[arrival voice] onend'); setArrivalSpeaking(false); setArrivalState(null) },
-      onError: () => { console.debug('[arrival voice] error'); setArrivalSpeaking(false) },
-    })
+    try {
+      if (!window.speechSynthesis) { console.debug('[arrival voice] speechSynthesis unavailable'); return }
+      console.debug('[arrival voice] button clicked')
+      console.debug('[arrival voice] text:', text)
+      console.debug('[arrival voice] text length:', text?.length)
+      console.debug('[arrival voice] typeof text:', typeof text)
+      console.debug('[arrival voice] currentRoom:', currentRoom)
+      const greeting = getArrivalGreeting('Joe')
+      console.debug('[arrival voice] greeting:', greeting)
+      const full = text ? `${greeting} ${text}` : greeting
+      console.debug('[arrival voice] full text length:', full?.length)
+      const voiceConfig = { ...getVoiceConfig(currentRoom), gender: null }
+      console.debug('[arrival voice] voiceConfig:', JSON.stringify(voiceConfig))
+      console.debug('[arrival voice] calling speakWithVoice')
+      speakWithVoice(full, voiceConfig, {
+        onStart: () => { console.debug('[arrival voice] onstart'); setArrivalSpeaking(true) },
+        onEnd:   () => { console.debug('[arrival voice] onend'); setArrivalSpeaking(false); setArrivalState(null) },
+        onError: () => { console.debug('[arrival voice] onerror callback'); setArrivalSpeaking(false) },
+      })
+    } catch (err) {
+      console.error('[arrival voice] CRASH:', err)
+      console.error('[arrival voice] stack:', err?.stack)
+      setArrivalSpeaking(false)
+    }
   }
 
   useEffect(() => {
