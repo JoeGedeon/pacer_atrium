@@ -141,8 +141,16 @@ function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, o
   )
 }
 
+const ARRIVAL_OPTIONS = [
+  { id: 'silent',  label: 'Silent',       note: 'PACER loads without greeting. The campus is yours.' },
+  { id: 'ask',     label: 'Ask Me First', note: 'PACER asks before delivering the briefing. Safe for shared screens.' },
+  { id: 'text',    label: 'Text Brief',   note: 'A briefing card appears with today\'s institutional pulse.' },
+  { id: 'voice',   label: 'Voice Brief',  note: 'PACER greets you and reads the briefing aloud on arrival.' },
+]
+
 export default function SettingsRoom({
   user, theme, onThemeChange, apiKey, onApiKeyChange, onSignOut, isMobile,
+  arrivalMode = 'silent', onArrivalModeChange,
 }) {
   const anthropicConnected = !!apiKey
 
@@ -185,6 +193,42 @@ export default function SettingsRoom({
               padding: '5px 12px', borderRadius: '6px',
             }}>Sign out</button>
           </Row>
+        </Section>
+
+        {/* Arrival */}
+        <Section title="Arrival">
+          <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7, marginBottom: '14px' }}>
+            When you enter the campus, how would you like to be received?
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {ARRIVAL_OPTIONS.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => onArrivalModeChange?.(opt.id)}
+                style={{
+                  width: '100%', textAlign: 'left', background: arrivalMode === opt.id ? '#0f172a' : 'var(--bg-2)',
+                  border: `1px solid ${arrivalMode === opt.id ? '#3b82f660' : 'var(--border-0)'}`,
+                  borderRadius: '8px', padding: '12px 16px', cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'flex-start', gap: '12px',
+                }}
+              >
+                <span style={{
+                  marginTop: '2px', flexShrink: 0, width: '12px', height: '12px',
+                  borderRadius: '50%', border: `2px solid ${arrivalMode === opt.id ? '#3b82f6' : 'var(--border-1)'}`,
+                  background: arrivalMode === opt.id ? '#3b82f6' : 'none',
+                  display: 'inline-block',
+                }} />
+                <div>
+                  <p style={{ color: arrivalMode === opt.id ? 'var(--text-1)' : 'var(--text-3)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>
+                    {opt.label}
+                  </p>
+                  <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.55 }}>
+                    {opt.note}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
         </Section>
 
         {/* Appearance */}

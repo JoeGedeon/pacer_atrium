@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTheme } from './hooks/useTheme'
 import { useAuth } from './hooks/useAuth'
 import { useIsMobile } from './hooks/useIsMobile'
@@ -20,15 +20,16 @@ import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import Intake from './components/Intake'
 import ConversationMode from './components/ConversationMode'
+import ArrivalBrief from './components/ArrivalBrief'
 import APIKeyGate from './components/APIKeyGate'
-import { analyzeObservation } from './lib/claudeRouting'
+import { analyzeObservation, generateInstitutionalPulse } from './lib/claudeRouting'
 import {
   listenObservations, createObservation, updateObservation,
   listenMuseWorks, createKELDecision, listenGraduates,
   createKELReview, listenKELReviews, updateKELReview,
   createInstitutionEvent, listenInstitutionEvents,
   listenCreatorLogs, createCreatorLog,
-  getUserProfile, createUserProfile,
+  getUserProfile, createUserProfile, updateUserProfile,
   createProduction, listenProductions, updateProduction,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
@@ -98,6 +99,12 @@ export default function App() {
   const [emailData, setEmailData]                 = useState(null)
   const [calendarEvents, setCalendarEvents]       = useState([])
 
+  // ── Arrival Protocol ──────────────────────────────────────────────────────────
+  const [arrivalState, setArrivalState]   = useState(null) // null | 'asking' | 'text' | 'voice'
+  const [arrivalText, setArrivalText]     = useState('')
+  const [arrivalLoading, setArrivalLoading] = useState(false)
+  const hasArrived                        = useRef(false)
+
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
     const reviews = kelReviews.filter(r => r.requestType === 'builder_readiness')
@@ -165,6 +172,80 @@ export default function App() {
     setGoogleTokenData(null)
     setEmailData(null)
     setCalendarEvents([])
+  }
+
+  // ── Arrival Protocol ─────────────────────────────────────────────────────────
+  function getArrivalGreeting(name) {
+    const h = new Date().getHours()
+    const salutation = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+    return name ? `${salutation}, ${name}.` : `${salutation}.`
+  }
+
+  async function buildArrivalText() {
+    try {
+      if (apiKey) {
+        const text = await generateInstitutionalPulse(
+          { observations, productions, institutionEvents, creatorLogs },
+          apiKey
+        )
+        if (text) return text
+      }
+    } catch (_) { /* fall through to static */ }
+    // Static fallback: build a brief sentence from live counts
+    const unrouted = observations.filter(o => !o.destination).length
+    const pending  = productions.filter(p => p.humanGateStatus === 'pending' || (p.status === 'staged' && !p.humanGateStatus)).length
+    const parts = []
+    if (observations.length === 0) parts.push('The Atrium is quiet.')
+    else parts.push(`${observations.length} observation${observations.length !== 1 ? 's' : ''} in memory.`)
+    if (unrouted > 0) parts.push(`${unrouted} awaiting routing.`)
+    if (pending > 0) parts.push(`${pending} production${pending !== 1 ? 's' : ''} awaiting approval.`)
+    if (institutionEvents.length > 0) parts.push('Institutional activity is on record.')
+    return parts.join(' ') || 'Campus is operational.'
+  }
+
+  function speakText(text) {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const utt = new SpeechSynthesisUtterance(text)
+    utt.rate  = 0.92
+    utt.pitch = 1.0
+    utt.onend   = () => setArrivalState(null)
+    utt.onerror = () => setArrivalState(null)
+    window.speechSynthesis.speak(utt)
+  }
+
+  useEffect(() => {
+    if (!profile || profile === undefined || hasArrived.current) return
+    const mode = profile.arrivalMode || 'silent'
+    if (mode === 'silent') { hasArrived.current = true; return }
+
+    hasArrived.current = true
+    const timer = setTimeout(async () => {
+      if (mode === 'ask') {
+        setArrivalState('asking')
+      } else if (mode === 'text') {
+        setArrivalState('text')
+        setArrivalLoading(true)
+        const text = await buildArrivalText()
+        setArrivalText(text || '')
+        setArrivalLoading(false)
+      } else if (mode === 'voice') {
+        const text = await buildArrivalText()
+        const greeting = getArrivalGreeting(profile.campusName ? 'Joe' : '')
+        const full = text ? `${greeting} ${text}` : greeting
+        setArrivalState('voice')
+        speakText(full)
+      }
+    }, 700) // allow Firestore first-load to settle
+    return () => clearTimeout(timer)
+  }, [profile?.campusId]) // eslint-disable-line
+
+  async function handleArrivalAccept() {
+    setArrivalState('text')
+    setArrivalLoading(true)
+    const text = await buildArrivalText()
+    setArrivalText(text || '')
+    setArrivalLoading(false)
   }
 
   // ── Refresh Google data when token is valid ──────────────────────────────────
@@ -508,6 +589,11 @@ export default function App() {
             onApiKeyChange={setApiKey}
             onSignOut={signOut}
             isMobile={isMobile}
+            arrivalMode={profile?.arrivalMode || 'silent'}
+            onArrivalModeChange={mode => {
+              updateUserProfile(user.uid, { arrivalMode: mode })
+              setProfile(prev => prev ? { ...prev, arrivalMode: mode } : prev)
+            }}
           />
         )}
 
@@ -515,6 +601,19 @@ export default function App() {
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
+
+      {/* ── Arrival Protocol overlay ───────────────────────────────────────── */}
+      {arrivalState && (
+        <ArrivalBrief
+          mode={arrivalState === 'asking' ? 'ask' : arrivalState}
+          greeting={getArrivalGreeting('Joe')}
+          text={arrivalText}
+          loading={arrivalLoading}
+          onDismiss={() => setArrivalState(null)}
+          onAccept={handleArrivalAccept}
+          onDecline={() => setArrivalState(null)}
+        />
+      )}
     </div>
   )
 }
