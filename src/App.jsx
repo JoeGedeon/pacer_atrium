@@ -478,6 +478,7 @@ export default function App() {
             observationCount={observations.length}
             onMorningBrief={handleArrivalAccept}
             campusStats={campusStats}
+            isMobile={isMobile}
           />
         )}
 

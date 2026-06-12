@@ -1,13 +1,19 @@
 // Blue Pineapple: doctrine, not decoration.
 const BLUE_PINEAPPLE_FILTER = 'hue-rotate(160deg) saturate(2) brightness(1.1)'
 
-export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats }) {
+export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile }) {
   return (
     <div
-      className="flex-1 flex flex-col items-center justify-center"
+      className="flex-1 flex flex-col items-center overflow-y-auto"
       style={{ background: 'var(--bg-0)' }}
     >
-      <div className="text-center w-full" style={{ maxWidth: '420px', padding: '0 24px' }}>
+      <div
+        className="text-center w-full"
+        style={{
+          maxWidth: isMobile ? '420px' : '680px',
+          padding: isMobile ? '48px 24px 40px' : '64px 48px 48px',
+        }}
+      >
 
         {/* Official Seal — Arrival Hall. The seal identifies the institution. The text names the place. */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
