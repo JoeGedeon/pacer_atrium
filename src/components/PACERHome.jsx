@@ -9,8 +9,8 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
     >
       <div className="text-center w-full" style={{ maxWidth: '420px', padding: '0 24px' }}>
 
-        {/* Official Seal — Arrival Hall. The pineapple carries visitors through; the seal tells them they arrived somewhere. */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        {/* Official Seal — Arrival Hall. The seal identifies the institution. The text names the place. */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
           <img
             src="/pacer-seal.png"
             alt="PACER"
@@ -21,13 +21,6 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
             }}
           />
         </div>
-
-        <h1
-          className="font-bold tracking-widest uppercase"
-          style={{ fontSize: '22px', color: 'var(--text-0)', letterSpacing: '0.25em', marginBottom: '10px' }}
-        >
-          PACER
-        </h1>
 
         <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '6px' }}>
           There is room. Come in.
