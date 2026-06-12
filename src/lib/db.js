@@ -168,6 +168,28 @@ export function listenInstitutionEvents(uid, callback) {
   })
 }
 
+// ── Multi-Manifest Tests — constitutional preservation tests ──────────────────
+
+export async function createMultiManifestTest(uid, data) {
+  const ref = await addDoc(
+    collection(db, 'users', uid, 'multi_manifest_tests'),
+    {
+      observationText: data.observationText,
+      results:         data.results,
+      preservedCount:  data.preservedCount,
+      totalCount:      data.totalCount,
+      createdAt:       serverTimestamp(),
+    }
+  )
+  await createInstitutionEvent(uid, {
+    eventType:       'multi_manifest_test_completed',
+    title:           'Multi-Manifest Test Completed',
+    description:     `${data.preservedCount}/${data.totalCount} formats preserved cargo integrity. Constitutional Principle #2 tested.`,
+    relatedEntityId: ref.id,
+  })
+  return ref.id
+}
+
 // ── Graduate Registry — written only by Builder Studio, read everywhere ────────
 
 function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }
