@@ -25,6 +25,12 @@ const CONSTITUTIONAL_PRINCIPLES = [
 
 const CANDIDATE_PRINCIPLES = [
   {
+    id: 'reality-voted',
+    text: 'Reality voted. Architecture adapted.',
+    inConsideration: 'June 2026',
+    note: 'The institution was built in conversation, then tested in production. When the first users arrived, the roadmap changed — not because the architecture was wrong, but because reality is always the most accurate observer in the room. A principle earns the wall by surviving contact with actual humans. Plans that never meet friction are theories, not principles. The order of operations is not: design, then learn. It is: design, ship, observe, adapt. The institution does not resist this. The institution depends on it. Currently in the shaking phase.',
+  },
+  {
     id: 'shake-the-tree',
     text: 'What survives scrutiny is what marches.',
     inConsideration: 'June 2026',

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import ThemeToggle from './ThemeToggle'
+import { ROOM_VOICE_CONFIG, ROOM_DISPLAY_NAMES, getRoomSample, speakWithVoice } from '../lib/roomVoice'
 
 function Section({ title, children }) {
   return (
@@ -155,6 +156,22 @@ export default function SettingsRoom({
   const anthropicConnected  = !!apiKey
   const [arrivalSaved, setArrivalSaved] = useState(false)
   const arrivalSavedTimer = useRef(null)
+  const [testingRoom, setTestingRoom] = useState(null)
+
+  const VOICE_ROOMS = ['atrium', 'muse', 'vera', 'kel', 'content', 'businesscenter', 'archive', 'doctrine']
+
+  function handleTestVoice(roomId) {
+    if (testingRoom) {
+      window.speechSynthesis?.cancel()
+      setTestingRoom(null)
+      return
+    }
+    setTestingRoom(roomId)
+    speakWithVoice(getRoomSample(roomId), ROOM_VOICE_CONFIG[roomId], {
+      onEnd:   () => setTestingRoom(null),
+      onError: () => setTestingRoom(null),
+    })
+  }
 
   function handleArrivalChange(mode) {
     onArrivalModeChange?.(mode)
@@ -245,6 +262,68 @@ export default function SettingsRoom({
               </button>
             ))}
           </div>
+        </Section>
+
+        {/* Voice */}
+        <Section title="Voice">
+          <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7, marginBottom: '16px' }}>
+            Each room carries its own voice. PACER should sound like the room you are standing in.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {VOICE_ROOMS.map(roomId => {
+              const cfg     = ROOM_VOICE_CONFIG[roomId]
+              const isTesting = testingRoom === roomId
+              return (
+                <div
+                  key={roomId}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', borderRadius: '8px',
+                    background: isTesting ? '#0a0d14' : 'var(--bg-1)',
+                    border: `1px solid ${isTesting ? '#6366f140' : 'var(--border-0)'}`,
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                      <span style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500 }}>
+                        {ROOM_DISPLAY_NAMES[roomId]}
+                      </span>
+                      <span style={{
+                        fontSize: '9px', padding: '1px 7px', borderRadius: '999px', fontWeight: 600,
+                        letterSpacing: '0.06em', background: 'var(--bg-2)',
+                        color: isTesting ? '#a5b4fc' : 'var(--text-4)',
+                        border: `1px solid ${isTesting ? '#6366f160' : 'var(--border-1)'}`,
+                      }}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>{cfg.character}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{ color: 'var(--text-6)', fontSize: '9px', fontFamily: 'monospace' }}>
+                      {cfg.rate.toFixed(2)}× · {cfg.pitch.toFixed(2)}p
+                    </span>
+                    <button
+                      onClick={() => handleTestVoice(roomId)}
+                      style={{
+                        background: isTesting ? '#1e1b4b' : 'var(--bg-2)',
+                        border: `1px solid ${isTesting ? '#6366f1' : 'var(--border-1)'}`,
+                        color: isTesting ? '#a5b4fc' : 'var(--text-4)',
+                        fontSize: '10px', cursor: 'pointer',
+                        padding: '4px 10px', borderRadius: '5px', fontFamily: 'inherit',
+                      }}
+                    >
+                      {isTesting ? '■ Stop' : '▶ Test'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px', marginTop: '12px' }}>
+            Voice selection uses available system voices. Results vary by browser and OS.
+          </p>
         </Section>
 
         {/* Appearance */}

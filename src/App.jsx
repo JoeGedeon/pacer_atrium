@@ -21,6 +21,7 @@ import PlaceholderRoom from './components/PlaceholderRoom'
 import Intake from './components/Intake'
 import ConversationMode from './components/ConversationMode'
 import ArrivalBrief from './components/ArrivalBrief'
+import OnboardingCard from './components/OnboardingCard'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation, generateInstitutionalPulse } from './lib/claudeRouting'
 import {
@@ -31,10 +32,12 @@ import {
   listenCreatorLogs, createCreatorLog,
   getUserProfile, createUserProfile, updateUserProfile,
   createProduction, listenProductions, updateProduction,
+  incrementCampusStat, listenCampusStats,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
+import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -98,6 +101,7 @@ export default function App() {
   const [googleTokenData, setGoogleTokenData]     = useState(null) // { access_token, expires_at }
   const [emailData, setEmailData]                 = useState(null)
   const [calendarEvents, setCalendarEvents]       = useState([])
+  const [campusStats, setCampusStats]             = useState(null) // creator-only beta counters
 
   // ── Arrival Protocol ──────────────────────────────────────────────────────────
   const [arrivalState, setArrivalState]     = useState(null) // null | 'asking' | 'text' | 'voice'
@@ -125,7 +129,7 @@ export default function App() {
 
   // Load or seed campus profile once user is known
   useEffect(() => {
-    if (!user) { setProfile(undefined); return }
+    if (!user) { setProfile(undefined); setCampusStats(null); return }
     if (isCreator(user)) {
       const creatorBase = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
       setProfile(creatorBase) // instant access — no loading state
@@ -133,13 +137,26 @@ export default function App() {
         if (!existing) {
           createUserProfile(user.uid, creatorBase)
         } else {
-          // Merge stored preferences (arrivalMode, etc.) back into the live profile
           setProfile({ ...creatorBase, ...existing })
         }
       })
-      return
+      // Creator-only: listen to beta stats counters
+      const unsubStats = listenCampusStats(setCampusStats)
+      return () => unsubStats()
     }
-    getUserProfile(user.uid).then(p => setProfile(p ?? null))
+    const today = new Date().toISOString().slice(0, 10)
+    getUserProfile(user.uid).then(p => {
+      setProfile(p ?? null)
+      if (p) {
+        // Track return visits — only when user has visited before
+        if (p.lastVisitDate && p.lastVisitDate !== today) {
+          updateUserProfile(user.uid, { lastVisitDate: today })
+          incrementCampusStat('returns')
+        } else if (!p.lastVisitDate) {
+          updateUserProfile(user.uid, { lastVisitDate: today })
+        }
+      }
+    })
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Start Firestore listeners once we know the user
@@ -211,16 +228,13 @@ export default function App() {
 
   function speakArrivalText(text) {
     if (!window.speechSynthesis) return
-    window.speechSynthesis.cancel()
     setArrivalSpeaking(true)
     const greeting = getArrivalGreeting('Joe')
     const full = text ? `${greeting} ${text}` : greeting
-    const utt = new SpeechSynthesisUtterance(full)
-    utt.rate  = 0.92
-    utt.pitch = 1.0
-    utt.onend   = () => { setArrivalSpeaking(false); setArrivalState(null) }
-    utt.onerror = () => { setArrivalSpeaking(false) }
-    window.speechSynthesis.speak(utt)
+    speakWithVoice(full, getVoiceConfig(currentRoom), {
+      onEnd:   () => { setArrivalSpeaking(false); setArrivalState(null) },
+      onError: () => { setArrivalSpeaking(false) },
+    })
   }
 
   useEffect(() => {
@@ -265,6 +279,7 @@ export default function App() {
   }, [googleTokenData]) // eslint-disable-line
 
   async function submitObservation(obs) {
+    if (!isCreator(user)) incrementCampusStat('observations')
     const id = await createObservation(user.uid, {
       text:          obs.text,
       type:          obs.type,
@@ -409,6 +424,7 @@ export default function App() {
             bypass:        false,
           }
           await createUserProfile(user.uid, newProfile)
+          incrementCampusStat('visitors')
           setProfile(newProfile)
         }}
       />
@@ -454,6 +470,7 @@ export default function App() {
             onEnter={room => setCurrentRoom(room)}
             observationCount={observations.length}
             onMorningBrief={handleArrivalAccept}
+            campusStats={campusStats}
           />
         )}
 
@@ -469,6 +486,7 @@ export default function App() {
                 onSwitchToText={() => setAtriumMode('observe')}
                 emailContext={emailContextString(emailData)}
                 calendarContext={calendarContextString(calendarEvents)}
+                voiceConfig={getVoiceConfig('atrium')}
               />
             )
             : (
@@ -606,6 +624,16 @@ export default function App() {
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
+
+      {/* ── Onboarding orientation — first-time non-creator visitors ─────── */}
+      {profile && profile.hasSeenOnboarding === false && !isCreator(user) && (
+        <OnboardingCard
+          onEnter={() => {
+            updateUserProfile(user.uid, { hasSeenOnboarding: true })
+            setProfile(prev => prev ? { ...prev, hasSeenOnboarding: true } : prev)
+          }}
+        />
+      )}
 
       {/* ── Arrival Protocol overlay ───────────────────────────────────────── */}
       {arrivalState && (

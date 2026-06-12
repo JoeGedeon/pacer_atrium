@@ -1,7 +1,7 @@
 // Blue Pineapple: doctrine, not decoration.
 const BLUE_PINEAPPLE_FILTER = 'hue-rotate(160deg) saturate(2) brightness(1.1)'
 
-export default function PACERHome({ onEnter, observationCount, onMorningBrief }) {
+export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats }) {
   return (
     <div
       className="flex-1 flex flex-col items-center justify-center"
@@ -120,6 +120,37 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief })
           )}
 
         </div>
+
+        {/* Creator-only beta pulse — three numbers, nothing more */}
+        {campusStats && (
+          <div style={{
+            marginTop: '32px',
+            padding: '14px 20px',
+            background: 'var(--bg-1)',
+            border: '1px solid var(--border-0)',
+            borderRadius: '10px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}>
+            {[
+              { label: 'Visitors',     value: campusStats.visitors     || 0 },
+              { label: 'Returns',      value: campusStats.returns      || 0 },
+              { label: 'Observations', value: campusStats.observations || 0 },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ textAlign: 'center', flex: 1 }}>
+                <p style={{ color: 'var(--text-0)', fontSize: '20px', fontWeight: 700, lineHeight: 1 }}>
+                  {value}
+                </p>
+                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
+                  textTransform: 'uppercase', marginTop: '5px' }}>
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
     </div>
   )
