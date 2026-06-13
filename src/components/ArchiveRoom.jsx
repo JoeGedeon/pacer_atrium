@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { listenKELDecisions } from '../lib/db'
 import RoomSubNav from './RoomSubNav'
+import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
 const ARCHIVE_TABS = [
   { id: 'timeline',  label: 'Timeline' },
@@ -241,6 +242,38 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
 
   const px = isMobile ? 'px-6' : 'px-10'
 
+  const [timelineSpeaking, setTimelineSpeaking] = useState(false)
+
+  function playTimeline() {
+    if (timelineSpeaking || allEntries.length === 0) return
+    const reversed = [...allEntries].reverse()
+    const script = reversed.map(entry => {
+      const dateStr = entry.timestamp.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+      if (entry.kind === 'observation') {
+        let s = `${dateStr}. Observation entered Atrium.`
+        if (entry.text) s += ` "${entry.text.slice(0, 100)}".`
+        if (entry.destination) s += ` Routed to ${entry.destination}.`
+        if (entry.constellation) s += ` Constellation: ${entry.constellation}.`
+        return s
+      }
+      if (entry.kind === 'decision') {
+        return `${dateStr}. K.E.L. decision: ${entry.decision}. ${entry.recommendation || ''}.`
+      }
+      if (entry.kind === 'event') {
+        return `${dateStr}. ${entry.title}. ${entry.description || ''}`
+      }
+      if (entry.kind === 'work') {
+        return `${dateStr}. Work published: ${entry.title}.`
+      }
+      return ''
+    }).filter(Boolean).join(' ')
+    speakWithVoice(script, getVoiceConfig('vera'), {
+      onStart: () => setTimelineSpeaking(true),
+      onEnd:   () => setTimelineSpeaking(false),
+      onError: () => setTimelineSpeaking(false),
+    })
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
@@ -251,17 +284,37 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
           textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
           College of Memory
         </p>
-        <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
-          letterSpacing: '0.08em', marginBottom: '5px' }}>Archivist Hall</h2>
-        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
-          The past is still speaking.
-        </p>
-        <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '6px' }}>
-          {allEntries.length} record{allEntries.length !== 1 ? 's' : ''} ·{' '}
-          {kelDecisions.length} decision{kelDecisions.length !== 1 ? 's' : ''} ·{' '}
-          {threadKeys.length} thread{threadKeys.length !== 1 ? 's' : ''} ·{' '}
-          {outcomeThreads.length} outcome{outcomeThreads.length !== 1 ? 's' : ''}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
+              letterSpacing: '0.08em', marginBottom: '5px' }}>Archivist Hall</h2>
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
+              The past is still speaking.
+            </p>
+            <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '6px' }}>
+              {allEntries.length} record{allEntries.length !== 1 ? 's' : ''} ·{' '}
+              {kelDecisions.length} decision{kelDecisions.length !== 1 ? 's' : ''} ·{' '}
+              {threadKeys.length} thread{threadKeys.length !== 1 ? 's' : ''} ·{' '}
+              {outcomeThreads.length} outcome{outcomeThreads.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          {allEntries.length > 0 && (
+            <button
+              onClick={playTimeline}
+              disabled={timelineSpeaking}
+              style={{
+                flexShrink: 0, background: 'none',
+                border: '1px solid var(--border-1)', borderRadius: '7px',
+                padding: '7px 13px', cursor: timelineSpeaking ? 'default' : 'pointer',
+                color: timelineSpeaking ? 'var(--text-4)' : 'var(--text-3)',
+                fontSize: '11px', fontWeight: 600, fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: '5px',
+              }}
+            >
+              {timelineSpeaking ? '🔊 Playing…' : '▶ Play Timeline'}
+            </button>
+          )}
+        </div>
       </div>
 
       <RoomSubNav tabs={ARCHIVE_TABS} activeTab={view} onSelect={setView} />

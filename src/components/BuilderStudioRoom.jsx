@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import RoomSubNav from './RoomSubNav'
 
 const BUILDER_TABS = [
@@ -22,7 +23,60 @@ function ArtifactSection({ label, children }) {
   )
 }
 
+function artifactToText(artifact) {
+  const domain = artifact.domain || ''
+  const isFleetFlow = domain === 'FleetFlow'
+  const isIsles = domain === 'Isles of the Awakening'
+  const parts = [artifact.title]
+  if (isFleetFlow) {
+    if (artifact.actionSummary) parts.push(artifact.actionSummary)
+    if (artifact.taskList?.length) parts.push('Tasks: ' + artifact.taskList.join('. '))
+    if (artifact.outreachDraft) parts.push(artifact.outreachDraft)
+    if (artifact.successMetric) parts.push('Success metric: ' + artifact.successMetric)
+  } else if (isIsles) {
+    if (artifact.conceptSummary) parts.push(artifact.conceptSummary)
+    if (artifact.nextCreativeStep) parts.push(artifact.nextCreativeStep)
+    if (artifact.expansionQuestions?.length) parts.push('Questions: ' + artifact.expansionQuestions.join('. '))
+    if (artifact.productionRecommendation) parts.push(artifact.productionRecommendation)
+  } else {
+    if (artifact.strategicSummary) parts.push(artifact.strategicSummary)
+    if (artifact.recommendedAction) parts.push(artifact.recommendedAction)
+    if (artifact.followUpSteps?.length) parts.push('Next steps: ' + artifact.followUpSteps.join('. '))
+  }
+  return parts.filter(Boolean).join('. ')
+}
+
 function ForgeArtifact({ artifact }) {
+  const [speaking, setSpeaking] = useState(false)
+  const [copied, setCopied]     = useState(false)
+  const artifactText = artifactToText(artifact)
+
+  function handleReadAloud() {
+    if (speaking) return
+    speakWithVoice(artifactText, getVoiceConfig('vera'), {
+      onStart: () => setSpeaking(true),
+      onEnd:   () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    })
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(artifactText).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    })
+  }
+
+  function handleExport() {
+    const blob = new Blob([artifactText], { type: 'text/plain' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = `${(artifact.title || 'artifact').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const domain = artifact.domain || ''
   const isFleetFlow = domain === 'FleetFlow'
   const isIsles     = domain === 'Isles of the Awakening'
@@ -39,6 +93,42 @@ function ForgeArtifact({ artifact }) {
           textTransform: 'uppercase' }}>
           Recommended Action Package
         </p>
+      </div>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
+        <button
+          onClick={handleReadAloud}
+          disabled={speaking}
+          style={{
+            background: 'none', border: '1px solid #10b98140', borderRadius: '5px',
+            padding: '4px 10px', color: speaking ? '#10b98180' : '#10b981',
+            fontSize: '10px', fontWeight: 600, cursor: speaking ? 'default' : 'pointer',
+            fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
+          }}
+        >
+          {speaking ? '🔊 Reading…' : '🔊 Read Aloud'}
+        </button>
+        <button
+          onClick={handleCopy}
+          style={{
+            background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px',
+            padding: '4px 10px', color: copied ? '#10b981' : 'var(--text-4)',
+            fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          {copied ? '✓ Copied' : '📋 Copy'}
+        </button>
+        <button
+          onClick={handleExport}
+          style={{
+            background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px',
+            padding: '4px 10px', color: 'var(--text-4)',
+            fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          ⬇ Export
+        </button>
       </div>
       <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600,
         lineHeight: 1.5, marginBottom: '16px' }}>

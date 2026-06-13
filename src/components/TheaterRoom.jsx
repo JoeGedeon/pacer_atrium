@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { enrichForFormat, FORMATS } from '../lib/theaterEnrichment'
 import { createMultiManifestTest } from '../lib/db'
 import RoomSubNav from './RoomSubNav'
+import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
 const THEATER_TABS = [
   { id: 'office',    label: '📦 Production Office' },
@@ -125,9 +126,36 @@ function IncomingCard({ observation, onStart, starting }) {
   )
 }
 
+function productionToNarration(production) {
+  const meta = STATUS_META[production.status] || STATUS_META.incoming
+  const studioLabel = STUDIO_OPTIONS.find(s => s.id === (production.studio || ''))?.label
+  const parts = [`Production: ${production.title || 'Untitled'}.`]
+  parts.push(`Status: ${meta.label}.`)
+  if (production.sourceText) parts.push(`Origin observation: "${production.sourceText.slice(0, 200)}".`)
+  if (production.sourceConstellation) parts.push(`Constellation: ${production.sourceConstellation}.`)
+  if (studioLabel && production.studio) parts.push(`Studio: ${studioLabel}.`)
+  if (production.deliveryDestination) parts.push(`Delivery destination: ${production.deliveryDestination}.`)
+  if (production.humanGateStatus) parts.push(`Human Gate: ${production.humanGateStatus}.`)
+  if (production.notes) parts.push(production.notes)
+  const outputCount = Object.keys(production.outputs || {}).length
+  if (outputCount > 0) parts.push(`${outputCount} output format${outputCount !== 1 ? 's' : ''} produced.`)
+  return parts.filter(Boolean).join(' ')
+}
+
 function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArchive, isMobile }) {
   const [edit, setEdit] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [narrating, setNarrating] = useState(false)
+
+  function handleNarrate() {
+    if (narrating) return
+    const script = productionToNarration(production)
+    speakWithVoice(script, getVoiceConfig('vera'), {
+      onStart: () => setNarrating(true),
+      onEnd:   () => setNarrating(false),
+      onError: () => setNarrating(false),
+    })
+  }
 
   function handleToggle() {
     if (expanded) {
@@ -382,7 +410,21 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
             display: 'flex', gap: '8px', justifyContent: 'space-between',
             paddingTop: '10px', borderTop: '1px solid var(--border-0)',
           }}>
-            <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleNarrate}
+                disabled={narrating}
+                style={{
+                  background: narrating ? 'var(--bg-2)' : '#030d1a',
+                  border: `1px solid ${narrating ? 'var(--border-1)' : '#3b82f640'}`,
+                  borderRadius: '6px', padding: '7px 12px',
+                  color: narrating ? 'var(--text-5)' : '#60a5fa',
+                  fontSize: '11px', fontWeight: 600,
+                  cursor: narrating ? 'default' : 'pointer',
+                }}
+              >
+                {narrating ? '🔊 Narrating…' : '🔊 Narrate'}
+              </button>
               <button
                 onClick={() => onStage(production.sourceText)}
                 style={{
