@@ -41,6 +41,7 @@ import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import PACERVoice from './components/PACERVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
+console.debug('[PACER env] GOOGLE_CLIENT_ID present:', !!GOOGLE_CLIENT_ID, '| length:', GOOGLE_CLIENT_ID?.length ?? 0)
 
 const CREATOR_EMAIL = (import.meta.env.VITE_CREATOR_EMAIL || 'jgedeon22@gmail.com').toLowerCase()
 const CREATOR_UID   = import.meta.env.VITE_CREATOR_UID   || null
