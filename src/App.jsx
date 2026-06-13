@@ -629,6 +629,7 @@ export default function App() {
         {isSettings && (
           <SettingsRoom
             user={user}
+            profile={profile}
             theme={theme}
             onThemeChange={setTheme}
             apiKey={apiKey}
@@ -649,6 +650,18 @@ export default function App() {
             onEveningReviewModeChange={mode => {
               updateUserProfile(user.uid, { eveningReviewMode: mode })
               setProfile(prev => prev ? { ...prev, eveningReviewMode: mode } : prev)
+            }}
+            onPreferredLanguageChange={lang => {
+              updateUserProfile(user.uid, { preferredLanguage: lang })
+              setProfile(prev => prev ? { ...prev, preferredLanguage: lang } : prev)
+            }}
+            onNativeLanguageChange={lang => {
+              updateUserProfile(user.uid, { nativeLanguage: lang })
+              setProfile(prev => prev ? { ...prev, nativeLanguage: lang } : prev)
+            }}
+            onAiProviderChange={provider => {
+              updateUserProfile(user.uid, { aiProvider: provider })
+              setProfile(prev => prev ? { ...prev, aiProvider: provider } : prev)
             }}
           />
         )}

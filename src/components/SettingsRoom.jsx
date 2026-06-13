@@ -142,6 +142,45 @@ function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, o
   )
 }
 
+const LANGUAGE_OPTIONS = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'ht', label: 'Haitian Creole' },
+  { value: 'fr', label: 'French' },
+  { value: 'pt', label: 'Portuguese' },
+]
+
+const AI_PROVIDER_OPTIONS = [
+  { value: 'claude',  label: 'Claude (Anthropic)' },
+  { value: 'openai',  label: 'ChatGPT (OpenAI)' },
+  { value: 'gemini',  label: 'Gemini (Google)' },
+]
+
+function ProfileSelect({ value, onChange, options, placeholder = 'Select…' }) {
+  return (
+    <select
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        background: 'var(--bg-0)',
+        border: '1px solid var(--border-1)',
+        color: value ? 'var(--text-0)' : 'var(--text-5)',
+        fontSize: '12px',
+        padding: '6px 10px',
+        borderRadius: '6px',
+        fontFamily: 'inherit',
+        cursor: 'pointer',
+        minWidth: '180px',
+      }}
+    >
+      {!value && <option value="" disabled>{placeholder}</option>}
+      {options.map(o => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  )
+}
+
 const ARRIVAL_OPTIONS = [
   { id: 'silent',  label: 'Silent',       note: 'PACER loads without greeting. The campus is yours.' },
   { id: 'ask',     label: 'Ask Me First', note: 'PACER asks before delivering the briefing. Safe for shared screens.' },
@@ -190,10 +229,11 @@ function OptionList({ options, value, onChange }) {
 }
 
 export default function SettingsRoom({
-  user, theme, onThemeChange, apiKey, onApiKeyChange, onSignOut, isMobile,
+  user, profile, theme, onThemeChange, apiKey, onApiKeyChange, onSignOut, isMobile,
   arrivalMode = 'silent', onArrivalModeChange,
   middayPulseMode = 'off', onMiddayPulseModeChange,
   eveningReviewMode = 'off', onEveningReviewModeChange,
+  onPreferredLanguageChange, onNativeLanguageChange, onAiProviderChange,
 }) {
   const anthropicConnected  = !!apiKey
   const [rhythmSaved, setRhythmSaved] = useState(false)
@@ -252,10 +292,38 @@ export default function SettingsRoom({
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-6' : 'px-10'} py-8`}
         style={{ maxWidth: '600px' }}>
 
-        {/* Account */}
-        <Section title="Account">
+        {/* Identity & Access */}
+        <Section title="Identity & Access">
+          {user?.displayName && (
+            <Row label="Name">
+              <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>{user.displayName}</span>
+            </Row>
+          )}
           <Row label="Email">
             <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>{user?.email}</span>
+          </Row>
+          <Row label="Preferred Language">
+            <ProfileSelect
+              value={profile?.preferredLanguage}
+              onChange={onPreferredLanguageChange}
+              options={LANGUAGE_OPTIONS}
+              placeholder="Choose language…"
+            />
+          </Row>
+          <Row label="Native Language">
+            <ProfileSelect
+              value={profile?.nativeLanguage}
+              onChange={onNativeLanguageChange}
+              options={LANGUAGE_OPTIONS}
+              placeholder="Choose language…"
+            />
+          </Row>
+          <Row label="AI Provider">
+            <ProfileSelect
+              value={profile?.aiProvider || 'claude'}
+              onChange={onAiProviderChange}
+              options={AI_PROVIDER_OPTIONS}
+            />
           </Row>
           <Row label="Session">
             <button onClick={onSignOut} style={{
