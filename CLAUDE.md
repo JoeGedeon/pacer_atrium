@@ -6,6 +6,27 @@
 
 ---
 
+## PACER Mission
+
+**PACER collects institutional state, identifies bottlenecks, determines highest-leverage actions, and recommends next execution steps. Everything else is support infrastructure for that mission.**
+
+Infrastructure can change — Claude, Firestore, Google Calendar are plumbing. The mission does not change.
+
+### PACER Operating Test
+
+Before adding any room, prompt, dashboard, or workflow, ask:
+
+1. **What is blocked?** — Can this contribute evidence toward identifying a bottleneck?
+2. **What unlocks it?** — Does this help determine what clears the blockage?
+3. **What action creates the most leverage?** — Does this help surface the highest-leverage next step?
+4. **What should happen next?** — Does this help PACER recommend a concrete next action?
+
+If the answer is no to all four, it probably does not belong.
+
+Every room is a data source for answering these questions. Theater surfaces production bottlenecks. Builder Studio surfaces governance state. MUSE surfaces analysis state. KEL surfaces execution state. The pulse function translates all of it into operational language.
+
+---
+
 ## Locked Language — Do Not Alter
 
 These phrases are institutional doctrine. Do not rewrite, paraphrase, or "improve" them.
