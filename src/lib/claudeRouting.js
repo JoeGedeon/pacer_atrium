@@ -54,12 +54,20 @@ Recent Institution Events:
 ${recentEvents || 'None recorded yet.'}`
 
 export async function generateInstitutionalPulse(context, apiKey) {
-  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], emailContext = null, calendarContext = null } = context
+  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], kelReviews = [], emailContext = null, calendarContext = null } = context
 
   // PACER institutional data always leads — Google is enrichment, not a dependency
+  const museDone    = observations.filter(o => o.claude && !o.destination)
+  const unanalyzed  = observations.filter(o => !o.claude && !o.destination)
+  const routed      = observations.filter(o => !!o.destination)
+  const pendingGate = productions.filter(p => p.humanGateStatus === 'pending')
+  const staged      = productions.filter(p => p.status === 'staged')
+  const pendingKEL  = kelReviews.filter(r => r.status === 'pending')
+
   const lines = []
-  lines.push(`Campus observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`)
-  lines.push(`Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting approval`)
+  lines.push(`Observations: ${observations.length} total — ${museDone.length} analyzed by MUSE awaiting routing, ${unanalyzed.length} not yet analyzed, ${routed.length} routed`)
+  lines.push(`Productions: ${productions.length} total — ${staged.length} staged, ${pendingGate.length} awaiting Human Gate approval`)
+  if (pendingKEL.length > 0) lines.push(`KEL Reviews: ${pendingKEL.length} pending (${pendingKEL.map(r => r.requestType).join(', ')})`)
   if (institutionEvents.length > 0) {
     lines.push(`Recent events: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ')}`)
   }
@@ -70,8 +78,8 @@ export async function generateInstitutionalPulse(context, apiKey) {
 
   const data = await callClaude({
     model: MODEL,
-    max_tokens: 200,
-    system: 'You are PACER\'s institutional intelligence delivering a personal executive briefing. Write 3-5 declarative sentences in plain prose. Lead with what requires the resident\'s attention: unrouted observations, pending approvals, staged productions. If Google Calendar data is provided, name specific upcoming events with times. If Gmail data is provided, note priority items. Be specific and direct — cite actual numbers and names. No preamble, no headers, no "I cannot see" language. Only report what is known.',
+    max_tokens: 220,
+    system: 'You are PACER, the institutional intelligence for JPG Ventures. Deliver a morning brief in 3-5 sentences of plain prose. Lead with the single most important action the founder should take today, stated as a directive — "Your highest priority is..." or "Three items require your decision today." Follow with supporting specifics: cite actual numbers, name what MUSE has completed and what is awaiting assignment, call out pending approvals. If calendar data is provided, name the most important upcoming event with its time. Close with one forward-looking sentence. Never hedge. Never report what is missing. Never say "I cannot see." Speak as the institution itself — clear, decisive, authoritative.',
     messages: [{ role: 'user', content: summary }],
   }, apiKey)
 

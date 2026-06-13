@@ -44,7 +44,7 @@ export async function saveLatestBrief(uid, { text, calendarIncluded, emailInclud
     generatedAt: new Date().toISOString(),
     calendarIncluded: !!calendarIncluded,
     emailIncluded: !!emailIncluded,
-    version: 'v2', // v2: PACER-first prompt, Google as enrichment not dependency
+    version: 'v3', // v3: directive leadership prompt — priorities and next actions, not status reporting
   })
 }
 

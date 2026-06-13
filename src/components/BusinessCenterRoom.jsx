@@ -466,7 +466,7 @@ export default function BusinessCenterRoom({
         ? calendarEvents.map(e => `${e.timeLabel} — ${e.title}`).join('; ')
         : null
       const result = await generateInstitutionalPulse(
-        { observations, productions, institutionEvents, creatorLogs, emailContext: emailCtx, calendarContext: calendarCtx },
+        { observations, productions, institutionEvents, creatorLogs, kelReviews, emailContext: emailCtx, calendarContext: calendarCtx },
         apiKey
       )
       if (result) setAiPulse(result)

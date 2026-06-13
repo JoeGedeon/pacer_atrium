@@ -350,12 +350,12 @@ export default function App() {
     if (!forceRefresh && user) {
       try {
         const stored = await getLatestBrief(user.uid)
-        if (stored && new Date(stored.generatedAt).toDateString() === today && stored.version === 'v2') {
+        if (stored && new Date(stored.generatedAt).toDateString() === today && stored.version === 'v3') {
           // Reuse cached brief unless we now have Google data that it lacked
           const weHaveMore = (calendarIncluded && !stored.calendarIncluded) || (emailIncluded && !stored.emailIncluded)
           if (!weHaveMore) return stored.text
         }
-        // v1 brief (old Google-required prompt) is intentionally ignored — regenerate
+        // v1/v2 briefs are intentionally ignored — regenerate with v3 directive prompt
       } catch (_) {} // network issue — fall through to generate
     }
 
@@ -364,7 +364,7 @@ export default function App() {
       if (apiKey) {
         const text = await generateInstitutionalPulse(
           {
-            observations, productions, institutionEvents, creatorLogs,
+            observations, productions, institutionEvents, creatorLogs, kelReviews,
             emailContext:    emailIncluded    ? emailContextString(currentEmail)    : null,
             calendarContext: calendarIncluded ? calendarContextString(currentCalendar) : null,
           },
