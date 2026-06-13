@@ -40,6 +40,7 @@ import {
   getLatestBrief, saveLatestBrief,
   createThread, listenThreads, updateThread,
   createMediaAsset, updateMediaAsset, listenMediaAssets,
+  createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -118,6 +119,7 @@ export default function App() {
   const [creatorLogs, setCreatorLogs]             = useState([])
   const [productions, setProductions]             = useState([])
   const [mediaAssets, setMediaAssets]             = useState([])
+  const [doctrineCases, setDoctrineCases]         = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -268,7 +270,8 @@ export default function App() {
     const unsubLogs      = listenCreatorLogs(user.uid, setCreatorLogs)
     const unsubProds     = listenProductions(user.uid, setProductions)
     const unsubMedia     = listenMediaAssets(user.uid, setMediaAssets)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia() }
+    const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -671,6 +674,17 @@ export default function App() {
     })
   }
 
+  async function createDoctrineCaseRecord(data) {
+    if (!user) return null
+    const caseNumber = doctrineCases.length + 1
+    return await createDoctrineCase(user.uid, { ...data, caseNumber })
+  }
+
+  async function updateDoctrineCaseRecord(id, patch) {
+    if (!user) return
+    await updateDoctrineCase(user.uid, id, patch)
+  }
+
   async function addCreatorLog(data) {
     if (!user) return
     await createCreatorLog(user.uid, data)
@@ -918,7 +932,15 @@ export default function App() {
             isMobile={isMobile}
           />
         )}
-        {isDoctrine && <DoctrineRoom isMobile={isMobile} voiceMode={voiceMode} />}
+        {isDoctrine && (
+          <DoctrineRoom
+            isMobile={isMobile}
+            voiceMode={voiceMode}
+            doctrineCases={doctrineCases}
+            onCreateCase={createDoctrineCaseRecord}
+            onUpdateCase={updateDoctrineCaseRecord}
+          />
+        )}
         {isTheater  && (
           <TheaterRoom
             graduates={graduates}

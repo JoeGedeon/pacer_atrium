@@ -460,3 +460,57 @@ export function listenMediaAssets(uid, callback) {
     callback(snap.docs.map(d => ({ ...d.data(), id: d.id })))
   })
 }
+
+// ── Doctrine Cases — constitutional review records ────────────────────────────
+
+function doctrineColl(uid) { return collection(db, 'users', uid, 'doctrine_cases') }
+
+export async function createDoctrineCase(uid, data) {
+  const ref = await addDoc(doctrineColl(uid), {
+    caseNumber:             data.caseNumber,
+    title:                  data.title                  || 'Untitled Case',
+    originRoom:             data.originRoom             || '',
+    triggerEvent:           data.triggerEvent           || '',
+    articlesInvolved:       data.articlesInvolved       || [],
+    summary:                data.summary                || '',
+    facts:                  data.facts                  || '',
+    evidence:               data.evidence               || '',
+    conflictingPrinciples:  data.conflictingPrinciples  || '',
+    risks:                  data.risks                  || '',
+    holding:                data.holding                || '',
+    conditions:             data.conditions             || '',
+    limitations:            data.limitations            || '',
+    reasoning:              data.reasoning              || '',
+    status:                 'proposed',
+    establishedAt:          null,
+    overturnedAt:           null,
+    revisedBy:              null,
+    createdAt:              serverTimestamp(),
+    updatedAt:              serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateDoctrineCase(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'doctrine_cases', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function listenDoctrineCases(uid, callback) {
+  const q = query(doctrineColl(uid), orderBy('createdAt', 'asc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id:            d.id,
+        createdAt:     data.createdAt?.toDate?.()     ?? new Date(),
+        updatedAt:     data.updatedAt?.toDate?.()     ?? new Date(),
+        establishedAt: data.establishedAt,
+        overturnedAt:  data.overturnedAt,
+      }
+    }))
+  })
+}

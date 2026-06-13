@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
@@ -272,10 +272,626 @@ const DOCTRINE_TABS = [
   { id: 'principles',    label: 'Principles' },
   { id: 'canonizations', label: 'Canonizations' },
   { id: 'charter',       label: 'Charter' },
+  { id: 'review',        label: '⚖ Review' },
   { id: 'weights',       label: 'Weights' },
 ]
 
-export default function DoctrineRoom({ isMobile, voiceMode }) {
+const ARTICLES = [
+  'Article I: Institutional Identity',
+  'Article II: Provenance Requirement',
+  'Article III: Chain Preservation',
+  'Article IV: Human Accountability',
+  'Article V: Challenge Rights',
+  'Article VI: Reputation',
+  'Article VII: Correction and Memory',
+  'Article VIII: Forecast Transparency',
+  'Preamble',
+]
+
+const ORIGIN_ROOMS = [
+  'Atrium', 'MUSE', 'VERA', 'K.E.L.', 'Theater',
+  'OpsCore', 'Archivist Hall', 'Business Center', 'Doctrine', 'Other',
+]
+
+const STATUS_LABELS = {
+  proposed:     { label: 'Proposed',             color: '#6b7280' },
+  under_review: { label: 'Under Review',         color: '#3b82f6' },
+  standing:     { label: 'Standing Established', color: '#10b981' },
+  no_standing:  { label: 'No Standing',          color: '#ef4444' },
+  overturned:   { label: 'Overturned',           color: '#f59e0b' },
+}
+
+const CONSTITUTIONAL_TEST = [
+  'Does it preserve provenance?',
+  'Does it preserve challenge rights?',
+  'Does it preserve correction history?',
+  'Does it preserve chain integrity?',
+  'Does it require constitutional standing before it may act?',
+]
+
+const EMPTY_FORM = {
+  title: '', originRoom: '', triggerEvent: '', articlesInvolved: [],
+  summary: '', facts: '', evidence: '', conflictingPrinciples: '',
+  risks: '', holding: '', conditions: '', limitations: '', reasoning: '',
+}
+
+function CaseIntakeForm({ onSubmit, onCancel }) {
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+
+  function set(key, val) { setForm(prev => ({ ...prev, [key]: val })) }
+
+  function toggleArticle(a) {
+    setForm(prev => ({
+      ...prev,
+      articlesInvolved: prev.articlesInvolved.includes(a)
+        ? prev.articlesInvolved.filter(x => x !== a)
+        : [...prev.articlesInvolved, a],
+    }))
+  }
+
+  async function handleSubmit() {
+    if (!form.title.trim()) return
+    setSaving(true)
+    try { await onSubmit(form) } finally { setSaving(false) }
+  }
+
+  const inputStyle = {
+    width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+    borderRadius: '6px', padding: '8px 10px', color: 'var(--text-1)',
+    fontSize: '12px', fontFamily: 'inherit', resize: 'vertical',
+  }
+  const labelStyle = { color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
+    textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px', display: 'block' }
+
+  return (
+    <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)',
+      borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
+      <p style={{ color: 'var(--text-3)', fontSize: '11px', fontWeight: 600,
+        marginBottom: '20px', letterSpacing: '0.06em' }}>NEW CONSTITUTIONAL CASE</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div>
+          <span style={labelStyle}>Case Title *</span>
+          <input style={inputStyle} value={form.title}
+            onChange={e => set('title', e.target.value)}
+            placeholder="Brief identifying title for this case" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <span style={labelStyle}>Origin Room</span>
+            <select style={{ ...inputStyle, cursor: 'pointer' }}
+              value={form.originRoom} onChange={e => set('originRoom', e.target.value)}>
+              <option value="">Select…</option>
+              {ORIGIN_ROOMS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <div>
+            <span style={labelStyle}>Trigger Event</span>
+            <input style={inputStyle} value={form.triggerEvent}
+              onChange={e => set('triggerEvent', e.target.value)}
+              placeholder="What forced interpretation?" />
+          </div>
+        </div>
+
+        <div>
+          <span style={labelStyle}>Articles in Tension</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {ARTICLES.map(a => {
+              const active = form.articlesInvolved.includes(a)
+              return (
+                <button key={a} onClick={() => toggleArticle(a)} style={{
+                  background: active ? '#3b82f620' : 'var(--bg-2)',
+                  border: `1px solid ${active ? '#3b82f6' : 'var(--border-1)'}`,
+                  color: active ? '#3b82f6' : 'var(--text-4)',
+                  fontSize: '10px', padding: '3px 8px', borderRadius: '4px',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                  {a}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <span style={labelStyle}>Summary</span>
+          <textarea rows={2} style={inputStyle} value={form.summary}
+            onChange={e => set('summary', e.target.value)}
+            placeholder="One-sentence statement of the constitutional question" />
+        </div>
+
+        <div>
+          <span style={labelStyle}>Facts</span>
+          <textarea rows={3} style={inputStyle} value={form.facts}
+            onChange={e => set('facts', e.target.value)}
+            placeholder="Operational circumstances that produced this case" />
+        </div>
+
+        <div>
+          <span style={labelStyle}>Evidence</span>
+          <textarea rows={2} style={inputStyle} value={form.evidence}
+            onChange={e => set('evidence', e.target.value)}
+            placeholder="What data or observations are in the record?" />
+        </div>
+
+        <div>
+          <span style={labelStyle}>Conflicting Principles</span>
+          <textarea rows={2} style={inputStyle} value={form.conflictingPrinciples}
+            onChange={e => set('conflictingPrinciples', e.target.value)}
+            placeholder="How do the involved articles pull against each other?" />
+        </div>
+
+        <div>
+          <span style={labelStyle}>Risks</span>
+          <textarea rows={2} style={inputStyle} value={form.risks}
+            onChange={e => set('risks', e.target.value)}
+            placeholder="What breaks if we get this interpretation wrong?" />
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--border-1)', paddingTop: '14px' }}>
+          <p style={{ ...labelStyle, color: '#3b82f680', marginBottom: '12px' }}>
+            DECISION (may be completed later)
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div>
+              <span style={labelStyle}>Holding</span>
+              <textarea rows={2} style={inputStyle} value={form.holding}
+                onChange={e => set('holding', e.target.value)}
+                placeholder="The decision in one or two sentences" />
+            </div>
+            <div>
+              <span style={labelStyle}>Conditions</span>
+              <textarea rows={2} style={inputStyle} value={form.conditions}
+                onChange={e => set('conditions', e.target.value)}
+                placeholder="What must be true for this holding to apply?" />
+            </div>
+            <div>
+              <span style={labelStyle}>Limitations</span>
+              <textarea rows={2} style={inputStyle} value={form.limitations}
+                onChange={e => set('limitations', e.target.value)}
+                placeholder="Where does this holding not extend?" />
+            </div>
+            <div>
+              <span style={labelStyle}>Reasoning</span>
+              <textarea rows={3} style={inputStyle} value={form.reasoning}
+                onChange={e => set('reasoning', e.target.value)}
+                placeholder="Why this interpretation rather than another?" />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button onClick={onCancel} style={{
+            background: 'none', border: '1px solid var(--border-1)',
+            color: 'var(--text-4)', fontSize: '11px', padding: '7px 14px',
+            borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+          }}>Cancel</button>
+          <button onClick={handleSubmit} disabled={!form.title.trim() || saving} style={{
+            background: '#3b82f6', border: 'none', color: '#fff',
+            fontSize: '11px', padding: '7px 16px', borderRadius: '6px',
+            cursor: form.title.trim() && !saving ? 'pointer' : 'default',
+            fontFamily: 'inherit', opacity: form.title.trim() && !saving ? 1 : 0.5,
+          }}>
+            {saving ? 'Opening…' : 'Open Case'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CaseCard({ c, onUpdate }) {
+  const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing]   = useState(false)
+  const [form, setForm]         = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const status = STATUS_LABELS[c.status] || STATUS_LABELS.proposed
+  const caseId = `CASE-${String(c.caseNumber || 0).padStart(3, '0')}`
+
+  function startEdit() {
+    setForm({
+      holding: c.holding || '', conditions: c.conditions || '',
+      limitations: c.limitations || '', reasoning: c.reasoning || '',
+    })
+    setEditing(true)
+  }
+
+  async function saveEdit() {
+    setSaving(true)
+    try { await onUpdate(c.id, form) } finally { setSaving(false); setEditing(false) }
+  }
+
+  async function advance(newStatus, extra = {}) {
+    setSaving(true)
+    try {
+      await onUpdate(c.id, {
+        status: newStatus,
+        ...extra,
+        ...(newStatus === 'standing'    ? { establishedAt: new Date().toISOString() } : {}),
+        ...(newStatus === 'no_standing' ? { establishedAt: new Date().toISOString() } : {}),
+        ...(newStatus === 'overturned'  ? { overturnedAt:  new Date().toISOString() } : {}),
+      })
+    } finally { setSaving(false) }
+  }
+
+  const inputStyle = {
+    width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+    borderRadius: '6px', padding: '8px 10px', color: 'var(--text-1)',
+    fontSize: '12px', fontFamily: 'inherit', resize: 'vertical',
+  }
+
+  return (
+    <div style={{
+      border: `1px solid ${c.status === 'standing' ? '#10b98130' : c.status === 'no_standing' ? '#ef444430' : 'var(--border-1)'}`,
+      borderLeft: `3px solid ${status.color}`,
+      borderRadius: '0 10px 10px 0',
+      overflow: 'hidden',
+      marginBottom: '12px',
+    }}>
+      {/* Summary row */}
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{ padding: '12px 16px', cursor: 'pointer', background: 'var(--bg-1)',
+          display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <span style={{ color: 'var(--text-5)', fontSize: '10px', fontWeight: 700,
+          flexShrink: 0, minWidth: '72px' }}>{caseId}</span>
+        <span style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, flex: 1 }}>
+          {c.title}
+        </span>
+        <span style={{
+          fontSize: '9px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px',
+          background: status.color + '20', color: status.color, flexShrink: 0,
+        }}>
+          {status.label}
+        </span>
+        <span style={{ color: 'var(--text-5)', fontSize: '11px', flexShrink: 0 }}>
+          {expanded ? '▲' : '▼'}
+        </span>
+      </div>
+
+      {expanded && (
+        <div style={{ background: 'var(--bg-0)', padding: '16px 20px' }}>
+          {/* Metadata */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px',
+            marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border-0)' }}>
+            {c.originRoom && (
+              <div>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                  textTransform: 'uppercase', marginBottom: '3px' }}>Origin</p>
+                <p style={{ color: 'var(--text-3)', fontSize: '11px' }}>{c.originRoom}</p>
+              </div>
+            )}
+            {c.triggerEvent && (
+              <div>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                  textTransform: 'uppercase', marginBottom: '3px' }}>Trigger</p>
+                <p style={{ color: 'var(--text-3)', fontSize: '11px' }}>{c.triggerEvent}</p>
+              </div>
+            )}
+            {c.articlesInvolved?.length > 0 && (
+              <div>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                  textTransform: 'uppercase', marginBottom: '6px' }}>Articles in Tension</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {c.articlesInvolved.map(a => (
+                    <span key={a} style={{
+                      fontSize: '10px', padding: '2px 7px', borderRadius: '4px',
+                      background: '#3b82f615', color: '#3b82f6aa',
+                    }}>{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Facts / Summary / Evidence */}
+          {[
+            { key: 'summary', label: 'Summary' },
+            { key: 'facts', label: 'Facts' },
+            { key: 'evidence', label: 'Evidence' },
+            { key: 'conflictingPrinciples', label: 'Conflicting Principles' },
+            { key: 'risks', label: 'Risks' },
+          ].filter(f => c[f.key]).map(f => (
+            <div key={f.key} style={{ marginBottom: '12px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                textTransform: 'uppercase', marginBottom: '4px' }}>{f.label}</p>
+              <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7 }}>{c[f.key]}</p>
+            </div>
+          ))}
+
+          {/* Decision */}
+          {(c.holding || c.conditions || c.limitations || c.reasoning || editing) && (
+            <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '14px',
+              marginTop: '4px', marginBottom: '14px' }}>
+              <p style={{ color: '#3b82f680', fontSize: '9px', letterSpacing: '0.12em',
+                textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>Decision</p>
+              {editing ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {[
+                    { key: 'holding', label: 'Holding', rows: 2 },
+                    { key: 'conditions', label: 'Conditions', rows: 2 },
+                    { key: 'limitations', label: 'Limitations', rows: 2 },
+                    { key: 'reasoning', label: 'Reasoning', rows: 3 },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
+                        textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>{f.label}</p>
+                      <textarea rows={f.rows} style={inputStyle}
+                        value={form[f.key]}
+                        onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setEditing(false)} style={{
+                      background: 'none', border: '1px solid var(--border-1)',
+                      color: 'var(--text-4)', fontSize: '11px', padding: '5px 12px',
+                      borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+                    }}>Cancel</button>
+                    <button onClick={saveEdit} disabled={saving} style={{
+                      background: '#3b82f6', border: 'none', color: '#fff',
+                      fontSize: '11px', padding: '5px 14px', borderRadius: '6px',
+                      cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                    }}>{saving ? 'Saving…' : 'Save Decision'}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {[
+                    { key: 'holding', label: 'Holding' },
+                    { key: 'conditions', label: 'Conditions' },
+                    { key: 'limitations', label: 'Limitations' },
+                    { key: 'reasoning', label: 'Reasoning' },
+                  ].filter(f => c[f.key]).map(f => (
+                    <div key={f.key}>
+                      <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                        textTransform: 'uppercase', marginBottom: '4px' }}>{f.label}</p>
+                      <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7 }}>{c[f.key]}</p>
+                    </div>
+                  ))}
+                  {!editing && (
+                    <button onClick={startEdit} style={{
+                      alignSelf: 'flex-start', background: 'none',
+                      border: '1px solid var(--border-1)', color: 'var(--text-4)',
+                      fontSize: '10px', padding: '4px 10px', borderRadius: '5px',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}>Edit Decision</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Status transitions */}
+          {!editing && (
+            <div style={{ borderTop: '1px solid var(--border-0)', paddingTop: '12px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                textTransform: 'uppercase', marginBottom: '10px' }}>Status</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                {c.status === 'proposed' && (
+                  <>
+                    <button onClick={() => advance('under_review')} disabled={saving} style={{
+                      background: '#3b82f620', border: '1px solid #3b82f6',
+                      color: '#3b82f6', fontSize: '11px', padding: '5px 12px',
+                      borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+                    }}>Advance to Review</button>
+                    {!c.holding && (
+                      <button onClick={startEdit} style={{
+                        background: 'none', border: '1px solid var(--border-1)',
+                        color: 'var(--text-4)', fontSize: '11px', padding: '5px 12px',
+                        borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+                      }}>Add Decision</button>
+                    )}
+                  </>
+                )}
+                {c.status === 'under_review' && (
+                  <>
+                    <button onClick={() => advance('standing')} disabled={saving} style={{
+                      background: '#10b98120', border: '1px solid #10b981',
+                      color: '#10b981', fontSize: '11px', padding: '5px 12px',
+                      borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+                    }}>⚖ Establish Standing</button>
+                    <button onClick={() => advance('no_standing')} disabled={saving} style={{
+                      background: '#ef444420', border: '1px solid #ef4444',
+                      color: '#ef4444', fontSize: '11px', padding: '5px 12px',
+                      borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                    }}>✕ No Standing Established</button>
+                  </>
+                )}
+                {c.status === 'standing' && (
+                  <button onClick={() => advance('overturned')} disabled={saving} style={{
+                    background: 'none', border: '1px solid #f59e0b60',
+                    color: '#f59e0b80', fontSize: '10px', padding: '4px 10px',
+                    borderRadius: '5px', cursor: 'pointer', fontFamily: 'inherit',
+                  }}>Overturn</button>
+                )}
+                {(c.establishedAt || c.overturnedAt) && (
+                  <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+                    {c.status === 'standing' && `Standing since ${new Date(c.establishedAt).toLocaleDateString()}`}
+                    {c.status === 'no_standing' && `Closed ${new Date(c.establishedAt).toLocaleDateString()}`}
+                    {c.status === 'overturned' && `Overturned ${new Date(c.overturnedAt).toLocaleDateString()}`}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReviewTab({ doctrineCases, onCreateCase, onUpdateCase }) {
+  const [showForm, setShowForm] = useState(false)
+  const [subview, setSubview]   = useState('cases') // 'cases' | 'precedent' | 'test'
+
+  const activeCases    = useMemo(() => doctrineCases.filter(c => c.status === 'proposed' || c.status === 'under_review'), [doctrineCases])
+  const standingCases  = useMemo(() => doctrineCases.filter(c => c.status === 'standing'), [doctrineCases])
+  const closedCases    = useMemo(() => doctrineCases.filter(c => c.status === 'no_standing' || c.status === 'overturned'), [doctrineCases])
+
+  async function handleCreate(data) {
+    await onCreateCase(data)
+    setShowForm(false)
+  }
+
+  const subBtnStyle = (active) => ({
+    background: 'none', border: 'none',
+    borderBottom: `2px solid ${active ? 'var(--text-2)' : 'transparent'}`,
+    color: active ? 'var(--text-1)' : 'var(--text-5)',
+    fontSize: '11px', fontWeight: active ? 600 : 400, padding: '8px 14px',
+    cursor: 'pointer', fontFamily: 'inherit', marginBottom: '-1px',
+  })
+
+  return (
+    <div style={{ maxWidth: '680px' }}>
+      {/* Preamble */}
+      <div style={{ background: 'var(--bg-1)', border: '1px solid #3b82f620',
+        borderLeft: '3px solid #3b82f6', borderRadius: '0 8px 8px 0',
+        padding: '14px 18px', marginBottom: '24px' }}>
+        <p style={{ color: '#3b82f6', fontSize: '9px', fontWeight: 700,
+          letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>
+          Preamble
+        </p>
+        <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.7, fontStyle: 'italic' }}>
+          An institution is not defined by the accuracy of its conclusions.
+          It is defined by the integrity of its corrections.
+        </p>
+      </div>
+
+      {/* Sub-navigation */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-1)', marginBottom: '20px' }}>
+        <button style={subBtnStyle(subview === 'cases')}    onClick={() => setSubview('cases')}>
+          Cases ({activeCases.length})
+        </button>
+        <button style={subBtnStyle(subview === 'precedent')} onClick={() => setSubview('precedent')}>
+          Precedent ({standingCases.length})
+        </button>
+        <button style={subBtnStyle(subview === 'test')}     onClick={() => setSubview('test')}>
+          Constitutional Test
+        </button>
+        {closedCases.length > 0 && (
+          <button style={subBtnStyle(subview === 'closed')} onClick={() => setSubview('closed')}>
+            Closed ({closedCases.length})
+          </button>
+        )}
+      </div>
+
+      {/* Cases subview */}
+      {subview === 'cases' && (
+        <>
+          {showForm
+            ? <CaseIntakeForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+            : (
+              <button onClick={() => setShowForm(true)} style={{
+                background: 'none', border: '1px dashed var(--border-1)',
+                color: 'var(--text-4)', fontSize: '11px', padding: '8px 16px',
+                borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+                marginBottom: '20px', width: '100%',
+              }}>
+                + Open New Case
+              </button>
+            )
+          }
+          {activeCases.length === 0 && !showForm && (
+            <p style={{ color: 'var(--text-6)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              No active cases. The constitution accumulates only as fast as operational reality produces cases.
+            </p>
+          )}
+          {activeCases.map(c => (
+            <CaseCard key={c.id} c={c} onUpdate={onUpdateCase} />
+          ))}
+        </>
+      )}
+
+      {/* Precedent subview */}
+      {subview === 'precedent' && (
+        <>
+          {standingCases.length === 0 ? (
+            <p style={{ color: 'var(--text-6)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              No precedent established yet. A principle gains standing only after operational reality produces a case requiring interpretation.
+            </p>
+          ) : (
+            <>
+              <p style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic',
+                marginBottom: '16px', lineHeight: 1.7 }}>
+                Standing Established decisions are institutional precedent.
+                Future rooms may cite them without requiring new constitutional review.
+              </p>
+              {standingCases.map(c => (
+                <CaseCard key={c.id} c={c} onUpdate={onUpdateCase} />
+              ))}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Constitutional Test subview */}
+      {subview === 'test' && (
+        <div>
+          <p style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic',
+            marginBottom: '20px', lineHeight: 1.7 }}>
+            Before a new room, feature, or capability ships, it must pass this test.
+            If any answer fails, the feature requires Doctrine Review before it may proceed.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {CONSTITUTIONAL_TEST.map((q, i) => (
+              <div key={i} style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                borderRadius: '8px', padding: '14px 16px',
+                display: 'flex', gap: '14px', alignItems: 'flex-start',
+              }}>
+                <span style={{ color: '#3b82f660', fontSize: '11px',
+                  fontWeight: 700, flexShrink: 0, minWidth: '20px', paddingTop: '1px' }}>
+                  {i + 1}.
+                </span>
+                <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.6 }}>{q}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: '20px', background: 'var(--bg-1)', border: '1px solid var(--border-1)',
+            borderRadius: '8px', padding: '14px 16px' }}>
+            <p style={{ color: '#ef444470', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+              If any answer is no
+            </p>
+            <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7 }}>
+              The feature does not ship until a case is opened, reviewed, and standing is established.
+              A feature that cannot satisfy constitutional review has no standing to produce institutional output.
+            </p>
+          </div>
+          <div style={{ marginTop: '12px', background: 'var(--bg-1)', border: '1px solid var(--border-1)',
+            borderRadius: '8px', padding: '14px 16px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+              Constitutional Review vs. Content Moderation
+            </p>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.7 }}>
+              Content moderation filters output. Constitutional review determines what kinds of rooms
+              are permitted to produce output in the first place. The distinction is architectural.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Closed subview */}
+      {subview === 'closed' && closedCases.length > 0 && (
+        <>
+          <p style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic',
+            marginBottom: '16px', lineHeight: 1.7 }}>
+            Closed cases remain in the record. A wrong conclusion that was later closed
+            is more trustworthy than a system that pretends it was always right.
+          </p>
+          {closedCases.map(c => (
+            <CaseCard key={c.id} c={c} onUpdate={onUpdateCase} />
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
+export default function DoctrineRoom({ isMobile, voiceMode, doctrineCases = [], onCreateCase, onUpdateCase }) {
   const [tab, setTab]         = useState('principles')
   const [speaking, setSpeaking] = useState(null)
   const px = isMobile ? '24px' : '40px'
@@ -811,6 +1427,14 @@ export default function DoctrineRoom({ isMobile, voiceMode }) {
       </section>
 
       </>)}
+
+      {tab === 'review' && (
+        <ReviewTab
+          doctrineCases={doctrineCases}
+          onCreateCase={onCreateCase}
+          onUpdateCase={onUpdateCase}
+        />
+      )}
 
       {tab === 'weights' && (
         <div style={{ maxWidth: '600px' }}>

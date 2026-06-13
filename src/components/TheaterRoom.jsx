@@ -1271,6 +1271,7 @@ function StagingWing({ observations, productions, apiKey, onConnectClaude, onSav
 function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobile }) {
   const [edit, setEdit] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const [publishing, setPublishing] = useState(false)
   const [videoUploading, setVideoUploading] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
@@ -1316,6 +1317,8 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
   async function handleSave() {
     if (!edit || saving) return
     setSaving(true)
+    setSaveError(null)
+    console.log('[AssetCard] handleSave called', { id: asset.id, ...edit })
     try {
       await onUpdate(asset.id, {
         title:           edit.title           || 'Untitled Asset',
@@ -1325,6 +1328,10 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
         humanGateStatus: edit.humanGateStatus || null,
         type:            edit.videoUrl ? 'video' : edit.audioUrl ? 'audio' : 'transcript',
       })
+      console.log('[AssetCard] save succeeded')
+    } catch (err) {
+      console.error('[AssetCard] save failed:', err)
+      setSaveError(err?.message || 'Save failed')
     } finally { setSaving(false) }
   }
 
@@ -1490,7 +1497,10 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
             </div>
 
             {/* Save */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid var(--border-0)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-0)', gap: '12px' }}>
+              {saveError ? (
+                <p style={{ color: '#ef4444', fontSize: '11px' }}>⚠ {saveError}</p>
+              ) : <span />}
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -1547,6 +1557,7 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
   const [expandedId, setExpandedId] = useState(null)
   const [form, setForm] = useState({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState(null)
   const [videoUploading, setVideoUploading] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const videoInputRef = useRef(null)
@@ -1577,15 +1588,21 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
   async function handleCreate() {
     if (!form.title.trim() || creating) return
     setCreating(true)
+    setCreateError(null)
+    console.log('[MediaWing] handleCreate called', { title: form.title, videoUrl: form.videoUrl, audioUrl: form.audioUrl })
     try {
-      await onCreateMediaAsset({
+      const id = await onCreateMediaAsset({
         title:      form.title,
         videoUrl:   form.videoUrl  || null,
         audioUrl:   form.audioUrl  || null,
         transcript: form.transcript || '',
         type:       form.videoUrl ? 'video' : form.audioUrl ? 'audio' : 'transcript',
       })
+      console.log('[MediaWing] asset created, id:', id)
       setForm({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
+    } catch (err) {
+      console.error('[MediaWing] createMediaAsset failed:', err)
+      setCreateError(err?.message || 'Save failed — check console for details')
     } finally { setCreating(false) }
   }
 
@@ -1668,19 +1685,26 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
             </div>
           )}
 
-          <button
-            onClick={handleCreate}
-            disabled={!form.title.trim() || creating}
-            style={{
-              background: form.title.trim() && !creating ? '#7c3aed' : 'var(--bg-1)',
-              border: `1px solid ${form.title.trim() && !creating ? '#a855f7' : 'var(--border-1)'}`,
-              borderRadius: '7px', padding: '8px 18px',
-              color: form.title.trim() && !creating ? '#fff' : 'var(--text-5)',
-              fontSize: '11px', fontWeight: 600, cursor: form.title.trim() && !creating ? 'pointer' : 'default',
-            }}
-          >
-            {creating ? 'Creating…' : '+ Add Asset'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleCreate}
+              disabled={!form.title.trim() || creating}
+              style={{
+                background: form.title.trim() && !creating ? '#7c3aed' : 'var(--bg-1)',
+                border: `1px solid ${form.title.trim() && !creating ? '#a855f7' : 'var(--border-1)'}`,
+                borderRadius: '7px', padding: '8px 18px',
+                color: form.title.trim() && !creating ? '#fff' : 'var(--text-5)',
+                fontSize: '11px', fontWeight: 600, cursor: form.title.trim() && !creating ? 'pointer' : 'default',
+              }}
+            >
+              {creating ? 'Creating…' : '+ Add Asset'}
+            </button>
+            {createError && (
+              <p style={{ color: '#ef4444', fontSize: '11px', lineHeight: 1.5 }}>
+                ⚠ {createError}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Assets list */}
