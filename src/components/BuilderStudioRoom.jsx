@@ -22,7 +22,7 @@ function ForgeArtifact({ artifact }) {
   return (
     <div style={{
       background: 'var(--bg-3)', border: '1px solid var(--border-1)',
-      borderTop: '2px solid #10b981', borderRadius: '0 0 8px 8px',
+      borderTop: '2px solid #10b981', borderRadius: '0',
       padding: '16px 18px', marginTop: '-1px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -166,9 +166,117 @@ function ForgeArtifact({ artifact }) {
   )
 }
 
+// ── Outcome Recording ─────────────────────────────────────────────────────────
+
+const OUTCOME_SIGNALS = [
+  { id: 'positive', label: 'Positive', color: '#10b981' },
+  { id: 'neutral',  label: 'Neutral',  color: '#6b7280' },
+  { id: 'friction', label: 'Friction', color: '#f97316' },
+]
+
+function OutcomeForm({ threadId, onRecordOutcome }) {
+  const [note, setNote]     = useState('')
+  const [signal, setSignal] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+
+  async function handleSave() {
+    if (!signal) return
+    setSaving(true)
+    setError(null)
+    try {
+      await onRecordOutcome(threadId, { outcomeNote: note.trim(), outcomeSignal: signal })
+    } catch {
+      setError('Save failed. Try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{
+      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+      borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '14px 18px',
+    }}>
+      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
+        textTransform: 'uppercase', fontWeight: 700, marginBottom: '10px' }}>
+        Record Outcome
+      </p>
+      <textarea
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        placeholder="What happened? Was the artifact used? What resulted?"
+        rows={2}
+        style={{
+          width: '100%', background: 'var(--bg-0)', border: '1px solid var(--border-1)',
+          borderRadius: '6px', color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.6,
+          padding: '8px 10px', marginBottom: '10px', resize: 'vertical',
+          fontFamily: 'inherit', boxSizing: 'border-box',
+        }}
+      />
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+        {OUTCOME_SIGNALS.map(s => {
+          const selected = signal === s.id
+          return (
+            <button
+              key={s.id}
+              onClick={() => setSignal(s.id)}
+              style={{
+                flex: 1, padding: '5px 0', borderRadius: '5px', fontFamily: 'inherit',
+                fontSize: '11px', fontWeight: selected ? 600 : 400, cursor: 'pointer',
+                background: selected ? s.color + '20' : 'var(--bg-0)',
+                border: `1px solid ${selected ? s.color + '80' : 'var(--border-1)'}`,
+                color: selected ? s.color : 'var(--text-5)',
+              }}
+            >
+              {s.label}
+            </button>
+          )
+        })}
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={!signal || saving}
+        style={{
+          background: signal ? '#0a1f1240' : 'var(--bg-0)',
+          border: `1px solid ${signal ? '#10b98160' : 'var(--border-1)'}`,
+          color: signal ? '#10b981' : 'var(--text-6)',
+          fontSize: '11px', fontWeight: 600, padding: '6px 0', width: '100%',
+          borderRadius: '6px', cursor: !signal || saving ? 'default' : 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        {saving ? 'Saving…' : 'Save Outcome'}
+      </button>
+      {error && <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px' }}>{error}</p>}
+    </div>
+  )
+}
+
+function RecordedOutcome({ signal, note }) {
+  const color = OUTCOME_SIGNALS.find(s => s.id === signal)?.color || 'var(--text-4)'
+  return (
+    <div style={{
+      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+      borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '12px 18px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: note ? '6px' : '0' }}>
+        <span style={{ color, fontSize: '10px', fontWeight: 700,
+          letterSpacing: '0.06em', textTransform: 'capitalize' }}>
+          ◈ {signal}
+        </span>
+        <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>outcome recorded</span>
+      </div>
+      {note && (
+        <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.6 }}>{note}</p>
+      )}
+    </div>
+  )
+}
+
 // ── Approved Thread Card ───────────────────────────────────────────────────────
 
-function ThreadCard({ thread, onForge, hasApiKey }) {
+function ThreadCard({ thread, onForge, hasApiKey, onRecordOutcome }) {
   const [forging, setForging] = useState(false)
   const [forgeError, setForgeError] = useState(null)
 
@@ -247,13 +355,18 @@ function ThreadCard({ thread, onForge, hasApiKey }) {
       </div>
 
       {hasArtifact && <ForgeArtifact artifact={thread.artifact} />}
+      {hasArtifact && (
+        thread.outcomeSignal
+          ? <RecordedOutcome signal={thread.outcomeSignal} note={thread.outcomeNote} />
+          : <OutcomeForm threadId={thread.id} onRecordOutcome={onRecordOutcome} />
+      )}
     </div>
   )
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey }) {
+export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, onRecordOutcome }) {
   const px = isMobile ? 'px-6' : 'px-10'
   const approvedThreads = threads.filter(t => t.decision === 'approved')
 
@@ -312,6 +425,7 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
                     thread={t}
                     onForge={onForge}
                     hasApiKey={!!apiKey}
+                    onRecordOutcome={onRecordOutcome}
                   />
                 ))}
               </div>

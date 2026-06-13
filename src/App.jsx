@@ -589,6 +589,17 @@ export default function App() {
     })
   }
 
+  async function recordOutcome(threadId, { outcomeNote, outcomeSignal }) {
+    if (!user) return
+    await updateThread(user.uid, threadId, { outcomeNote, outcomeSignal })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'outcome_recorded',
+      title:           'Outcome Recorded',
+      description:     `Signal: ${outcomeSignal}.${outcomeNote ? ' "' + outcomeNote.slice(0, 80) + '"' : ''}`,
+      relatedEntityId: threadId,
+    })
+  }
+
   async function forgeArtifact(threadId, thread) {
     if (!user || !apiKey) return
     const obsText = observations.find(o => thread.observationIds?.includes(o.id))?.text || ''
@@ -910,6 +921,7 @@ export default function App() {
             onNavigate={setCurrentRoom}
             onForge={forgeArtifact}
             apiKey={apiKey}
+            onRecordOutcome={recordOutcome}
           />
         )}
         {isKEL && (

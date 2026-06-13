@@ -125,11 +125,17 @@ function JourneyTimeline({ observation, thread }) {
       color:    '#10b981',
     },
     {
-      label:    'Archivist',
-      detail:   null,
-      done:     false,
+      label:    thread?.outcomeSignal
+        ? `Archivist — ${thread.outcomeSignal}`
+        : 'Archivist',
+      detail:   thread?.outcomeNote
+        ? (thread.outcomeNote.length > 70 ? thread.outcomeNote.slice(0, 70) + '…' : thread.outcomeNote)
+        : null,
+      done:     !!thread?.outcomeSignal,
       ts:       null,
-      color:    'var(--text-5)',
+      color:    thread?.outcomeSignal === 'positive' ? '#10b981'
+        : thread?.outcomeSignal === 'friction' ? '#f97316'
+        : '#6b7280',
     },
   ]
 
