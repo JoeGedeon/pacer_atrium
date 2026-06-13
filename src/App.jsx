@@ -865,7 +865,7 @@ export default function App() {
             voiceMode={voiceMode}
           />
         )}
-        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} uid={user?.uid} isMobile={isMobile} />}
         {isIsles && (
           <IslesRoom
             observations={observations}
@@ -875,7 +875,7 @@ export default function App() {
             isMobile={isMobile}
           />
         )}
-        {isDoctrine && <DoctrineRoom isMobile={isMobile} />}
+        {isDoctrine && <DoctrineRoom isMobile={isMobile} voiceMode={voiceMode} />}
         {isTheater  && (
           <TheaterRoom
             graduates={graduates}

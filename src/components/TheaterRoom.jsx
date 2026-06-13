@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { enrichForFormat, FORMATS } from '../lib/theaterEnrichment'
 import { createMultiManifestTest } from '../lib/db'
+import RoomSubNav from './RoomSubNav'
+
+const THEATER_TABS = [
+  { id: 'office',    label: '📦 Production Office' },
+  { id: 'stage',     label: '🎭 Staging' },
+  { id: 'published', label: 'Published' },
+  { id: 'archive',   label: 'Archive' },
+  { id: 'about',     label: 'About' },
+]
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1192,35 +1201,19 @@ export default function TheaterRoom({
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
       {/* Header */}
-      <div className={`shrink-0 ${px} pt-6 pb-0`} style={{ borderBottom: '1px solid var(--border-0)' }}>
+      <div className={`shrink-0 ${px} pt-6 pb-5`} style={{ borderBottom: '1px solid var(--border-0)' }}>
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
           textTransform: 'uppercase', fontWeight: 600, marginBottom: '3px' }}>
           College of Transmission
         </p>
         <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
           letterSpacing: '0.08em', marginBottom: '4px' }}>Theater</h2>
-        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', marginBottom: '14px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
           The production office knows everything. The audience sees what survives.
         </p>
-
-        <div style={{ display: 'flex', gap: '0', marginBottom: '-1px' }}>
-          {[
-            { id: 'office', label: '📦 Production Office' },
-            { id: 'stage',  label: '🎭 Staging' },
-            { id: 'about',  label: 'About' },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setView(tab.id)} style={{
-              background: 'none', border: 'none',
-              borderBottom: `2px solid ${view === tab.id ? '#8b5cf6' : 'transparent'}`,
-              padding: '8px 14px', color: view === tab.id ? '#8b5cf6' : 'var(--text-4)',
-              fontSize: '12px', fontWeight: view === tab.id ? 600 : 400,
-              cursor: 'pointer', letterSpacing: '0.02em', transition: 'all 0.15s',
-            }}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
       </div>
+
+      <RoomSubNav tabs={THEATER_TABS} activeTab={view} onSelect={setView} />
 
       {view === 'office' && (
         <ProductionOffice
@@ -1243,6 +1236,36 @@ export default function TheaterRoom({
           uid={uid}
           isMobile={isMobile}
         />
+      )}
+      {view === 'published' && (
+        <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4' : 'px-8'} py-6`}>
+          <div style={{ maxWidth: '580px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+              Published Productions
+            </p>
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              Published artifacts — observations that became deliverables and were deployed.
+              A produced artifact and a deployed artifact are not the same thing.
+              Published is the proof that the institution acted.
+              Coming soon.
+            </p>
+          </div>
+        </div>
+      )}
+      {view === 'archive' && (
+        <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4' : 'px-8'} py-6`}>
+          <div style={{ maxWidth: '580px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+              Archived Productions
+            </p>
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              Productions that ran their course, were superseded, or were set aside.
+              The record remains. Coming soon.
+            </p>
+          </div>
+        </div>
       )}
       {view === 'about' && (
         <AboutTab graduates={graduates} isMobile={isMobile} />

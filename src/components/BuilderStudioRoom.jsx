@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import RoomSubNav from './RoomSubNav'
+
+const BUILDER_TABS = [
+  { id: 'decisions', label: 'Decisions' },
+  { id: 'outcomes',  label: 'Outcomes' },
+]
+
+const OUTCOME_SIGNAL_COLORS = { positive: '#10b981', neutral: '#6b7280', friction: '#f97316' }
 
 // ── Artifact Renderer ──────────────────────────────────────────────────────────
 
@@ -367,8 +375,10 @@ function ThreadCard({ thread, onForge, hasApiKey, onRecordOutcome }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, onRecordOutcome }) {
+  const [tab, setTab] = useState('decisions')
   const px = isMobile ? 'px-6' : 'px-10'
   const approvedThreads = threads.filter(t => t.decision === 'approved')
+  const completedThreads = approvedThreads.filter(t => t.outcomeSignal)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
@@ -402,7 +412,9 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
         </p>
       </div>
 
-      <div className={`flex-1 overflow-y-auto ${px} py-8`}>
+      <RoomSubNav tabs={BUILDER_TABS} activeTab={tab} onSelect={setTab} />
+
+      {tab === 'decisions' && <div className={`flex-1 overflow-y-auto ${px} py-8`}>
 
         {builderReadiness === 'approved' && (
           <div style={{ maxWidth: '560px' }}>
@@ -533,7 +545,59 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
             )}
           </div>
         )}
-      </div>
+      </div>}
+
+      {tab === 'outcomes' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-8`}>
+          <div style={{ maxWidth: '560px' }}>
+            {completedThreads.length === 0 ? (
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                No outcomes recorded yet. Forge an artifact and record the result in the Decisions tab.
+              </p>
+            ) : (
+              <>
+                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                  textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
+                  Recorded Outcomes — {completedThreads.length}
+                </p>
+                {completedThreads.map(t => {
+                  const color = OUTCOME_SIGNAL_COLORS[t.outcomeSignal] || 'var(--text-4)'
+                  return (
+                    <div key={t.id} style={{
+                      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                      borderLeft: `3px solid ${color}`,
+                      borderRadius: '0 8px 8px 0', padding: '14px 18px', marginBottom: '10px',
+                    }}>
+                      <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.6,
+                        marginBottom: '8px' }}>
+                        {t.recommendation}
+                      </p>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center',
+                        flexWrap: 'wrap', marginBottom: t.outcomeNote ? '8px' : '0' }}>
+                        <span style={{ color, fontSize: '10px', fontWeight: 700,
+                          textTransform: 'capitalize' }}>
+                          ◈ {t.outcomeSignal}
+                        </span>
+                        {t.domain && (
+                          <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{t.domain}</span>
+                        )}
+                        {t.artifact && (
+                          <span style={{ color: '#10b981', fontSize: '10px' }}>⚒ {t.artifact.title}</span>
+                        )}
+                      </div>
+                      {t.outcomeNote && (
+                        <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.6 }}>
+                          {t.outcomeNote}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

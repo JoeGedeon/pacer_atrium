@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { createMuseWork, updateMuseWork } from '../lib/db'
 import { getManifestDecision, DECISION_META } from '../lib/museDirector'
 import { FORMATS } from '../lib/theaterEnrichment'
+import RoomSubNav from './RoomSubNav'
+
+const MUSE_TABS = [
+  { id: 'inbox',  label: 'Inbox' },
+  { id: 'canvas', label: 'Canvas' },
+  { id: 'works',  label: 'Works' },
+  { id: 'signals', label: 'Signals' },
+]
 
 const CATEGORIES = [
   { id: 'music',         label: 'Music',        icon: '🎵' },
@@ -372,7 +380,7 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
 // ── Muse Room ─────────────────────────────────────────────────────────────────
 
 export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile }) {
-  const [mode, setMode] = useState('studio')
+  const [mode, setMode] = useState('canvas')
 
   const [activeWork, setActiveWork] = useState(null)
   const [draft, setDraft]           = useState({ title: '', category: 'characters' })
@@ -433,33 +441,21 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
-      {/* Room header with mode toggle */}
+      {/* Room header */}
       <div className="shrink-0" style={{ borderBottom: '1px solid var(--border-0)',
-        padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '2px' }}>MUSE</p>
-          <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-            {mode === 'studio' ? 'What wants to be made next?' : 'Should this be made at all?'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {[
-            { id: 'studio',   label: 'Studio' },
-            { id: 'director', label: '🎭 Creative Director' },
-          ].map(m => (
-            <button key={m.id} onClick={() => setMode(m.id)} style={{
-              padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer',
-              background: mode === m.id ? '#065f46' : 'var(--bg-2)',
-              color:      mode === m.id ? '#ecfdf5' : 'var(--text-4)',
-              border:     `1px solid ${mode === m.id ? '#10b981' : 'var(--border-1)'}`,
-              fontWeight: mode === m.id ? 600 : 400, transition: 'all 0.15s',
-            }}>{m.label}</button>
-          ))}
-        </div>
+        padding: '20px 24px 16px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>MUSE</p>
+        <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
+          letterSpacing: '0.08em', marginBottom: '4px' }}>Creative Studio</h2>
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
+          {mode === 'inbox' ? 'Should this be made at all?' : 'What wants to be made next?'}
+        </p>
       </div>
 
-      {mode === 'director' ? (
+      <RoomSubNav tabs={MUSE_TABS} activeTab={mode} onSelect={setMode} />
+
+      {mode === 'inbox' && (
         <CreativeDirectorView
           observations={observations}
           apiKey={apiKey}
@@ -467,7 +463,94 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
           onNavigate={onNavigate}
           isMobile={isMobile}
         />
-      ) : (
+      )}
+
+      {mode === 'works' && (
+        <div className="flex-1 overflow-y-auto" style={{ padding: '24px' }}>
+          <div style={{ maxWidth: '560px' }}>
+            {works.length === 0 ? (
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                No works in progress. Open Canvas to begin something new.
+              </p>
+            ) : (
+              CATEGORIES.map(cat => {
+                const catWorks = works.filter(w => w.category === cat.id)
+                if (catWorks.length === 0) return null
+                return (
+                  <div key={cat.id} style={{ marginBottom: '24px' }}>
+                    <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                      textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+                      {cat.icon} {cat.label}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {catWorks.map(w => (
+                        <div key={w.id} style={{
+                          background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                          borderRadius: '8px', padding: '10px 14px',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline',
+                            justifyContent: 'space-between', gap: '10px' }}>
+                            <p style={{ color: STATUS_COLORS[w.status] || 'var(--text-1)',
+                              fontSize: '13px', fontWeight: 500 }}>
+                              {STATUS_GLYPHS[w.status]}{w.title}
+                            </p>
+                            <span style={{ color: 'var(--text-6)', fontSize: '9px',
+                              textTransform: 'uppercase', letterSpacing: '0.08em',
+                              flexShrink: 0 }}>
+                              {w.status?.replace('_', ' ')}
+                            </span>
+                          </div>
+                          {w.notes && (
+                            <p style={{ color: 'var(--text-5)', fontSize: '11px',
+                              lineHeight: 1.5, marginTop: '4px' }}>
+                              {w.notes.length > 80 ? w.notes.slice(0, 80) + '…' : w.notes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {mode === 'signals' && (
+        <div className="flex-1 overflow-y-auto" style={{ padding: '24px' }}>
+          <div style={{ maxWidth: '560px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+              From Atrium
+            </p>
+            {observations.length === 0 ? (
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                No observations yet. Signals from Atrium will appear here.
+              </p>
+            ) : (
+              observations.slice(0, 20).map(obs => (
+                <div key={obs.id} style={{
+                  background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                  borderLeft: '2px solid #10b98140', borderRadius: '0 8px 8px 0',
+                  padding: '10px 14px', marginBottom: '6px',
+                }}>
+                  <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.55 }}>
+                    {obs.text.length > 90 ? obs.text.slice(0, 90) + '…' : obs.text}
+                  </p>
+                  {obs.constellation && (
+                    <p style={{ color: '#a07830', fontSize: '9px', marginTop: '4px' }}>
+                      ◈ {obs.constellation}
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {mode === 'canvas' && (
         <>
           <div className="flex flex-1 overflow-hidden">
 
@@ -748,3 +831,4 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
     </div>
   )
 }
+

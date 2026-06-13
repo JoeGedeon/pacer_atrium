@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import RoomSubNav from './RoomSubNav'
+import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+
 const CONSTITUTIONAL_PRINCIPLES = [
   {
     number: 1,
@@ -264,45 +268,87 @@ const TAG_COLORS = {
   Preservation: '#06b6d4',
 }
 
-export default function DoctrineRoom({ isMobile }) {
+const DOCTRINE_TABS = [
+  { id: 'principles',    label: 'Principles' },
+  { id: 'canonizations', label: 'Canonizations' },
+  { id: 'charter',       label: 'Charter' },
+  { id: 'weights',       label: 'Weights' },
+]
+
+export default function DoctrineRoom({ isMobile, voiceMode }) {
+  const [tab, setTab]         = useState('principles')
+  const [speaking, setSpeaking] = useState(null)
   const px = isMobile ? '24px' : '40px'
 
+  function readText(text, key) {
+    if (speaking === key) return
+    speakWithVoice(text, getVoiceConfig('vera'), {
+      onStart: () => setSpeaking(key),
+      onEnd:   () => setSpeaking(null),
+      onError: () => setSpeaking(null),
+    })
+  }
+
+  function principleText(p) {
+    let t = `Principle ${p.number}: ${p.title}. ${p.text}.`
+    if (p.note) t += ` ${p.note}`
+    if (p.closing) t += ` ${p.closing}`
+    return t
+  }
+
+  const fullDoctrineText = [
+    ...CONSTITUTIONAL_PRINCIPLES.map(p => principleText(p)),
+    ...CANDIDATE_PRINCIPLES.map(p => `Candidate principle: ${p.text}. ${p.note}`),
+    ...PRINCIPLES.map(p => `Principle ${p.id}: ${p.text}`),
+  ].join(' ')
+
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto"
-      style={{ background: 'var(--bg-0)', padding: `32px ${px}` }}
-    >
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
+
       {/* Header */}
-      <div style={{ marginBottom: '40px' }}>
-
-        {/* Official Seal — constitutional space only */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
-          <img
-            src="/pacer-seal.png"
-            alt="PACER Official Seal"
-            style={{ width: '132px', height: '132px', objectFit: 'contain' }}
-          />
+      <div className="shrink-0" style={{ borderBottom: '1px solid var(--border-0)',
+        padding: `20px ${px} 16px` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <img
+              src="/pacer-seal.png"
+              alt="PACER Official Seal"
+              style={{ width: '48px', height: '48px', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <div>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                textTransform: 'uppercase', fontWeight: 600, marginBottom: '3px' }}>
+                College of Understanding
+              </p>
+              <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
+                letterSpacing: '0.08em', marginBottom: '3px' }}>Doctrine</h2>
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
+                Principles governing memory, understanding, and action.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => readText(fullDoctrineText, 'doctrine')}
+            disabled={speaking === 'doctrine'}
+            style={{
+              background: 'none', border: '1px solid var(--border-1)',
+              color: speaking === 'doctrine' ? 'var(--text-5)' : 'var(--text-3)',
+              fontSize: '11px', padding: '5px 12px', borderRadius: '6px',
+              cursor: speaking === 'doctrine' ? 'default' : 'pointer',
+              fontFamily: 'inherit', flexShrink: 0,
+            }}
+          >
+            {speaking === 'doctrine' ? '🔊 Reading…' : '▶ Read Doctrine'}
+          </button>
         </div>
-
-        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-          textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px', textAlign: 'center' }}>
-          College of Understanding
-        </p>
-        <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
-          letterSpacing: '0.08em', marginBottom: '6px', textAlign: 'center' }}>Doctrine</h2>
-        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
-          marginBottom: '6px', textAlign: 'center' }}>
-          Principles governing memory, understanding, and action.
-        </p>
-        <p style={{ color: 'var(--text-6)', fontSize: '11px', textAlign: 'center',
-          marginBottom: '0', paddingBottom: '28px', borderBottom: '1px solid var(--border-0)' }}>
-          {CONSTITUTIONAL_PRINCIPLES.length} constitutional
-          {' · '}{CANDIDATE_PRINCIPLES.length} candidate
-          {' · '}{PRINCIPLES.length} principles
-          {' · '}{CANONIZATIONS.length} canonization{CANONIZATIONS.length !== 1 ? 's' : ''}
-          {' · '}{CHARTER_WINGS.length} wings chartered
-        </p>
       </div>
 
+      <RoomSubNav tabs={DOCTRINE_TABS} activeTab={tab} onSelect={setTab} />
+
+      <div className="flex-1 overflow-y-auto" style={{ padding: `24px ${px} 40px` }}>
+
+      {tab === 'principles' && (<>
       {/* Constitutional Principles — the wall */}
       <section style={{ maxWidth: '600px', marginBottom: '40px' }}>
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
@@ -325,10 +371,24 @@ export default function DoctrineRoom({ isMobile }) {
                     letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                     Principle #{p.number} — {p.title}
                   </p>
-                  <span style={{ color: 'var(--text-6)', fontSize: '9px',
-                    letterSpacing: '0.08em', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Ratified {p.ratified}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.08em' }}>
+                      Ratified {p.ratified}
+                    </span>
+                    <button
+                      onClick={() => readText(principleText(p), `p${p.number}`)}
+                      disabled={speaking === `p${p.number}`}
+                      style={{
+                        background: 'none', border: '1px solid #f59e0b30',
+                        color: speaking === `p${p.number}` ? '#f59e0b60' : '#f59e0b80',
+                        fontSize: '9px', padding: '2px 7px', borderRadius: '4px',
+                        cursor: speaking === `p${p.number}` ? 'default' : 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {speaking === `p${p.number}` ? '🔊' : '▶'}
+                    </button>
+                  </div>
                 </div>
                 <p style={{ color: 'var(--text-0)', fontSize: '14px', fontWeight: 600,
                   lineHeight: 1.6 }}>
@@ -469,7 +529,9 @@ export default function DoctrineRoom({ isMobile }) {
           ))}
         </div>
       </section>
+      </>)}
 
+      {tab === 'canonizations' && (<>
       {/* Canonization Records */}
       <section style={{ maxWidth: '600px', marginBottom: '32px' }}>
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
@@ -520,7 +582,9 @@ export default function DoctrineRoom({ isMobile }) {
           ))}
         </div>
       </section>
+      </>)}
 
+      {tab === 'charter' && (<>
       {/* Governance Charter */}
       <section style={{ maxWidth: '600px', marginBottom: '40px' }}>
         <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
@@ -746,10 +810,27 @@ export default function DoctrineRoom({ isMobile }) {
         </div>
       </section>
 
-      <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border-1)' }}>
+      </>)}
+
+      {tab === 'weights' && (
+        <div style={{ maxWidth: '600px' }}>
+          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+            Doctrine Weights
+          </p>
+          <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+            Doctrine weights express institutional priorities as a 0.0–1.0 scale.
+            When principles conflict, weights determine what governs. Coming soon.
+          </p>
+        </div>
+      )}
+
+      <div style={{ marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border-1)' }}>
         <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>
           History is preserved. Canon is promoted.
         </p>
+      </div>
+
       </div>
     </div>
   )

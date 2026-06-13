@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react'
 import { listenKELDecisions } from '../lib/db'
+import RoomSubNav from './RoomSubNav'
+
+const ARCHIVE_TABS = [
+  { id: 'timeline',  label: 'Timeline' },
+  { id: 'threads',   label: 'Threads' },
+  { id: 'decisions', label: 'Decisions' },
+  { id: 'outcomes',  label: 'Outcomes' },
+  { id: 'search',    label: 'Search' },
+]
+
+const OUTCOME_COLORS = { positive: '#10b981', neutral: '#6b7280', friction: '#f97316' }
 
 function formatDate(date) {
   if (!date) return ''
@@ -168,7 +179,7 @@ function TimelineEntry({ entry, isLast }) {
   )
 }
 
-export default function ArchiveRoom({ observations = [], museWorks = [], institutionEvents = [], uid, isMobile }) {
+export default function ArchiveRoom({ observations = [], museWorks = [], institutionEvents = [], forgeThreads = [], uid, isMobile }) {
   const [kelDecisions, setKelDecisions] = useState([])
   const [view, setView]                 = useState('timeline')
 
@@ -218,14 +229,15 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
   }
 
   // Group by constellation for threads view
-  const threads = {}
+  const constThreads = {}
   for (const obs of observations) {
     if (!obs.text || !obs.constellation) continue
-    if (!threads[obs.constellation]) threads[obs.constellation] = []
-    threads[obs.constellation].push(obs)
+    if (!constThreads[obs.constellation]) constThreads[obs.constellation] = []
+    constThreads[obs.constellation].push(obs)
   }
-  const threadKeys = Object.keys(threads).sort((a, b) => threads[b].length - threads[a].length)
+  const threadKeys = Object.keys(constThreads).sort((a, b) => constThreads[b].length - constThreads[a].length)
   const unthreaded = observations.filter(o => o.text && !o.constellation)
+  const outcomeThreads = forgeThreads.filter(t => t.outcomeSignal)
 
   const px = isMobile ? 'px-6' : 'px-10'
 
@@ -241,30 +253,18 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
         </p>
         <h2 style={{ fontSize: '18px', color: 'var(--text-0)', fontWeight: 700,
           letterSpacing: '0.08em', marginBottom: '5px' }}>Archivist Hall</h2>
-        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic',
-          marginBottom: '12px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
           The past is still speaking.
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
-            {allEntries.length} record{allEntries.length !== 1 ? 's' : ''} ·{' '}
-            {institutionEvents.length > 0 && `${institutionEvents.length} governance · `}
-            {kelDecisions.length} decision{kelDecisions.length !== 1 ? 's' : ''} ·{' '}
-            {threadKeys.length} thread{threadKeys.length !== 1 ? 's' : ''}
-          </p>
-          <div style={{ display: 'flex', gap: '2px' }}>
-            {['timeline', 'threads'].map(v => (
-              <button key={v} onClick={() => setView(v)} style={{
-                background: view === v ? 'var(--bg-3)' : 'none',
-                border: `1px solid ${view === v ? 'var(--border-1)' : 'transparent'}`,
-                color: view === v ? 'var(--text-0)' : 'var(--text-4)',
-                fontSize: '10px', padding: '4px 10px', borderRadius: '5px',
-                cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'capitalize',
-              }}>{v}</button>
-            ))}
-          </div>
-        </div>
+        <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '6px' }}>
+          {allEntries.length} record{allEntries.length !== 1 ? 's' : ''} ·{' '}
+          {kelDecisions.length} decision{kelDecisions.length !== 1 ? 's' : ''} ·{' '}
+          {threadKeys.length} thread{threadKeys.length !== 1 ? 's' : ''} ·{' '}
+          {outcomeThreads.length} outcome{outcomeThreads.length !== 1 ? 's' : ''}
+        </p>
       </div>
+
+      <RoomSubNav tabs={ARCHIVE_TABS} activeTab={view} onSelect={setView} />
 
       {/* Content */}
       <div className={`flex-1 overflow-y-auto ${px} py-6`}>
@@ -280,6 +280,78 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
               </p>
             </div>
           </div>
+        ) : view === 'decisions' ? (
+          <div>
+            {kelDecisions.length === 0 ? (
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                No KEL decisions recorded yet.
+              </p>
+            ) : (
+              kelDecisions.map(k => {
+                const ds = DECISION_STYLES[k.decision] || DECISION_STYLES.deferred
+                return (
+                  <div key={k.id} style={{ background: ds.bg, border: `1px solid ${ds.border}`,
+                    borderRadius: '8px', padding: '12px 16px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '7px' }}>
+                      <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '999px',
+                        fontWeight: 600, color: ds.color, border: `1px solid ${ds.border}` }}>
+                        {ds.label}
+                      </span>
+                      {k.domain && (
+                        <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{k.domain}</span>
+                      )}
+                      <span style={{ color: 'var(--text-6)', fontSize: '10px', marginLeft: 'auto' }}>
+                        {formatDate(k.decidedAt)}
+                      </span>
+                    </div>
+                    <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.6 }}>
+                      {k.recommendation}
+                    </p>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        ) : view === 'outcomes' ? (
+          <div>
+            {outcomeThreads.length === 0 ? (
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                No outcomes recorded yet. Record outcomes in Builder Studio after forging artifacts.
+              </p>
+            ) : (
+              outcomeThreads.map(t => {
+                const color = OUTCOME_COLORS[t.outcomeSignal] || 'var(--text-4)'
+                return (
+                  <div key={t.id} style={{
+                    background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                    borderLeft: `3px solid ${color}`,
+                    borderRadius: '0 8px 8px 0', padding: '14px 18px', marginBottom: '8px',
+                  }}>
+                    <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.6,
+                      marginBottom: '8px' }}>
+                      {t.recommendation}
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center',
+                      flexWrap: 'wrap', marginBottom: t.outcomeNote ? '6px' : '0' }}>
+                      <span style={{ color, fontSize: '10px', fontWeight: 700, textTransform: 'capitalize' }}>
+                        ◈ {t.outcomeSignal}
+                      </span>
+                      {t.domain && <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{t.domain}</span>}
+                    </div>
+                    {t.outcomeNote && (
+                      <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.6 }}>
+                        {t.outcomeNote}
+                      </p>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        ) : view === 'search' ? (
+          <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+            Full-text search across all records. Coming soon.
+          </p>
         ) : view === 'timeline' ? (
           <div>
             {PERIOD_ORDER.filter(p => byPeriod[p]?.length).map(period => (
@@ -317,7 +389,7 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
             ) : (
               <>
                 {threadKeys.map(constellation => {
-                  const sorted = [...threads[constellation]]
+                  const sorted = [...constThreads[constellation]]
                     .sort((a, b) => toDate(a.timestamp) - toDate(b.timestamp))
                   return (
                     <div key={constellation} style={{ marginBottom: '32px' }}>

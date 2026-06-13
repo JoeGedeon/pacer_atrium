@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { getSupportedAudioMimeType } from '../lib/voiceUpload'
+import RoomSubNav from './RoomSubNav'
 
 const DESTINATION = 'Isles of the Awakening'
+
+const ISLES_TABS = [
+  { id: 'seeds',   label: 'Seeds' },
+  { id: 'sprouts', label: 'Sprouts' },
+  { id: 'growth',  label: 'Growth' },
+  { id: 'signals', label: 'Recurring Signals' },
+  { id: 'revisit', label: 'Worth Revisiting' },
+]
 
 function timeAgo(date) {
   if (!date) return ''
@@ -235,6 +244,7 @@ function SectionHeader({ emoji, label, count, note }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function IslesRoom({ observations = [], onRoute, onNavigate, onPlantVoiceSeed, isMobile }) {
+  const [tab, setTab] = useState('seeds')
   const px = isMobile ? 'px-6' : 'px-10'
 
   const islesObs   = observations.filter(o => o.destination === DESTINATION)
@@ -257,17 +267,19 @@ export default function IslesRoom({ observations = [], onRoute, onNavigate, onPl
         </p>
       </div>
 
+      <RoomSubNav tabs={ISLES_TABS} activeTab={tab} onSelect={setTab} />
+
       <div className={`flex-1 overflow-y-auto ${px} py-8`}>
         <div style={{ maxWidth: '600px' }}>
 
-          {onPlantVoiceSeed && (
+          {tab === 'seeds' && onPlantVoiceSeed && (
             <VoiceRecorder onPlantSeed={onPlantVoiceSeed} />
           )}
 
-          {islesObs.length === 0 ? (
+          {tab === 'seeds' && seeds.length === 0 && (
             <div>
               <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
-                Nothing has arrived in Isles yet.
+                Nothing has arrived in Seeds yet.
               </p>
               <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7, marginBottom: '24px' }}>
                 Plant a voice seed above, or route an observation here from Atrium.
@@ -287,44 +299,59 @@ export default function IslesRoom({ observations = [], onRoute, onNavigate, onPl
                 </button>
               )}
             </div>
-          ) : (
+          )}
+
+          {tab === 'seeds' && seeds.length > 0 && (
             <>
-              {seeds.length > 0 && (
-                <div style={{ marginBottom: '36px' }}>
-                  <SectionHeader
-                    emoji="🌱"
-                    label="Seeds"
-                    count={seeds.length}
-                    note="Raw observations. No structure required."
-                  />
-                  {seeds.map(o => <SeedCard key={o.id} obs={o} />)}
-                </div>
-              )}
-
-              {withSignal.length > 0 && (
-                <div style={{ marginBottom: '36px' }}>
-                  <SectionHeader
-                    emoji="🌿"
-                    label="Growth"
-                    count={withSignal.length}
-                    note="MUSE has noticed something here. Ready to move when you decide."
-                  />
-                  {withSignal.map(o => (
-                    <GrowthCard
-                      key={o.id}
-                      obs={o}
-                      onRoute={onRoute}
-                      onNavigate={onNavigate}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-                {islesObs.length} observation{islesObs.length !== 1 ? 's' : ''} in Isles
+              {seeds.map(o => <SeedCard key={o.id} obs={o} />)}
+              <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginTop: '12px' }}>
+                {seeds.length} seed{seeds.length !== 1 ? 's' : ''}
               </p>
             </>
           )}
+
+          {tab === 'sprouts' && (
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              Sprouts are seeds that have begun to move — observations in early MUSE analysis.
+              Nothing here yet.
+            </p>
+          )}
+
+          {tab === 'growth' && withSignal.length === 0 && (
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              MUSE has not noticed anything here yet. Route observations through MUSE to see them grow.
+            </p>
+          )}
+
+          {tab === 'growth' && withSignal.length > 0 && (
+            <>
+              <p style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic',
+                marginBottom: '16px' }}>
+                MUSE has noticed something here. Ready to move when you decide.
+              </p>
+              {withSignal.map(o => (
+                <GrowthCard key={o.id} obs={o} onRoute={onRoute} onNavigate={onNavigate} />
+              ))}
+              <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginTop: '12px' }}>
+                {withSignal.length} observation{withSignal.length !== 1 ? 's' : ''} with signal
+              </p>
+            </>
+          )}
+
+          {tab === 'signals' && (
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              Recurring signals are patterns that surface more than once across Seeds.
+              Coming soon.
+            </p>
+          )}
+
+          {tab === 'revisit' && (
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+              Observations worth revisiting are surfaced here when VERA identifies patterns.
+              Coming soon.
+            </p>
+          )}
+
         </div>
       </div>
     </div>

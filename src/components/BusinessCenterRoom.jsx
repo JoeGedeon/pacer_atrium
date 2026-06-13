@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { generateInstitutionalPulse } from '../lib/claudeRouting'
+import RoomSubNav from './RoomSubNav'
+
+const BUSINESS_TABS = [
+  { id: 'overview',    label: 'Overview' },
+  { id: 'calendar',    label: 'Calendar' },
+  { id: 'operations',  label: 'Operations' },
+  { id: 'records',     label: 'Records' },
+]
 
 const FLEETFLOW_URL = import.meta.env.VITE_FLEETFLOW_URL || null
 
@@ -426,14 +434,14 @@ export default function BusinessCenterRoom({
   const px = isMobile ? 'px-5' : 'px-10'
 
   // ── Derived metrics ──────────────────────────────────────────────────────────
-  const totalObs           = observations.length
-  const pendingCount       = observations.filter(o => !o.destination).length
-  const stagedToTheater    = observations.filter(o => o.destination === 'Theater').length
+  const totalObs            = observations.length
+  const pendingCount        = observations.filter(o => !o.destination).length
+  const stagedToTheater     = observations.filter(o => o.destination === 'Theater').length
   const constitutionalTests = institutionEvents.filter(e => e.eventType === 'multi_manifest_test_completed').length
-  const humanGateApprovals = kelReviews.filter(r => r.status === 'approved').length
-  const calendarEntries    = creatorLogs.length
-  const recentEvents       = institutionEvents.slice(0, 12)
-  const groupedEvents      = groupEventsByDate(recentEvents)
+  const humanGateApprovals  = kelReviews.filter(r => r.status === 'approved').length
+  const calendarEntries     = creatorLogs.length
+  const recentEvents        = institutionEvents.slice(0, 12)
+  const groupedEvents       = groupEventsByDate(recentEvents)
 
   const fallbackPulse = staticPulse({
     totalObs, pendingCount, stagedCount: stagedToTheater,
@@ -443,9 +451,9 @@ export default function BusinessCenterRoom({
   })
 
   // ── AI Pulse ─────────────────────────────────────────────────────────────────
-  const [aiPulse, setAiPulse]   = useState(null)
-  const [pulsing, setPulsing]   = useState(false)
-  const hasPulsed               = useRef(false)
+  const [aiPulse, setAiPulse] = useState(null)
+  const [pulsing, setPulsing] = useState(false)
+  const hasPulsed             = useRef(false)
 
   useEffect(() => {
     if (!apiKey || hasPulsed.current) return
@@ -456,7 +464,7 @@ export default function BusinessCenterRoom({
   async function handleGeneratePulse() {
     setPulsing(true)
     try {
-      const emailCtx    = emailData    ? [
+      const emailCtx = emailData ? [
         `${emailData.unreadCount} unread`,
         emailData.categories.opportunities.length > 0 ? `${emailData.categories.opportunities.length} opportunities` : null,
         emailData.categories.urgent.length > 0         ? `${emailData.categories.urgent.length} urgent` : null,
@@ -513,7 +521,8 @@ export default function BusinessCenterRoom({
     return items
   })()
 
-  // ── System Health ─────────────────────────────────────────────────────────────
+  // ── Tab state + System Health ─────────────────────────────────────────────────
+  const [bcTab, setBcTab] = useState('overview')
   const health = buildHealth(observations, productions, institutionEvents, apiKey)
 
   return (
@@ -532,306 +541,308 @@ export default function BusinessCenterRoom({
         </div>
       </div>
 
-      <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+      <RoomSubNav tabs={BUSINESS_TABS} activeTab={bcTab} onSelect={setBcTab} />
 
-        {/* ── CALENDAR (CENTERPIECE) ──────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Calendar
-            </p>
-            {googleStatus === 'connected' && (
-              <button
-                onClick={onDisconnectGmail}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
-              >
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b98160', flexShrink: 0 }} />
-                Gmail connected
-              </button>
-            )}
-            {googleStatus === 'reconnecting' && (
-              <span style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic' }}>
-                Reconnecting…
-              </span>
-            )}
-            {googleStatus === 'reconnect-required' && (
-              <button
-                onClick={onConnectGmail}
-                disabled={!onConnectGmail}
-                style={{ background: 'none', border: '1px solid #92400e', borderRadius: '5px', padding: '3px 10px', color: '#f59e0b', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
-              >
-                ↺ Reconnect
-              </button>
-            )}
-            {googleStatus === 'disconnected' && (
-              onConnectGmail ? (
-                <button
-                  onClick={onConnectGmail}
-                  style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: 'var(--text-4)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
-                >
-                  + Connect Gmail
-                </button>
-              ) : (
-                <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-                  Set VITE_GOOGLE_CLIENT_ID to connect
-                </span>
-              )
-            )}
-          </div>
-          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden' }}>
-            {/* Today's schedule from Google Calendar */}
-            {(googleToken || calendarEvents.length > 0) && (
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-0)' }}>
-                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-                  Today
-                </p>
-                {calendarEvents.length === 0 ? (
-                  <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>Nothing scheduled.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {calendarEvents.map(event => (
-                      <div key={event.id} style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-                        <span style={{ color: '#3b82f6', fontSize: '11px', fontWeight: 600, flexShrink: 0, minWidth: '54px' }}>
-                          {event.timeLabel}
-                        </span>
-                        <span style={{ color: 'var(--text-2)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {event.title}
-                        </span>
-                        {event.location && (
-                          <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0 }}>· {event.location}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {/* Internal log calendar */}
-            <div style={{ padding: '18px' }}>
-              <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
-            </div>
-          </div>
-        </div>
+      {/* ── OVERVIEW TAB ───────────────────────────────────────────────────── */}
+      {bcTab === 'overview' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-6`}>
 
-        {/* ── ACTION QUEUE ────────────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Action Queue
-            </p>
-            {actionItems.length > 0 && (
-              <span style={{ background: '#1d4ed820', border: '1px solid #1d4ed840', borderRadius: '10px', padding: '1px 7px', color: '#60a5fa', fontSize: '9px', fontWeight: 700 }}>
-                {actionItems.length}
-              </span>
-            )}
-          </div>
-          <ActionQueue items={actionItems} onNavigate={onNavigate} />
-        </div>
-
-        {/* ── INSTITUTIONAL PULSE ─────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Institutional Pulse
-            </p>
-            {apiKey && (
-              <button
-                onClick={handleGeneratePulse}
-                disabled={pulsing}
-                style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: pulsing ? 'var(--text-6)' : 'var(--text-4)', fontSize: '10px', cursor: pulsing ? 'default' : 'pointer', letterSpacing: '0.04em' }}
-              >
-                {pulsing ? '…' : '↺ Refresh'}
-              </button>
-            )}
-          </div>
-          <div style={{
-            background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-            borderLeft: '3px solid #3b82f6', borderRadius: '0 10px 10px 0',
-            padding: '20px 24px',
-          }}>
-            <p style={{ color: pulsing ? 'var(--text-4)' : 'var(--text-1)', fontSize: '13px', lineHeight: 1.9, fontStyle: 'italic', fontWeight: 400, transition: 'color 0.3s' }}>
-              {pulsing ? 'Reading the campus…' : displayPulse}
-            </p>
-            {aiPulse && (
-              <p style={{ color: '#3b82f640', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '10px', fontWeight: 600 }}>
-                ● AI Generated
+          <div style={{ maxWidth: '600px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+                Action Queue
               </p>
-            )}
-          </div>
-        </div>
-
-        {/* ── SYSTEM HEALTH ───────────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-            System Health
-          </p>
-          <SystemHealth health={health} isMobile={isMobile} />
-        </div>
-
-        {/* ── FLEETFLOW GATEWAY ───────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '40px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span>🚚</span>
-            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
-              FleetFlow Wing
-            </p>
-          </div>
-          <div style={{
-            background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-            borderLeft: `3px solid ${FLEETFLOW_URL ? '#10b981' : '#374151'}`,
-            borderRadius: '0 10px 10px 0', overflow: 'hidden',
-          }}>
-            <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: FLEETFLOW_URL ? '#10b981' : '#6b7280', boxShadow: FLEETFLOW_URL ? '0 0 6px #10b98160' : 'none' }} />
-                <div>
-                  <p style={{ color: FLEETFLOW_URL ? '#10b981' : 'var(--text-4)', fontSize: '12px', fontWeight: 600, marginBottom: '1px' }}>
-                    {FLEETFLOW_URL ? 'Connected' : 'Not Yet Connected'}
-                  </p>
-                  <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
-                    {FLEETFLOW_URL ? 'Same campus. Different wing.' : 'Set VITE_FLEETFLOW_URL to open the gateway.'}
-                  </p>
-                </div>
-              </div>
-              {FLEETFLOW_URL ? (
-                <a href={FLEETFLOW_URL} target="_blank" rel="noopener noreferrer" style={{
-                  flexShrink: 0, background: '#052e16', border: '1px solid #10b981', color: '#10b981',
-                  fontSize: '12px', fontWeight: 600, padding: '9px 18px', borderRadius: '7px',
-                  textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap',
-                }}>
-                  Enter Operations →
-                </a>
-              ) : (
-                <span style={{ flexShrink: 0, color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>
-                  The wing is ready.
+              {actionItems.length > 0 && (
+                <span style={{ background: '#1d4ed820', border: '1px solid #1d4ed840', borderRadius: '10px', padding: '1px 7px', color: '#60a5fa', fontSize: '9px', fontWeight: 700 }}>
+                  {actionItems.length}
                 </span>
               )}
             </div>
+            <ActionQueue items={actionItems} onNavigate={onNavigate} />
           </div>
-        </div>
 
-        {/* ── DIVIDER ─────────────────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', borderTop: '1px solid var(--border-0)', marginBottom: '32px' }} />
-
-        {/* ── CREATOR TIMELINE ────────────────────────────────────────────── */}
-        {recentEvents.length > 0 && (
-          <div style={{ maxWidth: '600px', marginBottom: '32px' }}>
-            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-              Creator Timeline
-            </p>
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden', maxHeight: '360px', overflowY: 'auto' }}>
-              {groupedEvents.map(([dateLabel, events], gi) => (
-                <div key={dateLabel} style={{ borderBottom: gi < groupedEvents.length - 1 ? '1px solid var(--border-0)' : 'none', padding: '12px 16px' }}>
-                  <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '7px' }}>
-                    {dateLabel}
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {events.map(e => (
-                      <div key={e.id} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
-                        <span style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '1px', flexShrink: 0 }}>·</span>
-                        <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>{e.title}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+          <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+                Institutional Pulse
+              </p>
+              {apiKey && (
+                <button
+                  onClick={handleGeneratePulse}
+                  disabled={pulsing}
+                  style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: pulsing ? 'var(--text-6)' : 'var(--text-4)', fontSize: '10px', cursor: pulsing ? 'default' : 'pointer', letterSpacing: '0.04em' }}
+                >
+                  {pulsing ? '…' : '↺ Refresh'}
+                </button>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* ── COLLEGE OF OPERATIONS ───────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '32px' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
-            College of Operations
-          </p>
-          <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', marginBottom: '16px' }}>
-            Operational truth matters.
-          </p>
-          <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8, marginBottom: '10px' }}>
-            Business Center is where the institution teaches operational stewardship — not as a feature set, but as a discipline. Clients, projects, revenue, invoices, teams: these are not administrative tasks. They are the instruments of accountability.
-          </p>
-          <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8 }}>
-            A resident can spend months inside Business Center and never open FleetFlow. They should still leave understanding how to run an operation with integrity. That is the college's job.
-          </p>
-        </div>
-
-        <div style={{ maxWidth: '600px', marginBottom: '36px' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
-            What This College Teaches
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {TEACHINGS.map(({ label, note }) => (
-              <div key={label} style={{ borderLeft: '2px solid #3b82f630', paddingLeft: '14px' }}>
-                <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600, marginBottom: '3px' }}>{label}</p>
-                <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65 }}>{note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── GRADUATE REGISTRY ───────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '36px', paddingTop: '28px', borderTop: '1px solid var(--border-0)' }}>
-          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
-            Graduate Registry
-          </p>
-          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0', padding: '14px 18px', marginBottom: '10px' }}>
-            <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '1px' }}>FleetFlow</p>
-            <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>First Graduate</p>
-            <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65, fontStyle: 'italic' }}>Proof that the discipline survives contact with reality.</p>
-          </div>
-          {graduates.filter(g => g.sequence > 1).map(g => (
-            <div key={g.id} style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0', padding: '14px 18px', marginBottom: '10px' }}>
-              <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '1px' }}>{g.graduateName}</p>
-              <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>{ordinal(g.sequence)} Graduate</p>
-              {g.proof && <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65, fontStyle: 'italic' }}>{g.proof}</p>}
-            </div>
-          ))}
-        </div>
-
-        {/* ── BUILDER STUDIO ──────────────────────────────────────────────── */}
-        <div style={{ maxWidth: '600px', marginBottom: '48px', paddingTop: '28px', borderTop: '1px solid var(--border-0)' }}>
-          <div style={{ border: '1px solid var(--border-1)', borderRadius: '10px', padding: '24px', background: 'var(--bg-1)', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>Builder Studio</p>
-            <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8, marginBottom: '3px' }}>Knowledge enters.</p>
-            <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8, marginBottom: '20px' }}>Evidence leaves.</p>
-
-            {builderReadiness === 'approved' && (
-              <button onClick={onEnterBuilderStudio} style={{ display: 'inline-block', background: '#1a0a00', border: '1px solid #f59e0b', borderRadius: '6px', padding: '9px 20px', color: '#f59e0b', fontSize: '12px', letterSpacing: '0.06em', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Enter Builder Studio →
-              </button>
-            )}
-            {builderReadiness === 'pending' && (
-              <div style={{ display: 'inline-block', border: '1px solid #3b82f640', borderRadius: '6px', padding: '9px 20px', color: '#3b82f6', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>
-                Under KEL Review
-              </div>
-            )}
-            {builderReadiness === 'locked' && (
-              <div style={{ display: 'inline-block', border: '1px solid var(--border-1)', borderRadius: '6px', padding: '9px 20px', color: 'var(--text-5)', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-                Door Closed
-              </div>
-            )}
-
-            <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '16px', fontStyle: 'italic' }}>Graduation requires proof.</p>
-
-            {builderReadiness === 'locked' && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-0)' }}>
-                <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.65, marginBottom: '10px' }}>
-                  When the discipline is learned and a build proposal is ready, ask KEL to review readiness.
+            <div style={{
+              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+              borderLeft: '3px solid #3b82f6', borderRadius: '0 10px 10px 0',
+              padding: '20px 24px',
+            }}>
+              <p style={{ color: pulsing ? 'var(--text-4)' : 'var(--text-1)', fontSize: '13px', lineHeight: 1.9, fontStyle: 'italic', fontWeight: 400, transition: 'color 0.3s' }}>
+                {pulsing ? 'Reading the campus…' : displayPulse}
+              </p>
+              {aiPulse && (
+                <p style={{ color: '#3b82f640', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '10px', fontWeight: 600 }}>
+                  ● AI Generated
                 </p>
-                <button onClick={onRequestBuilderReview} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '6px', padding: '7px 14px', color: 'var(--text-3)', fontSize: '11px', letterSpacing: '0.04em', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Request Builder Review
+              )}
+            </div>
+          </div>
+
+          <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+              System Health
+            </p>
+            <SystemHealth health={health} isMobile={isMobile} />
+          </div>
+
+        </div>
+      )}
+
+      {/* ── CALENDAR TAB ───────────────────────────────────────────────────── */}
+      {bcTab === 'calendar' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+          <div style={{ maxWidth: '600px' }}>
+
+            {(googleToken || calendarEvents.length > 0) && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Today
+                  </p>
+                  {googleStatus === 'connected' && (
+                    <button onClick={onDisconnectGmail} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b98160', flexShrink: 0 }} />
+                      Gmail connected
+                    </button>
+                  )}
+                </div>
+                <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '14px 18px' }}>
+                  {calendarEvents.length === 0 ? (
+                    <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>Nothing scheduled.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {calendarEvents.map(event => (
+                        <div key={event.id} style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                          <span style={{ color: '#3b82f6', fontSize: '11px', fontWeight: 600, flexShrink: 0, minWidth: '54px' }}>{event.timeLabel}</span>
+                          <span style={{ color: 'var(--text-2)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.title}</span>
+                          {event.location && <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0 }}>· {event.location}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {googleStatus === 'disconnected' && (
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                {onConnectGmail ? (
+                  <button onClick={onConnectGmail} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: 'var(--text-4)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}>
+                    + Connect Gmail
+                  </button>
+                ) : (
+                  <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>Set VITE_GOOGLE_CLIENT_ID to connect</span>
+                )}
+              </div>
+            )}
+            {googleStatus === 'reconnect-required' && (
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={onConnectGmail} disabled={!onConnectGmail} style={{ background: 'none', border: '1px solid #92400e', borderRadius: '5px', padding: '3px 10px', color: '#f59e0b', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}>
+                  ↺ Reconnect
                 </button>
               </div>
             )}
-            {builderReadiness === 'pending' && (
-              <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.65, marginTop: '14px' }}>
-                A readiness review has been submitted. The forge opens when judgment confirms readiness.
-              </p>
+            {googleStatus === 'reconnecting' && (
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                <span style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic' }}>Reconnecting…</span>
+              </div>
             )}
+
+            <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+              Creator Log
+            </p>
+            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '18px' }}>
+              <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
+            </div>
+
           </div>
         </div>
+      )}
 
-      </div>
+      {/* ── OPERATIONS TAB ─────────────────────────────────────────────────── */}
+      {bcTab === 'operations' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+          <div style={{ maxWidth: '600px' }}>
+
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span>🚚</span>
+                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+                  FleetFlow Wing
+                </p>
+              </div>
+              <div style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                borderLeft: `3px solid ${FLEETFLOW_URL ? '#10b981' : '#374151'}`,
+                borderRadius: '0 10px 10px 0', overflow: 'hidden',
+              }}>
+                <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: FLEETFLOW_URL ? '#10b981' : '#6b7280', boxShadow: FLEETFLOW_URL ? '0 0 6px #10b98160' : 'none' }} />
+                    <div>
+                      <p style={{ color: FLEETFLOW_URL ? '#10b981' : 'var(--text-4)', fontSize: '12px', fontWeight: 600, marginBottom: '1px' }}>
+                        {FLEETFLOW_URL ? 'Connected' : 'Not Yet Connected'}
+                      </p>
+                      <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+                        {FLEETFLOW_URL ? 'Same campus. Different wing.' : 'Set VITE_FLEETFLOW_URL to open the gateway.'}
+                      </p>
+                    </div>
+                  </div>
+                  {FLEETFLOW_URL ? (
+                    <a href={FLEETFLOW_URL} target="_blank" rel="noopener noreferrer" style={{
+                      flexShrink: 0, background: '#052e16', border: '1px solid #10b981', color: '#10b981',
+                      fontSize: '12px', fontWeight: 600, padding: '9px 18px', borderRadius: '7px',
+                      textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                    }}>
+                      Enter Operations →
+                    </a>
+                  ) : (
+                    <span style={{ flexShrink: 0, color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>
+                      The wing is ready.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '28px', paddingTop: '24px', borderTop: '1px solid var(--border-0)' }}>
+              <div style={{ border: '1px solid var(--border-1)', borderRadius: '10px', padding: '24px', background: 'var(--bg-1)', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>Builder Studio</p>
+                <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8, marginBottom: '3px' }}>Knowledge enters.</p>
+                <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8, marginBottom: '20px' }}>Evidence leaves.</p>
+                {builderReadiness === 'approved' && (
+                  <button onClick={onEnterBuilderStudio} style={{ display: 'inline-block', background: '#1a0a00', border: '1px solid #f59e0b', borderRadius: '6px', padding: '9px 20px', color: '#f59e0b', fontSize: '12px', letterSpacing: '0.06em', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Enter Builder Studio →
+                  </button>
+                )}
+                {builderReadiness === 'pending' && (
+                  <div style={{ display: 'inline-block', border: '1px solid #3b82f640', borderRadius: '6px', padding: '9px 20px', color: '#3b82f6', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Under KEL Review
+                  </div>
+                )}
+                {builderReadiness === 'locked' && (
+                  <div style={{ display: 'inline-block', border: '1px solid var(--border-1)', borderRadius: '6px', padding: '9px 20px', color: 'var(--text-5)', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Door Closed
+                  </div>
+                )}
+                <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '16px', fontStyle: 'italic' }}>Graduation requires proof.</p>
+                {builderReadiness === 'locked' && (
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-0)' }}>
+                    <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.65, marginBottom: '10px' }}>
+                      When the discipline is learned and a build proposal is ready, ask KEL to review readiness.
+                    </p>
+                    <button onClick={onRequestBuilderReview} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '6px', padding: '7px 14px', color: 'var(--text-3)', fontSize: '11px', letterSpacing: '0.04em', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Request Builder Review
+                    </button>
+                  </div>
+                )}
+                {builderReadiness === 'pending' && (
+                  <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.65, marginTop: '14px' }}>
+                    A readiness review has been submitted. The forge opens when judgment confirms readiness.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div style={{ paddingTop: '24px', borderTop: '1px solid var(--border-0)' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+                Graduate Registry
+              </p>
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0', padding: '14px 18px', marginBottom: '10px' }}>
+                <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '1px' }}>FleetFlow</p>
+                <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>First Graduate</p>
+                <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65, fontStyle: 'italic' }}>Proof that the discipline survives contact with reality.</p>
+              </div>
+              {graduates.filter(g => g.sequence > 1).map(g => (
+                <div key={g.id} style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0', padding: '14px 18px', marginBottom: '10px' }}>
+                  <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '1px' }}>{g.graduateName}</p>
+                  <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>{ordinal(g.sequence)} Graduate</p>
+                  {g.proof && <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65, fontStyle: 'italic' }}>{g.proof}</p>}
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── RECORDS TAB ────────────────────────────────────────────────────── */}
+      {bcTab === 'records' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+          <div style={{ maxWidth: '600px' }}>
+
+            <div style={{ marginBottom: '32px' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+                Creator Timeline
+              </p>
+              {recentEvents.length > 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden', maxHeight: '400px', overflowY: 'auto' }}>
+                  {groupedEvents.map(([dateLabel, evts], gi) => (
+                    <div key={dateLabel} style={{ borderBottom: gi < groupedEvents.length - 1 ? '1px solid var(--border-0)' : 'none', padding: '12px 16px' }}>
+                      <p style={{ color: 'var(--text-4)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '7px' }}>{dateLabel}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {evts.map(e => (
+                          <div key={e.id} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
+                            <span style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '1px', flexShrink: 0 }}>·</span>
+                            <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>{e.title}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-5)', fontSize: '11px', fontStyle: 'italic' }}>No institutional events recorded yet.</p>
+              )}
+            </div>
+
+            <div style={{ marginBottom: '28px', paddingTop: '28px', borderTop: '1px solid var(--border-0)' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+                College of Operations
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', marginBottom: '16px' }}>
+                Operational truth matters.
+              </p>
+              <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.8, marginBottom: '10px' }}>
+                Business Center is where the institution teaches operational stewardship — not as a feature set, but as a discipline. Clients, projects, revenue, invoices, teams: these are not administrative tasks. They are the instruments of accountability.
+              </p>
+              <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.8 }}>
+                A resident can spend months inside Business Center and never open FleetFlow. They should still leave understanding how to run an operation with integrity. That is the college's job.
+              </p>
+            </div>
+
+            <div style={{ paddingTop: '28px', borderTop: '1px solid var(--border-0)' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
+                What This College Teaches
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {TEACHINGS.map(({ label, note }) => (
+                  <div key={label} style={{ borderLeft: '2px solid #3b82f630', paddingLeft: '14px' }}>
+                    <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600, marginBottom: '3px' }}>{label}</p>
+                    <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65 }}>{note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
