@@ -169,6 +169,11 @@ export default function App() {
           createUserProfile(user.uid, creatorBase)
         } else {
           setProfile({ ...creatorBase, ...existing })
+          // Load API key from Firestore if not already in localStorage
+          if (existing.anthropicApiKey && !localStorage.getItem('pacer_api_key')) {
+            localStorage.setItem('pacer_api_key', existing.anthropicApiKey)
+            setApiKey(existing.anthropicApiKey)
+          }
         }
       })
       // Creator-only: listen to beta stats counters
@@ -179,6 +184,11 @@ export default function App() {
     getUserProfile(user.uid).then(p => {
       setProfile(p ?? null)
       if (p) {
+        // Load API key from Firestore if not already in localStorage
+        if (p.anthropicApiKey && !localStorage.getItem('pacer_api_key')) {
+          localStorage.setItem('pacer_api_key', p.anthropicApiKey)
+          setApiKey(p.anthropicApiKey)
+        }
         // Track return visits — only when user has visited before
         if (p.lastVisitDate && p.lastVisitDate !== today) {
           updateUserProfile(user.uid, { lastVisitDate: today })
@@ -463,6 +473,20 @@ export default function App() {
     if (key) {
       localStorage.setItem('pacer_api_key', key)
       setApiKey(key)
+      // Persist to Firestore so all devices share the same key
+      if (user) updateUserProfile(user.uid, { anthropicApiKey: key })
+    }
+  }
+
+  function handleApiKeyChange(key) {
+    if (key) {
+      localStorage.setItem('pacer_api_key', key)
+      setApiKey(key)
+      if (user) updateUserProfile(user.uid, { anthropicApiKey: key })
+    } else {
+      localStorage.removeItem('pacer_api_key')
+      setApiKey(null)
+      if (user) updateUserProfile(user.uid, { anthropicApiKey: null })
     }
   }
 
@@ -755,7 +779,7 @@ export default function App() {
             theme={theme}
             onThemeChange={setTheme}
             apiKey={apiKey}
-            onApiKeyChange={setApiKey}
+            onApiKeyChange={handleApiKeyChange}
             onSignOut={signOut}
             isMobile={isMobile}
             arrivalMode={profile?.arrivalMode || 'silent'}
