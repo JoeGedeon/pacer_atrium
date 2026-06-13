@@ -3,7 +3,7 @@ import { sendToPACER } from '../lib/bridge'
 
 const ROUTES = [
   { id: 'FleetFlow',              label: 'FleetFlow',              description: 'Operational Systems',                  color: '#3b82f6', activeBg: '#0d1f3c', activeBorder: '#1d3f6e' },
-  { id: 'Isles of the Awakening', label: 'Isles of the Awakening', description: 'Worlds · Lore · Characters',            color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
+  { id: 'Isles of the Awakening', label: 'Isles',                  description: 'Incubation · Potential · Wilderness',    color: '#10b981', activeBg: '#041f14', activeBorder: '#065f3a' },
   { id: 'Doctrine',               label: 'Doctrine',               description: 'Principles · Frameworks · Architecture', color: '#f59e0b', activeBg: '#1c1200', activeBorder: '#5c3a00' },
   { id: 'Theater',                label: 'Theater',                description: 'Stage for Production · Manifestation',  color: '#a855f7', activeBg: '#130a20', activeBorder: '#6b21a8' },
   { id: 'Content',                label: 'Content',                description: 'Media · Assets · Publishing',           color: '#8b5cf6', activeBg: '#130c24', activeBorder: '#3b1f7a' },
@@ -23,7 +23,7 @@ function destColor(dest) { return ROUTE_COLORS[dest] || '#4b5563' }
 
 const STATIC_NEXT = {
   FleetFlow:                ['Is this pattern repeating?', 'Who else sees this?', 'What is the cost of ignoring it?'],
-  'Isles of the Awakening': ['What character embodies this?', 'Where does this fit the mythology?', 'What emotion does this carry?'],
+  'Isles of the Awakening': ['What could this become?', 'What is this idea waiting to find?', 'What would make this ready to move?'],
   Doctrine:                 ['Is this a principle or an exception?', 'What rule would prevent this?', 'Who needs to know this?'],
   Theater:                  ['What format serves this best?', 'Who is the audience?', 'What should they feel after experiencing it?'],
   Content:                  ['What is the headline?', 'Who is the audience?', 'What format fits this best?'],
