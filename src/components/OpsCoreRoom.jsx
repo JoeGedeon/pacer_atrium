@@ -238,9 +238,12 @@ function AssetsPanel({ mediaAssets, productions, isMobile }) {
 const day  = 86400000
 const week = 7 * day
 
-export default function OpsCoreRoom({ observations = [], threads = [], productions = [], mediaAssets = [], isMobile }) {
-  const [briefing, setBriefing] = useState(false)
-  const [view, setView] = useState('attention')
+export default function OpsCoreRoom({ observations = [], threads = [], productions = [], mediaAssets = [], institutionEvents = [], apiKey, onBuildBrief, isMobile }) {
+  const [briefing, setBriefing]         = useState(false)
+  const [view, setView]                 = useState('attention')
+  const [morningBrief, setMorningBrief] = useState('')
+  const [briefLoading, setBriefLoading] = useState(false)
+  const [briefSpeaking, setBriefSpeaking] = useState(false)
   const now = Date.now()
 
   // Signal counts by type
@@ -419,6 +422,28 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
     })
   }
 
+  async function handleGenerateBrief() {
+    if (briefLoading || !onBuildBrief) return
+    setBriefLoading(true)
+    try {
+      const text = await onBuildBrief(true) // force: bypass cache
+      setMorningBrief(text || '')
+    } catch (e) {
+      console.error('[OpsCore brief]', e)
+    } finally {
+      setBriefLoading(false)
+    }
+  }
+
+  function handleSpeakBrief() {
+    if (!morningBrief || briefSpeaking) return
+    speakWithVoice(morningBrief, getVoiceConfig('vera'), {
+      onStart: () => setBriefSpeaking(true),
+      onEnd:   () => setBriefSpeaking(false),
+      onError: () => setBriefSpeaking(false),
+    })
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -457,6 +482,74 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
       {view === 'attention' && (
       <div className={`flex-1 overflow-y-auto ${px} py-5`} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+        {/* ── MORNING BRIEF — flagship entry point ─────────────────────────── */}
+        <div style={{
+          background: '#020b18',
+          border: '1px solid #1d4ed820',
+          borderLeft: '4px solid #3b82f6',
+          borderRadius: '0 10px 10px 0',
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: isMobile ? '16px' : '20px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <p style={{ color: '#3b82f6', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 800, marginBottom: '4px' }}>
+                  🎙 Morning Brief
+                </p>
+                <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+                  {morningBrief ? 'Current as of now' : 'What happened since you were last here'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
+                {morningBrief && (
+                  <button
+                    onClick={handleSpeakBrief}
+                    disabled={briefSpeaking}
+                    style={{
+                      background: briefSpeaking ? 'var(--bg-2)' : '#030d1a',
+                      border: `1px solid ${briefSpeaking ? 'var(--border-1)' : '#3b82f640'}`,
+                      borderRadius: '6px', padding: '7px 12px',
+                      color: briefSpeaking ? 'var(--text-5)' : '#60a5fa',
+                      fontSize: '11px', fontWeight: 600,
+                      cursor: briefSpeaking ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {briefSpeaking ? '🔊 Speaking…' : '🔊 Play'}
+                  </button>
+                )}
+                <button
+                  onClick={handleGenerateBrief}
+                  disabled={briefLoading || !onBuildBrief}
+                  style={{
+                    background: briefLoading ? 'var(--bg-2)' : apiKey ? '#1d3a6e' : 'var(--bg-2)',
+                    border: `1px solid ${briefLoading ? 'var(--border-1)' : apiKey ? '#3b82f660' : 'var(--border-1)'}`,
+                    borderRadius: '6px', padding: '7px 16px',
+                    color: briefLoading ? 'var(--text-5)' : apiKey ? '#93c5fd' : 'var(--text-5)',
+                    fontSize: '11px', fontWeight: 700,
+                    cursor: briefLoading || !onBuildBrief ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {briefLoading ? 'Generating…' : morningBrief ? '↺ Refresh' : '▶ Generate'}
+                </button>
+              </div>
+            </div>
+
+            {morningBrief && (
+              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #1d4ed815' }}>
+                <p style={{ color: 'var(--text-1)', fontSize: isMobile ? '13px' : '14px', lineHeight: 1.85, fontStyle: 'italic' }}>
+                  {morningBrief}
+                </p>
+              </div>
+            )}
+
+            {!morningBrief && !apiKey && (
+              <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '10px' }}>
+                Connect Claude in Settings to enable AI-generated briefs.
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* ── LEAD SIGNAL / FEATURED BROADCAST — command card ─────────────── */}
         <div style={{

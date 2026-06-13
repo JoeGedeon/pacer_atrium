@@ -943,6 +943,9 @@ export default function App() {
             threads={threads}
             productions={productions}
             mediaAssets={mediaAssets}
+            institutionEvents={institutionEvents}
+            apiKey={apiKey}
+            onBuildBrief={buildArrivalText}
             isMobile={isMobile}
           />
         )}
