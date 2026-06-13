@@ -42,6 +42,7 @@ import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
+import { uploadVoiceSeed } from './lib/voiceUpload'
 import PACERVoice from './components/PACERVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
@@ -563,6 +564,23 @@ export default function App() {
     }
   }
 
+  async function plantVoiceSeed(audioBlob) {
+    if (!user) return
+    if (!isCreator(user)) incrementCampusStat('observations')
+    const storageUrl = await uploadVoiceSeed(audioBlob, user.uid)
+    await createObservation(user.uid, {
+      text:          '',
+      type:          'voice',
+      storageUrl,
+      destination:   'Isles of the Awakening',
+      constellation: null,
+      source:        null,
+      status:        'seed',
+      claude:        null,
+      claudeError:   null,
+    })
+  }
+
   async function createProductionRecord(data) {
     if (!user) return
     await createProduction(user.uid, data)
@@ -814,6 +832,7 @@ export default function App() {
             observations={observations}
             onRoute={routeObservation}
             onNavigate={setCurrentRoom}
+            onPlantVoiceSeed={plantVoiceSeed}
             isMobile={isMobile}
           />
         )}

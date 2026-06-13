@@ -1,8 +1,12 @@
+import { useState, useRef, useEffect } from 'react'
+import { getSupportedAudioMimeType } from '../lib/voiceUpload'
+
 const DESTINATION = 'Isles of the Awakening'
 
 function timeAgo(date) {
   if (!date) return ''
-  const mins = Math.floor((Date.now() - (date instanceof Date ? date.getTime() : new Date(date).getTime())) / 60000)
+  const ms = date instanceof Date ? date.getTime() : new Date(date).getTime()
+  const mins = Math.floor((Date.now() - ms) / 60000)
   if (mins < 1)  return 'just now'
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
@@ -10,39 +14,132 @@ function timeAgo(date) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-function SectionHeader({ label, emoji, count, note }) {
+// ── Voice Recorder ────────────────────────────────────────────────────────────
+
+function VoiceRecorder({ onPlantSeed }) {
+  const [isRecording, setIsRecording]   = useState(false)
+  const [isUploading, setIsUploading]   = useState(false)
+  const [recordError, setRecordError]   = useState(null)
+  const mediaRecorderRef = useRef(null)
+  const chunksRef        = useRef([])
+  const streamRef        = useRef(null)
+
+  useEffect(() => () => {
+    mediaRecorderRef.current?.stop()
+    streamRef.current?.getTracks().forEach(t => t.stop())
+  }, [])
+
+  async function start() {
+    setRecordError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      const mimeType = getSupportedAudioMimeType()
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+      mediaRecorderRef.current = recorder
+      chunksRef.current = []
+
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' })
+        setIsUploading(true)
+        try {
+          await onPlantSeed(blob)
+        } catch {
+          setRecordError('Upload failed. Try again.')
+        } finally {
+          setIsUploading(false)
+        }
+      }
+
+      recorder.start()
+      setIsRecording(true)
+    } catch {
+      setRecordError('Microphone access denied. Check browser permissions.')
+    }
+  }
+
+  function stop() {
+    mediaRecorderRef.current?.stop()
+    setIsRecording(false)
+  }
+
   return (
-    <div style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-        <span style={{ fontSize: '14px' }}>{emoji}</span>
-        <p style={{ color: 'var(--text-3)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
-          textTransform: 'uppercase' }}>
-          {label}
+    <div style={{ marginBottom: '28px' }}>
+      <button
+        onClick={isRecording ? stop : start}
+        disabled={isUploading}
+        style={{
+          background: isRecording ? '#14080820' : 'none',
+          border: `1px solid ${isRecording ? '#ef4444' : '#10b98160'}`,
+          color: isRecording ? '#ef4444' : '#10b981',
+          fontSize: '12px', fontWeight: 600, padding: '8px 18px',
+          borderRadius: '6px', cursor: isUploading ? 'default' : 'pointer',
+          fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '8px',
+        }}
+      >
+        {isRecording ? (
+          <>
+            <span style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: '#ef4444', display: 'inline-block',
+              animation: 'pulse-fade 1.2s infinite',
+            }} />
+            Stop Recording
+          </>
+        ) : isUploading ? (
+          'Saving seed…'
+        ) : (
+          <><span>🌱</span> Plant Voice Seed</>
+        )}
+      </button>
+      {recordError && (
+        <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '8px' }}>
+          {recordError}
         </p>
-        <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{count}</span>
-      </div>
-      <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', paddingLeft: '22px' }}>
-        {note}
-      </p>
+      )}
     </div>
   )
 }
 
+// ── Seed Cards ────────────────────────────────────────────────────────────────
+
 function SeedCard({ obs }) {
+  const isVoiceRecording = obs.type === 'voice' && obs.storageUrl
+
   return (
     <div style={{
       background: 'var(--bg-2)', border: '1px solid var(--border-1)',
       borderRadius: '8px', padding: '12px 16px', marginBottom: '8px',
     }}>
-      <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.65, marginBottom: '6px' }}>
-        {obs.text}
-      </p>
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        {obs.constellation && (
-          <span style={{ color: '#a07830', fontSize: '10px' }}>◈ {obs.constellation}</span>
-        )}
-        <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{timeAgo(obs.timestamp)}</span>
-      </div>
+      {isVoiceRecording ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ color: '#10b981', fontSize: '12px' }}>🎤</span>
+            <span style={{ color: 'var(--text-4)', fontSize: '11px', fontWeight: 500 }}>Voice seed</span>
+            <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{timeAgo(obs.timestamp)}</span>
+          </div>
+          <audio
+            controls
+            src={obs.storageUrl}
+            style={{ width: '100%', height: '32px', display: 'block' }}
+          />
+        </>
+      ) : (
+        <>
+          <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.65, marginBottom: '6px' }}>
+            {obs.text}
+          </p>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {obs.constellation && (
+              <span style={{ color: '#a07830', fontSize: '10px' }}>◈ {obs.constellation}</span>
+            )}
+            <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{timeAgo(obs.timestamp)}</span>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -61,9 +158,11 @@ function GrowthCard({ obs, onRoute, onNavigate }) {
       </p>
 
       {claude.rationale && (
-        <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6,
+        <p style={{
+          color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6,
           fontStyle: 'italic', marginBottom: '10px', paddingLeft: '8px',
-          borderLeft: '2px solid var(--border-2)' }}>
+          borderLeft: '2px solid var(--border-2)',
+        }}>
           {claude.rationale}
         </p>
       )}
@@ -113,12 +212,34 @@ function GrowthCard({ obs, onRoute, onNavigate }) {
   )
 }
 
-export default function IslesRoom({ observations = [], onRoute, onNavigate, isMobile }) {
+// ── Section Header ─────────────────────────────────────────────────────────────
+
+function SectionHeader({ emoji, label, count, note }) {
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <span style={{ fontSize: '14px' }}>{emoji}</span>
+        <p style={{ color: 'var(--text-3)', fontSize: '11px', fontWeight: 700,
+          letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          {label}
+        </p>
+        <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{count}</span>
+      </div>
+      <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', paddingLeft: '22px' }}>
+        {note}
+      </p>
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+export default function IslesRoom({ observations = [], onRoute, onNavigate, onPlantVoiceSeed, isMobile }) {
   const px = isMobile ? 'px-6' : 'px-10'
 
-  const islesObs     = observations.filter(o => o.destination === DESTINATION)
-  const seeds        = islesObs.filter(o => !o.claude)
-  const withSignal   = islesObs.filter(o => !!o.claude)
+  const islesObs   = observations.filter(o => o.destination === DESTINATION)
+  const seeds      = islesObs.filter(o => !o.claude)
+  const withSignal = islesObs.filter(o => !!o.claude)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
@@ -137,68 +258,74 @@ export default function IslesRoom({ observations = [], onRoute, onNavigate, isMo
       </div>
 
       <div className={`flex-1 overflow-y-auto ${px} py-8`}>
-        {islesObs.length === 0 ? (
-          <div style={{ maxWidth: '460px' }}>
-            <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
-              Nothing has arrived in Isles yet.
-            </p>
-            <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7, marginBottom: '24px' }}>
-              Isles is where observations live before anyone knows what they are.
-              Route an observation here from Atrium — no structure required, no decision needed.
-              Ideas are allowed to exist here without justifying themselves.
-            </p>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate('atrium')}
-                style={{
-                  background: 'none', border: '1px solid var(--border-1)',
-                  color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer',
-                  padding: '8px 16px', borderRadius: '6px', fontFamily: 'inherit',
-                }}
-              >
-                Go to Atrium →
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ maxWidth: '600px' }}>
+        <div style={{ maxWidth: '600px' }}>
 
-            {seeds.length > 0 && (
-              <div style={{ marginBottom: '36px' }}>
-                <SectionHeader
-                  emoji="🌱"
-                  label="Seeds"
-                  count={seeds.length}
-                  note="Raw observations. No structure required. Nothing here needs to justify itself."
-                />
-                {seeds.map(o => <SeedCard key={o.id} obs={o} />)}
-              </div>
-            )}
+          {onPlantVoiceSeed && (
+            <VoiceRecorder onPlantSeed={onPlantVoiceSeed} />
+          )}
 
-            {withSignal.length > 0 && (
-              <div style={{ marginBottom: '36px' }}>
-                <SectionHeader
-                  emoji="🌿"
-                  label="Growth"
-                  count={withSignal.length}
-                  note="MUSE has noticed something here. Ready to move when you decide."
-                />
-                {withSignal.map(o => (
-                  <GrowthCard
-                    key={o.id}
-                    obs={o}
-                    onRoute={onRoute}
-                    onNavigate={onNavigate}
+          {islesObs.length === 0 ? (
+            <div>
+              <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
+                Nothing has arrived in Isles yet.
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7, marginBottom: '24px' }}>
+                Plant a voice seed above, or route an observation here from Atrium.
+                No structure required. No decision needed. Ideas are allowed to exist here
+                without justifying themselves.
+              </p>
+              {onNavigate && (
+                <button
+                  onClick={() => onNavigate('atrium')}
+                  style={{
+                    background: 'none', border: '1px solid var(--border-1)',
+                    color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer',
+                    padding: '8px 16px', borderRadius: '6px', fontFamily: 'inherit',
+                  }}
+                >
+                  Go to Atrium →
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {seeds.length > 0 && (
+                <div style={{ marginBottom: '36px' }}>
+                  <SectionHeader
+                    emoji="🌱"
+                    label="Seeds"
+                    count={seeds.length}
+                    note="Raw observations. No structure required."
                   />
-                ))}
-              </div>
-            )}
+                  {seeds.map(o => <SeedCard key={o.id} obs={o} />)}
+                </div>
+              )}
 
-            <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginTop: '8px' }}>
-              {islesObs.length} observation{islesObs.length !== 1 ? 's' : ''} in Isles
-            </p>
-          </div>
-        )}
+              {withSignal.length > 0 && (
+                <div style={{ marginBottom: '36px' }}>
+                  <SectionHeader
+                    emoji="🌿"
+                    label="Growth"
+                    count={withSignal.length}
+                    note="MUSE has noticed something here. Ready to move when you decide."
+                  />
+                  {withSignal.map(o => (
+                    <GrowthCard
+                      key={o.id}
+                      obs={o}
+                      onRoute={onRoute}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                {islesObs.length} observation{islesObs.length !== 1 ? 's' : ''} in Isles
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
