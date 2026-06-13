@@ -104,6 +104,13 @@ export default function LeftNav({
       </ul>
 
       <div className="mt-auto px-3 flex flex-col gap-3">
+        <button
+          onClick={onSignOut}
+          className="text-xs text-left"
+          style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 0 }}
+        >
+          ↪ Sign out
+        </button>
         <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
         <button
           onClick={() => onSelect('home')}
