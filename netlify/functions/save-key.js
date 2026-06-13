@@ -16,6 +16,8 @@ exports.handler = async (event) => {
   }
 
   const secret = process.env.ENCRYPTION_SECRET
+  // Diagnostic: log env state without exposing value — remove after confirming
+  console.log('[save-key] secret present:', !!secret, '| length:', secret?.length ?? 0, '| matching keys:', Object.keys(process.env).filter(k => k.startsWith('ENCRYPT')))
   if (!secret) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Server not configured' }) }
   }
