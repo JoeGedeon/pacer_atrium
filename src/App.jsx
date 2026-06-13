@@ -89,6 +89,7 @@ export default function App() {
 
   const [currentRoom, setCurrentRoom]             = useState('home')
   const [atriumMode, setAtriumMode]               = useState('observe') // 'observe' | 'conversation'
+  const [voiceMode, setVoiceMode]                 = useState(() => localStorage.getItem('pacer_voice_mode') === 'on')
   const [observations, setObservations]           = useState([])
   const [museWorks, setMuseWorks]                 = useState([])
   const [graduates, setGraduates]                 = useState([])
@@ -512,6 +513,14 @@ export default function App() {
     await updateObservation(user.uid, id, { constellation })
   }
 
+  function toggleVoiceMode() {
+    setVoiceMode(prev => {
+      const next = !prev
+      localStorage.setItem('pacer_voice_mode', next ? 'on' : 'off')
+      return next
+    })
+  }
+
   function handleApiKey(keyOrBundle) {
     setShowKeyGate(false)
     if (keyOrBundle) {
@@ -680,6 +689,8 @@ export default function App() {
           onConnectClaude={() => setShowKeyGate(true)}
           isMobile={isMobile}
           visibleRooms={visibleRooms}
+          voiceMode={voiceMode}
+          onToggleVoice={toggleVoiceMode}
         />
       )}
 
@@ -775,6 +786,7 @@ export default function App() {
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}
+            voiceMode={voiceMode}
           />
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
@@ -829,6 +841,7 @@ export default function App() {
             onApproveReview={approveKELReview}
             onDenyReview={denyKELReview}
             isMobile={isMobile}
+            voiceMode={voiceMode}
           />
         )}
         {isSettings && (

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { requestKELRecommendation } from '../lib/kelAnalysis'
+import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
 const REQUEST_LABELS = { builder_readiness: 'Builder Readiness' }
 
@@ -25,7 +26,7 @@ function domainColor(d) { return DOMAIN_COLORS[d] || '#4b5563' }
 
 export default function KELRoom({
   observations = [], apiKey, onConnectClaude, onDecision,
-  kelReviews = [], onApproveReview, onDenyReview, isMobile,
+  kelReviews = [], onApproveReview, onDenyReview, isMobile, voiceMode,
 }) {
   const [rec,          setRec]          = useState(null)
   const [reading,      setReading]      = useState(false)
@@ -33,6 +34,7 @@ export default function KELRoom({
   const [decided,      setDecided]      = useState(null)
   const [denyingId,    setDenyingId]    = useState(null)
   const [denyRationale, setDenyRationale] = useState('')
+  const [kelSpeaking,  setKelSpeaking]  = useState(false)
 
   const pendingReviews = kelReviews.filter(r => r.status === 'pending')
 
@@ -283,6 +285,24 @@ export default function KELRoom({
                 fontWeight: 500, letterSpacing: '-0.01em' }}>
                 {rec.recommendation}
               </p>
+              {voiceMode && (
+                <button
+                  disabled={kelSpeaking}
+                  onClick={() => speakWithVoice(rec.recommendation, getVoiceConfig('kel'), {
+                    onStart: () => setKelSpeaking(true),
+                    onEnd:   () => setKelSpeaking(false),
+                    onError: () => setKelSpeaking(false),
+                  })}
+                  style={{
+                    marginTop: '10px', background: 'none',
+                    border: '1px solid var(--border-1)', color: kelSpeaking ? 'var(--text-5)' : 'var(--text-3)',
+                    fontSize: '11px', padding: '5px 12px', borderRadius: '6px',
+                    cursor: kelSpeaking ? 'default' : 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  {kelSpeaking ? '🔊 Speaking…' : '▶ Read'}
+                </button>
+              )}
             </div>
 
             {/* Reasoning */}

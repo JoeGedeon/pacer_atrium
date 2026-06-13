@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import ThemeToggle from './ThemeToggle'
 
 const PACER_ROOMS = [
@@ -16,6 +17,7 @@ const PACER_ROOMS = [
 export default function LeftNav({
   currentRoom, onSelect, theme, onThemeChange,
   user, onSignOut, hasApiKey, onConnectClaude, isMobile, visibleRooms,
+  voiceMode, onToggleVoice,
 }) {
   const rooms = visibleRooms
     ? PACER_ROOMS.filter(r => visibleRooms.includes(r.id))
@@ -85,20 +87,42 @@ export default function LeftNav({
         {rooms.map(room => {
           const isActive = currentRoom === room.id
           return (
-            <li key={room.id}>
-              <button
-                onClick={() => onSelect(room.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
-                style={{
-                  background: isActive ? 'var(--bg-3)' : 'transparent',
-                  color: isActive ? 'var(--text-0)' : room.infra ? 'var(--text-3)' : 'var(--text-2)',
-                  borderLeft: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
-                }}
-              >
-                <span className="text-base leading-none" style={{ opacity: room.infra ? 0.6 : 1 }}>{room.icon}</span>
-                <span className="font-medium text-xs leading-tight">{room.label}</span>
-              </button>
-            </li>
+            <Fragment key={room.id}>
+              <li>
+                <button
+                  onClick={() => onSelect(room.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
+                  style={{
+                    background: isActive ? 'var(--bg-3)' : 'transparent',
+                    color: isActive ? 'var(--text-0)' : room.infra ? 'var(--text-3)' : 'var(--text-2)',
+                    borderLeft: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
+                  }}
+                >
+                  <span className="text-base leading-none" style={{ opacity: room.infra ? 0.6 : 1 }}>{room.icon}</span>
+                  <span className="font-medium text-xs leading-tight">{room.label}</span>
+                </button>
+              </li>
+              {room.id === 'doctrine' && onToggleVoice && (
+                <li>
+                  <button
+                    onClick={onToggleVoice}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
+                    style={{
+                      background: voiceMode ? '#052e1620' : 'transparent',
+                      color: voiceMode ? '#10b981' : 'var(--text-5)',
+                      borderLeft: `2px solid ${voiceMode ? '#10b981' : 'transparent'}`,
+                    }}
+                  >
+                    <span className="text-base leading-none" style={{ opacity: voiceMode ? 1 : 0.45 }}>
+                      {voiceMode ? '🔊' : '○'}
+                    </span>
+                    <span className="font-medium text-xs leading-tight">
+                      {voiceMode ? 'Voice On' : 'Voice Off'}
+                    </span>
+                  </button>
+                </li>
+              )}
+            </Fragment>
           )
         })}
       </ul>

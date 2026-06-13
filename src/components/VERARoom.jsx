@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { clusterObservations, analyzePatterns } from '../lib/veraAnalysis'
+import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
 const MUSE_CONSTELLATIONS = [
   { a: 'FleetFlow',           b: 'Isles',     note: 'movement as narrative' },
@@ -29,10 +30,11 @@ const PANEL_HEADER = {
   marginBottom: '16px',
 }
 
-export default function VERARoom({ observations = [], museWorks = [], apiKey, onConnectClaude, isMobile }) {
-  const [patterns,  setPatterns]  = useState(null)
-  const [analyzing, setAnalyzing] = useState(false)
+export default function VERARoom({ observations = [], museWorks = [], apiKey, onConnectClaude, isMobile, voiceMode }) {
+  const [patterns,     setPatterns]     = useState(null)
+  const [analyzing,    setAnalyzing]    = useState(false)
   const [analysisError, setAnalysisError] = useState(null)
+  const [veraSpeaking, setVeraSpeaking] = useState(false)
   const hasAnalyzed = useRef(false)
 
   const { byConstellation, byTheme, remaining } = clusterObservations(observations)
@@ -241,6 +243,29 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
                 ✦ Update key in Settings →
               </button>
             </div>
+          )}
+
+          {voiceMode && patterns?.emerging?.length > 0 && !analyzing && (
+            <button
+              disabled={veraSpeaking}
+              onClick={() => {
+                const text = patterns.emerging.map(p => `${p.name}. ${p.description}`).join(' ')
+                speakWithVoice(text, getVoiceConfig('vera'), {
+                  onStart: () => setVeraSpeaking(true),
+                  onEnd:   () => setVeraSpeaking(false),
+                  onError: () => setVeraSpeaking(false),
+                })
+              }}
+              style={{
+                background: 'none', border: '1px solid var(--border-1)',
+                color: veraSpeaking ? 'var(--text-5)' : 'var(--text-3)',
+                fontSize: '11px', padding: '5px 12px', borderRadius: '6px',
+                cursor: veraSpeaking ? 'default' : 'pointer',
+                fontFamily: 'inherit', marginBottom: '16px',
+              }}
+            >
+              {veraSpeaking ? '🔊 Speaking…' : '▶ Read patterns'}
+            </button>
           )}
 
           {patterns?.emerging?.map((p, i) => (
