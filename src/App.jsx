@@ -350,11 +350,12 @@ export default function App() {
     if (!forceRefresh && user) {
       try {
         const stored = await getLatestBrief(user.uid)
-        if (stored && new Date(stored.generatedAt).toDateString() === today) {
+        if (stored && new Date(stored.generatedAt).toDateString() === today && stored.version === 'v2') {
           // Reuse cached brief unless we now have Google data that it lacked
           const weHaveMore = (calendarIncluded && !stored.calendarIncluded) || (emailIncluded && !stored.emailIncluded)
           if (!weHaveMore) return stored.text
         }
+        // v1 brief (old Google-required prompt) is intentionally ignored — regenerate
       } catch (_) {} // network issue — fall through to generate
     }
 
