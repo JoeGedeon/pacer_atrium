@@ -55,7 +55,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(data),
     }
   } catch (err) {
-    console.error('[ai] upstream fetch failed:', err?.name, err?.message)
+    console.error('[ai] upstream fetch failed:', err?.name, err?.message, '| cause:', err?.cause?.message || err?.cause)
     return { statusCode: 502, body: JSON.stringify({ error: 'Upstream request failed' }) }
   }
 }
