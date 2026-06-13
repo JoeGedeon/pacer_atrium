@@ -121,6 +121,7 @@ export default function App() {
   const [arrivalSpeaking, setArrivalSpeaking] = useState(false)
   const hasArrived                          = useRef(false)
   const briefRefreshedForGoogle             = useRef(false)
+  const googleStateRef                      = useRef({ tokenData: null, emailData: null, calendarEvents: [] })
   const [googleReconnecting, setGoogleReconnecting]   = useState(false)
   const [googleReconnectFailed, setGoogleReconnectFailed] = useState(false)
 
@@ -302,8 +303,10 @@ export default function App() {
 
   async function buildArrivalText(forceRefresh = false) {
     const today = new Date().toDateString()
-    const calendarIncluded = !!googleTokenData && calendarEvents.length > 0
-    const emailIncluded    = !!googleTokenData && !!emailData
+    // Read from ref to get current values — avoids stale closure from when the effect fired
+    const { tokenData, emailData: currentEmail, calendarEvents: currentCalendar } = googleStateRef.current
+    const calendarIncluded = !!tokenData && currentCalendar.length > 0
+    const emailIncluded    = !!tokenData && !!currentEmail
 
     // Check Firestore for a brief generated today on any device
     if (!forceRefresh && user) {
@@ -325,8 +328,8 @@ export default function App() {
         const text = await generateInstitutionalPulse(
           {
             observations, productions, institutionEvents, creatorLogs,
-            emailContext:    emailIncluded    ? emailContextString(emailData)       : null,
-            calendarContext: calendarIncluded ? calendarContextString(calendarEvents) : null,
+            emailContext:    emailIncluded    ? emailContextString(currentEmail)    : null,
+            calendarContext: calendarIncluded ? calendarContextString(currentCalendar) : null,
           },
           apiKey
         )
@@ -406,6 +409,11 @@ export default function App() {
     setArrivalLoading(false)
   }
 
+  // Keep a ref current so buildArrivalText always reads latest Google state (avoids stale closure)
+  useEffect(() => {
+    googleStateRef.current = { tokenData: googleTokenData, emailData, calendarEvents }
+  }, [googleTokenData, emailData, calendarEvents]) // eslint-disable-line
+
   // ── Refresh Google data when token is valid ──────────────────────────────────
   useEffect(() => {
     if (!googleTokenData || isTokenExpired(googleTokenData)) return
@@ -418,17 +426,19 @@ export default function App() {
     })
   }, [googleTokenData]) // eslint-disable-line
 
-  // ── Refresh brief when Google data first arrives (handles slow network / late connect) ─
+  // ── Refresh brief when Google data first arrives ──────────────────────────────
+  // Always regenerate and write to Firestore so next session gets Google-enriched brief.
+  // Also updates the visible card if it's still showing.
   useEffect(() => {
     if (briefRefreshedForGoogle.current) return
     if (!emailData && calendarEvents.length === 0) return
     briefRefreshedForGoogle.current = true
-    if (arrivalState !== 'text' && arrivalState !== 'voice') return
-    if (arrivalLoading) return
-    setArrivalLoading(true)
-    buildArrivalText(true).then(text => { // force: we have better data than what was stored
-      setArrivalText(text || '')
-      setArrivalLoading(false)
+    buildArrivalText(true).then(text => {
+      if (!text) return
+      // Update UI if brief is still showing
+      if ((arrivalState === 'text' || arrivalState === 'voice') && !arrivalLoading) {
+        setArrivalText(text)
+      }
     })
   }, [emailData, calendarEvents]) // eslint-disable-line
 
