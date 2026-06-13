@@ -127,8 +127,9 @@ The subscription is the result of trust, not the beginning of it.
 
 ### Builder Readiness Gate
 - Three states: `locked` → `pending` → `approved`
-- Derived via `useMemo` from Firestore `kel_reviews` — NOT from local state
-- KEL approval only. No count-based or Settings-based unlock.
+- Derived via `useMemo` from `threads` (primary) or `kel_decisions` (fallback) — NOT from `kel_reviews`
+- Unlocked by any Human Gate approval on a KEL recommendation — not a separate review ceremony
+- Prior behavior (builder_readiness `kel_reviews`) retired — do not reintroduce
 
 ### Graduate Creation Rule
 - `createGraduate()` in `src/lib/db.js` — always emits `graduate_added` institution event

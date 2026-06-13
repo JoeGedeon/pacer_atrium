@@ -1,5 +1,6 @@
-export default function BuilderStudioRoom({ isMobile, builderReadiness, onNavigate }) {
+export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate }) {
   const px = isMobile ? 'px-6' : 'px-10'
+  const approvedThreads = threads.filter(t => t.decision === 'approved')
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
@@ -43,10 +44,42 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, onNaviga
                 Human Gate authorization confirmed
               </span>
             </div>
-            <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '28px' }}>
-              Builder Studio is active. Approved institutional decisions are ready to be converted
-              into executable plans. Every output produced here is traceable to the record that authorized it.
-            </p>
+
+            {approvedThreads.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                  textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
+                  Approved Decisions — Build from these
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {approvedThreads.map(t => (
+                    <div key={t.id} style={{
+                      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                      borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0',
+                      padding: '14px 18px',
+                    }}>
+                      <p style={{ color: 'var(--text-0)', fontSize: '13px',
+                        lineHeight: 1.6, marginBottom: '8px' }}>
+                        {t.recommendation}
+                      </p>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {t.domain && (
+                          <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{t.domain}</span>
+                        )}
+                        {t.outcome ? (
+                          <span style={{ color: '#10b981', fontSize: '10px' }}>Outcome recorded</span>
+                        ) : (
+                          <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                            Outcome pending
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{
               background: 'var(--bg-2)', border: '1px solid var(--border-1)',
               borderRadius: '8px', padding: '20px 24px',

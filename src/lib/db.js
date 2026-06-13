@@ -333,6 +333,56 @@ export async function createMultiManifestTest(uid, data) {
   return ref.id
 }
 
+// ── Thread Layer — links observation → recommendation → decision → outcome ──────
+// A thread is created when a KEL decision is recorded. It is the single record
+// that connects the observations that seeded the recommendation to the human
+// decision and, eventually, to the outcome.
+
+function threadColl(uid) { return collection(db, 'users', uid, 'threads') }
+
+export async function createThread(uid, data) {
+  const ref = await addDoc(threadColl(uid), {
+    observationIds: data.observationIds || [],
+    recommendation: data.recommendation,
+    reasoning:      data.reasoning      || null,
+    domain:         data.domain         || null,
+    confidence:     data.confidence     ?? null,
+    cited:          data.cited          || [],
+    decision:       data.decision,
+    decisionAt:     serverTimestamp(),
+    outcome:        null,
+    outcomeAt:      null,
+    outcomeNote:    null,
+  })
+  return ref.id
+}
+
+export async function updateThread(uid, threadId, patch) {
+  if (patch.outcomeAt) {
+    await updateDoc(doc(db, 'users', uid, 'threads', threadId), {
+      ...patch,
+      outcomeAt: serverTimestamp(),
+    })
+  } else {
+    await updateDoc(doc(db, 'users', uid, 'threads', threadId), patch)
+  }
+}
+
+export function listenThreads(uid, callback) {
+  const q = query(threadColl(uid), orderBy('decisionAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => {
+      const data = d.data()
+      return {
+        ...data,
+        id:         d.id,
+        decisionAt: data.decisionAt?.toDate?.() ?? new Date(),
+        outcomeAt:  data.outcomeAt?.toDate?.()  ?? null,
+      }
+    }))
+  })
+}
+
 // ── Graduate Registry — written only by Builder Studio, read everywhere ────────
 
 function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }

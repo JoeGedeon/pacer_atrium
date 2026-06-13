@@ -27,7 +27,7 @@ import { analyzeObservation, generateInstitutionalPulse } from './lib/claudeRout
 import { saveProviderKey } from './lib/anthropicProxy'
 import {
   listenObservations, createObservation, updateObservation,
-  listenMuseWorks, createKELDecision, listenGraduates,
+  listenMuseWorks, createKELDecision, listenKELDecisions, listenGraduates,
   createKELReview, listenKELReviews, updateKELReview,
   createInstitutionEvent, listenInstitutionEvents,
   listenCreatorLogs, createCreatorLog,
@@ -35,6 +35,7 @@ import {
   createProduction, listenProductions, updateProduction,
   incrementCampusStat, listenCampusStats,
   getLatestBrief, saveLatestBrief,
+  createThread, listenThreads,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -106,6 +107,8 @@ export default function App() {
   })
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
+  const [kelDecisions, setKelDecisions]           = useState([])
+  const [threads, setThreads]                     = useState([])
   const [institutionEvents, setInstitutionEvents] = useState([])
   const [creatorLogs, setCreatorLogs]             = useState([])
   const [productions, setProductions]             = useState([])
@@ -134,13 +137,15 @@ export default function App() {
   const [googleReconnecting, setGoogleReconnecting]   = useState(false)
   const [googleReconnectFailed, setGoogleReconnectFailed] = useState(false)
 
-  // Builder readiness derives from the ledger — not from local state
+  // Builder readiness derives from thread layer (primary) or kel_decisions (fallback)
+  // Unlocked by Human Gate approval on any KEL recommendation — not a separate review ceremony
   const builderReadiness = useMemo(() => {
-    const reviews = kelReviews.filter(r => r.requestType === 'builder_readiness')
-    if (reviews.some(r => r.status === 'approved')) return 'approved'
-    if (reviews.some(r => r.status === 'pending'))  return 'pending'
+    if (threads.some(t => t.decision === 'approved'))      return 'approved'
+    if (threads.length > 0)                                return 'pending'
+    if (kelDecisions.some(d => d.decision === 'approved')) return 'approved'
+    if (kelDecisions.length > 0)                           return 'pending'
     return 'locked'
-  }, [kelReviews])
+  }, [threads, kelDecisions])
 
   const campusConfig = profile ? (CAMPUS_TEMPLATES[profile.campusId] || CAMPUS_TEMPLATES.explorer) : null
   const visibleRooms = campusConfig?.rooms ?? null // null = all rooms (creator)
@@ -240,14 +245,16 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     migrateLocalStorage(user.uid)
-    const unsubObs     = listenObservations(user.uid, setObservations)
-    const unsubMuse    = listenMuseWorks(user.uid, setMuseWorks)
-    const unsubGrad    = listenGraduates(user.uid, setGraduates)
-    const unsubReviews = listenKELReviews(user.uid, setKelReviews)
-    const unsubEvents  = listenInstitutionEvents(user.uid, setInstitutionEvents)
-    const unsubLogs    = listenCreatorLogs(user.uid, setCreatorLogs)
-    const unsubProds   = listenProductions(user.uid, setProductions)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs(); unsubProds() }
+    const unsubObs       = listenObservations(user.uid, setObservations)
+    const unsubMuse      = listenMuseWorks(user.uid, setMuseWorks)
+    const unsubGrad      = listenGraduates(user.uid, setGraduates)
+    const unsubReviews   = listenKELReviews(user.uid, setKelReviews)
+    const unsubDecisions = listenKELDecisions(user.uid, setKelDecisions)
+    const unsubThreads   = listenThreads(user.uid, setThreads)
+    const unsubEvents    = listenInstitutionEvents(user.uid, setInstitutionEvents)
+    const unsubLogs      = listenCreatorLogs(user.uid, setCreatorLogs)
+    const unsubProds     = listenProductions(user.uid, setProductions)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -572,7 +579,17 @@ export default function App() {
 
   async function recordKELDecision(decisionData) {
     if (!user) return
-    await createKELDecision(user.uid, decisionData)
+    const { observationIds, ...kelData } = decisionData
+    await createKELDecision(user.uid, kelData)
+    await createThread(user.uid, {
+      observationIds: observationIds || [],
+      recommendation: decisionData.recommendation,
+      reasoning:      decisionData.reasoning      || null,
+      domain:         decisionData.domain         || null,
+      confidence:     decisionData.confidence     ?? null,
+      cited:          decisionData.cited          || [],
+      decision:       decisionData.decision,
+    })
   }
 
   async function requestBuilderReview() {
@@ -832,6 +849,7 @@ export default function App() {
           <BuilderStudioRoom
             isMobile={isMobile}
             builderReadiness={builderReadiness}
+            threads={threads}
             onNavigate={setCurrentRoom}
           />
         )}

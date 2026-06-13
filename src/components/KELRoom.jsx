@@ -28,13 +28,14 @@ export default function KELRoom({
   observations = [], apiKey, onConnectClaude, onDecision,
   kelReviews = [], onApproveReview, onDenyReview, isMobile, voiceMode,
 }) {
-  const [rec,          setRec]          = useState(null)
-  const [reading,      setReading]      = useState(false)
-  const [kelError,     setKelError]     = useState(null)
-  const [decided,      setDecided]      = useState(null)
-  const [denyingId,    setDenyingId]    = useState(null)
+  const [rec,           setRec]           = useState(null)
+  const [reading,       setReading]       = useState(false)
+  const [kelError,      setKelError]      = useState(null)
+  const [decided,       setDecided]       = useState(null)
+  const [denyingId,     setDenyingId]     = useState(null)
   const [denyRationale, setDenyRationale] = useState('')
-  const [kelSpeaking,  setKelSpeaking]  = useState(false)
+  const [kelSpeaking,   setKelSpeaking]   = useState(false)
+  const [obsIdsAtRequest, setObsIdsAtRequest] = useState([])
 
   const pendingReviews = kelReviews.filter(r => r.status === 'pending')
 
@@ -47,6 +48,7 @@ export default function KELRoom({
     setKelError(null)
     setRec(null)
     setDecided(null)
+    setObsIdsAtRequest(validObs.map(o => o.id).filter(Boolean))
     try {
       const result = await requestKELRecommendation(validObs, apiKey)
       setRec(result)
@@ -61,7 +63,7 @@ export default function KELRoom({
   function handleDecision(decision) {
     if (!rec || decided) return
     setDecided(decision)
-    onDecision({ ...rec, decision })
+    onDecision({ ...rec, decision, observationIds: obsIdsAtRequest })
   }
 
   const confidence = rec ? Math.round((rec.confidence ?? 0) * 100) : 0
