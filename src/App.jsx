@@ -150,6 +150,13 @@ export default function App() {
     return 'locked'
   }, [threads, kelDecisions])
 
+  // The thread linked to the currently selected observation (if any)
+  const activeThread = useMemo(() =>
+    activeObservationId
+      ? threads.find(t => t.observationIds?.includes(activeObservationId)) ?? null
+      : null
+  , [threads, activeObservationId])
+
   const campusConfig = profile ? (CAMPUS_TEMPLATES[profile.campusId] || CAMPUS_TEMPLATES.explorer) : null
   const visibleRooms = campusConfig?.rooms ?? null // null = all rooms (creator)
 
@@ -809,6 +816,7 @@ export default function App() {
                       uid={user?.uid}
                       isMobile={isMobile}
                       onBack={isMobile ? () => setActiveObservationId(null) : null}
+                      thread={activeThread}
                     />
                   )
                   : (
