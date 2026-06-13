@@ -17,8 +17,12 @@ export default function APIKeyGate({ onKey }) {
     try {
       const bundle = await saveProviderKey(k)
       onKey(bundle)
-    } catch {
-      setError('Failed to secure key. Check your connection and try again.')
+    } catch (err) {
+      const msg = err?.message || ''
+      const isServer = msg.includes('Server') || msg.includes('configured') || msg.includes('500')
+      setError(isServer
+        ? 'Server not configured. Ask the administrator to set ENCRYPTION_SECRET.'
+        : 'Failed to secure key. Check your connection and try again.')
       setSaving(false)
     }
   }

@@ -65,8 +65,12 @@ function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, o
       onSave(bundle)
       setDraft('')
       setOpen(false)
-    } catch {
-      setSaveError('Failed to save. Check your connection and try again.')
+    } catch (err) {
+      const msg = err?.message || ''
+      const isServer = msg.includes('Server') || msg.includes('configured') || msg.includes('500')
+      setSaveError(isServer
+        ? 'Server not configured. Ask the administrator to set ENCRYPTION_SECRET.'
+        : 'Failed to save. Check your connection and try again.')
     } finally {
       setSaving(false)
     }
