@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import { videoEmbed, audioEmbed } from './TheaterRoom'
+import RoomSubNav from './RoomSubNav'
 
 const SIGNAL_TYPES = [
   { id: 'revenue',       label: 'Revenue Risk',       color: '#ef4444', pattern: /revenue|finance|billing|money|cost|price|budget/i },
@@ -25,11 +26,221 @@ const SECTION = {
 
 const px = 'px-4 md:px-6'
 
+const OPSCORE_TABS = [
+  { id: 'attention',  label: '🎯 Attention' },
+  { id: 'broadcast',  label: '📡 Broadcast' },
+  { id: 'assets',     label: '🎬 Assets' },
+]
+
+// ── Broadcast Panel ──────────────────────────────────────────────────────────
+
+function BroadcastPanel({ featuredBroadcast, isMobile }) {
+  const padX = isMobile ? 'px-4' : 'px-8'
+
+  if (!featuredBroadcast) {
+    return (
+      <div className={`flex-1 overflow-y-auto ${padX} py-6`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '360px' }}>
+          <p style={{ fontSize: '40px', marginBottom: '16px' }}>📡</p>
+          <p style={{ color: 'var(--text-2)', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>No broadcast active.</p>
+          <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>
+            Publish a media asset from Theater → 🎬 Media to begin broadcasting here.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const { type, asset } = featuredBroadcast
+  const videoE = videoEmbed(asset.videoUrl)
+  const audioE = type === 'media' ? audioEmbed(asset.audioUrl) : null
+  const transcript = type === 'media' ? asset.transcript : null
+
+  return (
+    <div className="flex-1 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Title bar */}
+      <div className={`${padX} py-5`} style={{ borderBottom: '1px solid var(--border-0)' }}>
+        <div style={{ display: 'flex', align: 'flex-start', gap: '10px', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>
+              📡 Live Broadcast
+            </p>
+            <h2 style={{ color: 'var(--text-0)', fontSize: '20px', fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+              {asset.title || 'Untitled'}
+            </h2>
+          </div>
+          <p style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
+            {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </p>
+        </div>
+      </div>
+
+      {/* Video player — full width, no padding */}
+      {videoE && (
+        <div style={{ background: '#000', flexShrink: 0 }}>
+          {videoE.type === 'iframe' ? (
+            <iframe
+              src={videoE.src}
+              style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <video
+              controls
+              src={videoE.src}
+              style={{ width: '100%', display: 'block', maxHeight: '60vh', objectFit: 'contain' }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Audio track */}
+      {audioE && (
+        <div className={`${padX} py-4`} style={{ borderTop: '1px solid var(--border-0)', background: 'var(--bg-1)', flexShrink: 0 }}>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>🔊 Audio Track</p>
+          {audioE.type === 'iframe' ? (
+            <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
+          ) : (
+            <audio controls src={audioE.src} style={{ width: '100%', display: 'block' }} />
+          )}
+        </div>
+      )}
+
+      {/* Script */}
+      {transcript && (
+        <div className={`${padX} py-5`} style={{ borderTop: '1px solid var(--border-0)' }}>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>📄 Script</p>
+          <p style={{ color: 'var(--text-2)', fontSize: '14px', lineHeight: 1.85, whiteSpace: 'pre-wrap', maxWidth: '680px' }}>
+            {transcript}
+          </p>
+        </div>
+      )}
+
+      {/* Nothing to play message */}
+      {!videoE && !audioE && !transcript && (
+        <div className={`${padX} py-6`}>
+          <p style={{ color: 'var(--text-4)', fontSize: '12px', fontStyle: 'italic' }}>
+            No media attached to this broadcast yet. Open Theater → 🎬 Media to add a video or audio file.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Assets Panel ─────────────────────────────────────────────────────────────
+
+function AssetsPanel({ mediaAssets, productions, isMobile }) {
+  const padX = isMobile ? 'px-4' : 'px-8'
+
+  const publishedMedia = [...mediaAssets]
+    .filter(a => a.publishedAt)
+    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+
+  const publishedProds = [...productions]
+    .filter(p => p.publishedAt && p.videoUrl)
+    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+
+  if (publishedMedia.length === 0 && publishedProds.length === 0) {
+    return (
+      <div className={`flex-1 overflow-y-auto ${padX} py-6`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '360px' }}>
+          <p style={{ fontSize: '36px', marginBottom: '12px' }}>🎬</p>
+          <p style={{ color: 'var(--text-2)', fontSize: '14px', fontWeight: 600, marginBottom: '6px' }}>No published assets yet.</p>
+          <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>
+            Publish from Theater → 🎬 Media (Human Gate approve → 📡 Broadcast on OpsCore).
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${padX} py-5`}>
+      <div style={{ maxWidth: '700px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+        {publishedMedia.map(asset => {
+          const videoE = videoEmbed(asset.videoUrl)
+          const audioE = audioEmbed(asset.audioUrl)
+          return (
+            <div key={asset.id} style={{ border: '1px solid #10b98125', borderLeft: '3px solid #10b981', borderRadius: '0 10px 10px 0', overflow: 'hidden', background: '#041208' }}>
+              <div style={{ padding: '14px 18px', borderBottom: (videoE || audioE) ? '1px solid #10b98112' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                <div>
+                  <p style={{ color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    {asset.videoUrl ? '🎬 Media Asset' : '🔊 Audio Asset'}
+                  </p>
+                  <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 600, lineHeight: 1.3 }}>{asset.title}</p>
+                </div>
+                <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
+                  {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              {videoE && (
+                <div style={{ background: '#000' }}>
+                  {videoE.type === 'iframe' ? (
+                    <iframe src={videoE.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  ) : (
+                    <video controls src={videoE.src} style={{ width: '100%', display: 'block', maxHeight: '280px', objectFit: 'contain' }} />
+                  )}
+                </div>
+              )}
+              {audioE && (
+                <div style={{ background: 'var(--bg-2)', padding: audioE.type === 'iframe' ? '0' : '10px 16px' }}>
+                  {audioE.type === 'iframe' ? (
+                    <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
+                  ) : (
+                    <audio controls src={audioE.src} style={{ width: '100%', display: 'block' }} />
+                  )}
+                </div>
+              )}
+              {asset.transcript && (
+                <div style={{ padding: '12px 18px', borderTop: '1px solid #10b98112' }}>
+                  <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65 }}>
+                    {asset.transcript.length > 200 ? asset.transcript.slice(0, 200) + '…' : asset.transcript}
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {publishedProds.map(prod => {
+          const videoE = videoEmbed(prod.videoUrl)
+          if (!videoE) return null
+          return (
+            <div key={prod.id} style={{ border: '1px solid #10b98125', borderLeft: '3px solid #10b981', borderRadius: '0 10px 10px 0', overflow: 'hidden', background: '#041208' }}>
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid #10b98112', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                <div>
+                  <p style={{ color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>📡 Theater Production</p>
+                  <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 600, lineHeight: 1.3 }}>{prod.title || 'Untitled Production'}</p>
+                </div>
+                <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
+                  {new Date(prod.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <div style={{ background: '#000' }}>
+                {videoE.type === 'iframe' ? (
+                  <iframe src={videoE.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                ) : (
+                  <video controls src={videoE.src} style={{ width: '100%', display: 'block', maxHeight: '280px', objectFit: 'contain' }} />
+                )}
+              </div>
+            </div>
+          )
+        })}
+
+      </div>
+    </div>
+  )
+}
+
 const day  = 86400000
 const week = 7 * day
 
 export default function OpsCoreRoom({ observations = [], threads = [], productions = [], mediaAssets = [], isMobile }) {
   const [briefing, setBriefing] = useState(false)
+  const [view, setView] = useState('attention')
   const now = Date.now()
 
   // Signal counts by type
@@ -239,7 +450,12 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
         </div>
       </div>
 
-      {/* Body */}
+      <RoomSubNav tabs={OPSCORE_TABS} activeTab={view} onSelect={setView} />
+
+      {view === 'broadcast' && <BroadcastPanel featuredBroadcast={featuredBroadcast} isMobile={isMobile} />}
+      {view === 'assets'    && <AssetsPanel mediaAssets={mediaAssets} productions={productions} isMobile={isMobile} />}
+
+      {view === 'attention' && (
       <div className={`flex-1 overflow-y-auto ${px} py-5`} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
         {/* ── LEAD SIGNAL / FEATURED BROADCAST — command card ─────────────── */}
@@ -526,6 +742,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
         </div>
 
       </div>
+      )}
     </div>
   )
 }

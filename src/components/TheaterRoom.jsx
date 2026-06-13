@@ -1376,154 +1376,167 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
       </button>
 
       {expanded && edit && (
-        <div style={{ padding: '16px', borderTop: '1px solid #a855f720', background: 'var(--bg-1)' }}>
+        <div>
 
-          {/* Title */}
-          <div style={{ marginBottom: '12px' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>Title</p>
-            <input
-              value={edit.title}
-              onChange={e => setEdit(p => ({ ...p, title: e.target.value }))}
-              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-0)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Video */}
-          <div style={{ marginBottom: '12px' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🎬 Video</p>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input
-                value={edit.videoUrl}
-                onChange={e => setEdit(p => ({ ...p, videoUrl: e.target.value }))}
-                placeholder="YouTube, Vimeo, or direct .mp4 link…"
-                style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
-              />
-              <input ref={videoInputRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={handleVideoUpload} />
-              <button
-                onClick={() => videoInputRef.current?.click()}
-                disabled={videoUploading}
-                style={{ flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: videoUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: videoUploading ? 'default' : 'pointer' }}
-              >
-                {videoUploading ? 'Uploading…' : 'Upload'}
-              </button>
+          {/* ── PLAYER FIRST — see it before you edit it ──────────────────── */}
+          {(edit.videoUrl || asset.videoUrl) && (
+            <div style={{ background: '#000', borderTop: '1px solid #a855f720' }}>
+              <VideoPlayer url={edit.videoUrl || asset.videoUrl} />
             </div>
-            {(edit.videoUrl || asset.videoUrl) && (
-              <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-1)', background: '#000' }}>
-                <VideoPlayer url={edit.videoUrl || asset.videoUrl} />
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Audio */}
-          <div style={{ marginBottom: '12px' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🔊 Audio</p>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input
-                value={edit.audioUrl}
-                onChange={e => setEdit(p => ({ ...p, audioUrl: e.target.value }))}
-                placeholder="SoundCloud URL or direct .mp3 link…"
-                style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
-              />
-              <input ref={audioInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleAudioUpload} />
-              <button
-                onClick={() => audioInputRef.current?.click()}
-                disabled={audioUploading}
-                style={{ flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: audioUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: audioUploading ? 'default' : 'pointer' }}
-              >
-                {audioUploading ? 'Uploading…' : 'Upload'}
-              </button>
+          {(edit.audioUrl || asset.audioUrl) && (
+            <div style={{ borderTop: '1px solid #a855f710', background: 'var(--bg-2)', padding: '12px 16px' }}>
+              <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>🔊 Audio</p>
+              <AudioPlayer url={edit.audioUrl || asset.audioUrl} />
             </div>
-            {(edit.audioUrl || asset.audioUrl) && (
-              <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-1)', background: 'var(--bg-2)' }}>
-                <AudioPlayer url={edit.audioUrl || asset.audioUrl} />
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Transcript / Script */}
-          <div style={{ marginBottom: '12px' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>📄 Script / Transcript</p>
-            <textarea
-              value={edit.transcript}
-              onChange={e => setEdit(p => ({ ...p, transcript: e.target.value }))}
-              placeholder="Write or paste the script, transcript, or supporting text…"
-              rows={4}
-              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
-            />
-          </div>
+          {(edit.transcript || asset.transcript) && (
+            <div style={{ padding: '14px 16px', borderTop: '1px solid var(--border-0)', background: 'var(--bg-1)' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>📄 Script</p>
+              <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                {(edit.transcript || asset.transcript).length > 300
+                  ? (edit.transcript || asset.transcript).slice(0, 300) + '…'
+                  : (edit.transcript || asset.transcript)}
+              </p>
+            </div>
+          )}
 
-          {/* Human Gate */}
-          <div style={{ marginBottom: '14px' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '7px' }}>👤 Human Gate</p>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {[
-                { id: 'pending',  label: 'Pending',  color: '#f59e0b' },
-                { id: 'approved', label: 'Approved', color: '#10b981' },
-                { id: 'denied',   label: 'Denied',   color: '#ef4444' },
-              ].map(gate => (
-                <button
-                  key={gate.id}
-                  onClick={() => setEdit(p => ({ ...p, humanGateStatus: p.humanGateStatus === gate.id ? '' : gate.id }))}
-                  style={{
-                    padding: '5px 12px', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                    background: edit.humanGateStatus === gate.id ? gate.color + '15' : 'var(--bg-2)',
-                    border: `1px solid ${edit.humanGateStatus === gate.id ? gate.color : 'var(--border-2)'}`,
-                    color: edit.humanGateStatus === gate.id ? gate.color : 'var(--text-4)',
-                  }}
-                >
-                  {gate.label}
+          {/* ── EDIT FIELDS — below the player ───────────────────────────── */}
+          <div style={{ padding: '16px', borderTop: '1px solid var(--border-0)', background: 'var(--bg-1)' }}>
+
+            {/* Title */}
+            <div style={{ marginBottom: '12px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>Title</p>
+              <input
+                value={edit.title}
+                onChange={e => setEdit(p => ({ ...p, title: e.target.value }))}
+                style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-0)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+              />
+            </div>
+
+            {/* Video URL + upload */}
+            <div style={{ marginBottom: '10px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🎬 Video URL</p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  value={edit.videoUrl}
+                  onChange={e => setEdit(p => ({ ...p, videoUrl: e.target.value }))}
+                  placeholder="YouTube, Vimeo, or .mp4 link…"
+                  style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                />
+                <input ref={videoInputRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={handleVideoUpload} />
+                <button onClick={() => videoInputRef.current?.click()} disabled={videoUploading}
+                  style={{ flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: videoUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: videoUploading ? 'default' : 'pointer' }}>
+                  {videoUploading ? 'Uploading…' : 'Upload'}
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid var(--border-0)' }}>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                background: saving ? 'var(--bg-2)' : '#041208',
-                border: `1px solid ${saving ? 'var(--border-1)' : '#10b98140'}`,
-                borderRadius: '6px', padding: '7px 16px',
-                color: saving ? 'var(--text-5)' : '#10b981',
-                fontSize: '11px', fontWeight: 600, cursor: saving ? 'default' : 'pointer',
-              }}
-            >
-              {saving ? 'Saving…' : 'Save ✓'}
-            </button>
-          </div>
+            {/* Audio URL + upload */}
+            <div style={{ marginBottom: '12px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🔊 Audio URL</p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  value={edit.audioUrl}
+                  onChange={e => setEdit(p => ({ ...p, audioUrl: e.target.value }))}
+                  placeholder="SoundCloud or .mp3 link…"
+                  style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                />
+                <input ref={audioInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleAudioUpload} />
+                <button onClick={() => audioInputRef.current?.click()} disabled={audioUploading}
+                  style={{ flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: audioUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: audioUploading ? 'default' : 'pointer' }}>
+                  {audioUploading ? 'Uploading…' : 'Upload'}
+                </button>
+              </div>
+            </div>
 
-          {/* Publish to OpsCore — only when approved and not yet published */}
-          {edit.humanGateStatus === 'approved' && !asset.publishedAt && (
-            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98118' }}>
+            {/* Transcript / Script */}
+            <div style={{ marginBottom: '12px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>📄 Script / Transcript</p>
+              <textarea
+                value={edit.transcript}
+                onChange={e => setEdit(p => ({ ...p, transcript: e.target.value }))}
+                placeholder="Write or paste the script, transcript, or supporting text…"
+                rows={4}
+                style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+              />
+            </div>
+
+            {/* Human Gate */}
+            <div style={{ marginBottom: '14px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '7px' }}>👤 Human Gate</p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[
+                  { id: 'pending',  label: 'Pending',  color: '#f59e0b' },
+                  { id: 'approved', label: 'Approved', color: '#10b981' },
+                  { id: 'denied',   label: 'Denied',   color: '#ef4444' },
+                ].map(gate => (
+                  <button
+                    key={gate.id}
+                    onClick={() => setEdit(p => ({ ...p, humanGateStatus: p.humanGateStatus === gate.id ? '' : gate.id }))}
+                    style={{
+                      padding: '5px 12px', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                      background: edit.humanGateStatus === gate.id ? gate.color + '15' : 'var(--bg-2)',
+                      border: `1px solid ${edit.humanGateStatus === gate.id ? gate.color : 'var(--border-2)'}`,
+                      color: edit.humanGateStatus === gate.id ? gate.color : 'var(--text-4)',
+                    }}
+                  >
+                    {gate.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Save */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid var(--border-0)' }}>
               <button
-                onClick={handlePublish}
-                disabled={publishing}
+                onClick={handleSave}
+                disabled={saving}
                 style={{
-                  width: '100%', background: publishing ? 'var(--bg-2)' : '#041208',
-                  border: `1px solid ${publishing ? 'var(--border-1)' : '#10b98140'}`,
-                  borderRadius: '7px', padding: '10px 16px',
-                  color: publishing ? 'var(--text-5)' : '#10b981',
-                  fontSize: '12px', fontWeight: 700, cursor: publishing ? 'default' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  background: saving ? 'var(--bg-2)' : '#041208',
+                  border: `1px solid ${saving ? 'var(--border-1)' : '#10b98140'}`,
+                  borderRadius: '6px', padding: '7px 16px',
+                  color: saving ? 'var(--text-5)' : '#10b981',
+                  fontSize: '11px', fontWeight: 600, cursor: saving ? 'default' : 'pointer',
                 }}
               >
-                {publishing ? 'Publishing…' : '📡 Broadcast on OpsCore'}
+                {saving ? 'Saving…' : 'Save ✓'}
               </button>
             </div>
-          )}
 
-          {/* Published confirmation */}
-          {asset.publishedAt && (
-            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98115', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              <span style={{ color: '#10b981', fontSize: '11px', fontWeight: 600 }}>✓ Broadcasting on OpsCore</span>
-              <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>
-                · {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-            </div>
-          )}
+            {/* Publish gate — approved and not yet published */}
+            {edit.humanGateStatus === 'approved' && !asset.publishedAt && (
+              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98118' }}>
+                <button
+                  onClick={handlePublish}
+                  disabled={publishing}
+                  style={{
+                    width: '100%', background: publishing ? 'var(--bg-2)' : '#041208',
+                    border: `1px solid ${publishing ? 'var(--border-1)' : '#10b98140'}`,
+                    borderRadius: '7px', padding: '10px 16px',
+                    color: publishing ? 'var(--text-5)' : '#10b981',
+                    fontSize: '12px', fontWeight: 700, cursor: publishing ? 'default' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  }}
+                >
+                  {publishing ? 'Publishing…' : '📡 Broadcast on OpsCore'}
+                </button>
+              </div>
+            )}
 
+            {/* Published confirmation */}
+            {asset.publishedAt && (
+              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98115', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <span style={{ color: '#10b981', fontSize: '11px', fontWeight: 600 }}>✓ Broadcasting on OpsCore</span>
+                <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+                  · {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
     </div>
@@ -1638,6 +1651,22 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
               {audioUploading ? 'Uploading…' : '↑ Upload'}
             </button>
           </div>
+
+          {/* Live preview — appears as soon as a valid URL is entered */}
+          {(form.videoUrl || form.audioUrl) && (
+            <div style={{ marginBottom: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #a855f720' }}>
+              {form.videoUrl && (
+                <div style={{ background: '#000' }}>
+                  <VideoPlayer url={form.videoUrl} />
+                </div>
+              )}
+              {form.audioUrl && (
+                <div style={{ background: 'var(--bg-1)', padding: '10px 14px' }}>
+                  <AudioPlayer url={form.audioUrl} />
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             onClick={handleCreate}
