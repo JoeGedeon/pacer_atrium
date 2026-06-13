@@ -28,6 +28,26 @@ export function listenCampusStats(callback) {
   )
 }
 
+// ── Morning Brief ─────────────────────────────────────────────────────────────
+// One document per user. All devices read the same brief until it expires.
+
+const BRIEF_DOC = (uid) => doc(db, 'users', uid, 'briefs', 'latest')
+
+export async function getLatestBrief(uid) {
+  const snap = await getDoc(BRIEF_DOC(uid))
+  return snap.exists() ? snap.data() : null
+}
+
+export async function saveLatestBrief(uid, { text, calendarIncluded, emailIncluded }) {
+  await setDoc(BRIEF_DOC(uid), {
+    text,
+    generatedAt: new Date().toISOString(),
+    calendarIncluded: !!calendarIncluded,
+    emailIncluded: !!emailIncluded,
+    version: 'v1',
+  })
+}
+
 // ── User Profile ─────────────────────────────────────────────────────────────
 
 const PROFILE_DOC = (uid) => doc(db, 'users', uid, 'profile', 'campus')

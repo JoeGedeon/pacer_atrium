@@ -33,6 +33,7 @@ import {
   getUserProfile, createUserProfile, updateUserProfile,
   createProduction, listenProductions, updateProduction,
   incrementCampusStat, listenCampusStats,
+  getLatestBrief, saveLatestBrief,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -268,21 +269,45 @@ export default function App() {
     return name ? `${salutation}, ${name}.` : `${salutation}.`
   }
 
-  async function buildArrivalText() {
+  async function buildArrivalText(forceRefresh = false) {
+    const today = new Date().toDateString()
+    const calendarIncluded = !!googleTokenData && calendarEvents.length > 0
+    const emailIncluded    = !!googleTokenData && !!emailData
+
+    // Check Firestore for a brief generated today on any device
+    if (!forceRefresh && user) {
+      try {
+        const stored = await getLatestBrief(user.uid)
+        if (stored && new Date(stored.generatedAt).toDateString() === today) {
+          // Only reuse if the stored brief had at least as much data as we have now
+          const storedHasCalendar = stored.calendarIncluded
+          const storedHasEmail    = stored.emailIncluded
+          const weHaveMore = (calendarIncluded && !storedHasCalendar) || (emailIncluded && !storedHasEmail)
+          if (!weHaveMore) return stored.text
+        }
+      } catch (_) {} // network issue — fall through to generate
+    }
+
+    // Generate fresh
     try {
       if (apiKey) {
         const text = await generateInstitutionalPulse(
           {
             observations, productions, institutionEvents, creatorLogs,
-            emailContext:    googleTokenData ? emailContextString(emailData) : null,
-            calendarContext: googleTokenData ? calendarContextString(calendarEvents) : null,
+            emailContext:    emailIncluded    ? emailContextString(emailData)       : null,
+            calendarContext: calendarIncluded ? calendarContextString(calendarEvents) : null,
           },
           apiKey
         )
-        if (text) return text
+        if (text) {
+          // Write to Firestore so all devices see the same brief
+          if (user) saveLatestBrief(user.uid, { text, calendarIncluded, emailIncluded }).catch(() => {})
+          return text
+        }
       }
     } catch (_) { /* fall through to static */ }
-    // Static fallback: build a brief sentence from live counts
+
+    // Static fallback
     const unrouted = observations.filter(o => !o.destination).length
     const pending  = productions.filter(p => p.humanGateStatus === 'pending' || (p.status === 'staged' && !p.humanGateStatus)).length
     const parts = []
@@ -370,7 +395,7 @@ export default function App() {
     if (arrivalState !== 'text' && arrivalState !== 'voice') return
     if (arrivalLoading) return
     setArrivalLoading(true)
-    buildArrivalText().then(text => {
+    buildArrivalText(true).then(text => { // force: we have better data than what was stored
       setArrivalText(text || '')
       setArrivalLoading(false)
     })
@@ -785,7 +810,7 @@ export default function App() {
           onSpeak={() => speakArrivalText(arrivalText)}
           onRefresh={arrivalState !== 'asking' ? async () => {
             setArrivalLoading(true)
-            const text = await buildArrivalText()
+            const text = await buildArrivalText(true) // force: bypass cache, write new brief
             setArrivalText(text || '')
             setArrivalLoading(false)
           } : undefined}
