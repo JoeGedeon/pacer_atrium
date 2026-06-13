@@ -121,6 +121,8 @@ export default function App() {
   const [arrivalSpeaking, setArrivalSpeaking] = useState(false)
   const hasArrived                          = useRef(false)
   const briefRefreshedForGoogle             = useRef(false)
+  const [googleReconnecting, setGoogleReconnecting]   = useState(false)
+  const [googleReconnectFailed, setGoogleReconnectFailed] = useState(false)
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -132,6 +134,15 @@ export default function App() {
 
   const campusConfig = profile ? (CAMPUS_TEMPLATES[profile.campusId] || CAMPUS_TEMPLATES.explorer) : null
   const visibleRooms = campusConfig?.rooms ?? null // null = all rooms (creator)
+
+  // Google connection status — 4 states so UI never lies during async operations
+  const googleStatus = useMemo(() => {
+    if (!profile || !profile.googleConnected) return 'disconnected'
+    if (googleTokenData && !isTokenExpired(googleTokenData)) return 'connected'
+    if (googleReconnecting)    return 'reconnecting'
+    if (googleReconnectFailed) return 'reconnect-required'
+    return 'reconnecting' // profile connected, token absent, reconnect not yet fired
+  }, [profile, googleTokenData, googleReconnecting, googleReconnectFailed])
 
   // Derived: merge Firestore data with ephemeral per-session analyzing state
   const _active = observations.find(o => o.id === activeObservationId) || null
@@ -148,6 +159,8 @@ export default function App() {
     briefRefreshedForGoogle.current = false
     setArrivalState(null)
     setArrivalText('')
+    setGoogleReconnecting(false)
+    setGoogleReconnectFailed(false)
     if (isCreator(user)) {
       const creatorBase = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
       setProfile(creatorBase) // instant access — no loading state
@@ -194,27 +207,35 @@ export default function App() {
   // ── Silent Google reconnect on login ─────────────────────────────────────────
   // If Firestore says this user has authorized Google before, try to get a token
   // without showing a popup. Works when the Google session is still alive in browser.
-  // Falls back gracefully — no error shown to user, button stays available.
+  // On failure: shows "Reconnect required" — never wipes the Firestore flag.
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return
     if (!profile || profile.googleConnected !== true) return
-    if (googleTokenData && !isTokenExpired(googleTokenData)) return // already have a valid token
+    if (googleTokenData && !isTokenExpired(googleTokenData)) return
     const hint = profile.googleEmail || undefined
+    setGoogleReconnecting(true)
+    setGoogleReconnectFailed(false)
     requestGoogleTokenSilent(GOOGLE_CLIENT_ID, hint)
       .then(tokenData => {
         setGoogleTokenData(tokenData)
         sessionStorage.setItem('pacer_google_token', JSON.stringify(tokenData))
+        setGoogleReconnecting(false)
         return Promise.allSettled([
           fetchEmailSummary(tokenData.access_token),
           fetchTodayEvents(tokenData.access_token),
         ])
       })
-      .then(([email, calendar]) => {
-        if (!email || !calendar) return
+      .then(results => {
+        if (!results) return
+        const [email, calendar] = results
         if (email.status === 'fulfilled')    setEmailData(email.value)
         if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
       })
-      .catch(() => {}) // silent — user will see Connect button if needed
+      .catch(() => {
+        setGoogleReconnecting(false)
+        setGoogleReconnectFailed(true)
+        // Do NOT clear profile.googleConnected — user did not disconnect intentionally
+      })
   }, [profile?.googleConnected, profile?.googleEmail]) // eslint-disable-line
 
   // ── Google / Gmail connect ────────────────────────────────────────────────────
@@ -764,7 +785,7 @@ export default function App() {
               updateUserProfile(user.uid, { aiProvider: provider })
               setProfile(prev => prev ? { ...prev, aiProvider: provider } : prev)
             }}
-            googleConnected={!!googleTokenData?.access_token}
+            googleStatus={googleStatus}
             onConnectGmail={GOOGLE_CLIENT_ID ? handleConnectGmail : null}
             onDisconnectGmail={handleDisconnectGmail}
           />

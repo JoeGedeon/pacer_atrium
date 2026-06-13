@@ -234,9 +234,10 @@ export default function SettingsRoom({
   middayPulseMode = 'off', onMiddayPulseModeChange,
   eveningReviewMode = 'off', onEveningReviewModeChange,
   onPreferredLanguageChange, onNativeLanguageChange, onAiProviderChange,
-  googleConnected = false, onConnectGmail, onDisconnectGmail,
+  googleStatus = 'disconnected', onConnectGmail, onDisconnectGmail,
 }) {
-  const anthropicConnected  = !!apiKey
+  const anthropicConnected = !!apiKey
+  const googleConnected    = googleStatus === 'connected'
   const [rhythmSaved, setRhythmSaved] = useState(false)
   const rhythmSavedTimer = useRef(null)
   const [testingRoom, setTestingRoom] = useState(null)
@@ -464,31 +465,54 @@ export default function SettingsRoom({
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 16px', borderRadius: '8px',
             background: 'var(--bg-1)', border: '1px solid var(--border-0)',
-            marginBottom: '10px',
+            marginBottom: '10px', gap: '12px',
           }}>
-            <div>
-              <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>
-                Google
-              </p>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 500 }}>Google</p>
+                {googleStatus === 'reconnecting' && (
+                  <span style={{ fontSize: '9px', color: 'var(--text-5)', fontStyle: 'italic' }}>reconnecting…</span>
+                )}
+                {googleStatus === 'reconnect-required' && (
+                  <span style={{ fontSize: '9px', color: '#f59e0b', fontWeight: 600 }}>session expired</span>
+                )}
+              </div>
               <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
-                {googleConnected ? 'Gmail and Calendar connected' : 'Connect to include email and calendar in Morning Brief'}
+                {googleStatus === 'connected'          && 'Gmail and Calendar connected'}
+                {googleStatus === 'reconnecting'       && 'Restoring connection…'}
+                {googleStatus === 'reconnect-required' && 'Tap Reconnect to restore access'}
+                {googleStatus === 'disconnected'       && 'Connect to include email and calendar in Morning Brief'}
               </p>
             </div>
-            {googleConnected ? (
-              <button onClick={onDisconnectGmail} style={{
-                background: 'none', border: '1px solid var(--border-1)',
-                color: 'var(--text-3)', fontSize: '11px', cursor: 'pointer',
-                padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
-              }}>Disconnect</button>
-            ) : (
-              <button onClick={onConnectGmail} disabled={!onConnectGmail} style={{
-                background: onConnectGmail ? '#0d1a2e' : 'var(--bg-2)',
-                border: `1px solid ${onConnectGmail ? '#1d4ed8' : 'var(--border-1)'}`,
-                color: onConnectGmail ? '#93c5fd' : 'var(--text-5)',
-                fontSize: '11px', cursor: onConnectGmail ? 'pointer' : 'default',
-                padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
-              }}>Connect</button>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end', flexShrink: 0 }}>
+              {googleStatus === 'connected' && (
+                <button onClick={onDisconnectGmail} style={{
+                  background: 'none', border: '1px solid var(--border-1)',
+                  color: 'var(--text-3)', fontSize: '11px', cursor: 'pointer',
+                  padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
+                }}>Disconnect</button>
+              )}
+              {googleStatus === 'reconnect-required' && (<>
+                <button onClick={onConnectGmail} disabled={!onConnectGmail} style={{
+                  background: '#0d1a2e', border: '1px solid #1d4ed8',
+                  color: '#93c5fd', fontSize: '11px', cursor: 'pointer',
+                  padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
+                }}>Reconnect</button>
+                <button onClick={onDisconnectGmail} style={{
+                  background: 'none', border: 'none', color: 'var(--text-6)',
+                  fontSize: '9px', cursor: 'pointer', padding: '0', fontFamily: 'inherit',
+                }}>Forget connection</button>
+              </>)}
+              {googleStatus === 'disconnected' && (
+                <button onClick={onConnectGmail} disabled={!onConnectGmail} style={{
+                  background: onConnectGmail ? '#0d1a2e' : 'var(--bg-2)',
+                  border: `1px solid ${onConnectGmail ? '#1d4ed8' : 'var(--border-1)'}`,
+                  color: onConnectGmail ? '#93c5fd' : 'var(--text-5)',
+                  fontSize: '11px', cursor: onConnectGmail ? 'pointer' : 'default',
+                  padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
+                }}>Connect</button>
+              )}
+            </div>
           </div>
           <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>
             Read-only. PACER reads calendar events and email activity. It does not send, modify, or store your messages.
@@ -601,9 +625,32 @@ export default function SettingsRoom({
           </div>
         </Section>
 
-        <p style={{ color: 'var(--text-6)', fontSize: '9px', paddingBottom: '32px' }}>
-          PACER v0.7 · Atrium · Settings are device-local
-        </p>
+        {/* Sign Out — always reachable from Settings, critical on mobile where sidebar is absent */}
+        <div style={{
+          marginTop: '32px', paddingTop: '20px',
+          borderTop: '1px solid var(--border-0)', paddingBottom: '40px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', marginBottom: '2px' }}>
+              {user?.displayName || user?.email}
+            </p>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>
+              PACER v0.7 · Atrium
+            </p>
+          </div>
+          <button
+            onClick={onSignOut}
+            style={{
+              background: 'none', border: '1px solid var(--border-1)',
+              color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: '11px', padding: '7px 14px', borderRadius: '8px',
+              flexShrink: 0,
+            }}
+          >
+            ↪ Sign out
+          </button>
+        </div>
       </div>
     </div>
   )
