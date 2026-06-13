@@ -162,7 +162,7 @@ function CampusAtmosphere() {
   )
 }
 
-export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile }) {
+export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile, googleStatus, onReconnectGoogle }) {
   return (
     <div
       className="flex-1 flex flex-col items-center overflow-y-auto"
@@ -203,6 +203,29 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         }}>
           How do we preserve what matters while moving it forward?
         </p>
+
+        {/* Google reconnect notice — shown only when session expired and manual reconnect needed */}
+        {googleStatus === 'reconnect-required' && onReconnectGoogle && (
+          <button
+            onClick={onReconnectGoogle}
+            style={{
+              width: '100%', textAlign: 'left', fontFamily: 'inherit',
+              background: '#1c1400', border: '1px solid #92400e',
+              borderRadius: '8px', padding: '10px 16px', cursor: 'pointer',
+              marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '14px' }}>↺</span>
+            <div>
+              <p style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 600, marginBottom: '2px' }}>
+                Google session expired
+              </p>
+              <p style={{ color: '#92400e', fontSize: '10px' }}>
+                Tap to restore calendar and email access
+              </p>
+            </div>
+          </button>
+        )}
 
         <div className="flex flex-col gap-3">
 

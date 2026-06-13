@@ -37,22 +37,32 @@ export async function requestGoogleToken(clientId) {
 }
 
 // Silent reconnect — no popup. Works when Google session is still active in browser.
-// Rejects if silent grant fails; caller should fall back to requestGoogleToken.
+// Fails on iOS Safari / Firefox ITP where third-party cookies are blocked.
+// Rejects with the actual GIS error type so the caller can log and handle it.
 export async function requestGoogleTokenSilent(clientId, hint) {
   await loadGISScript()
   return new Promise((resolve, reject) => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: SCOPES,
-      hint, // email hint for the account to reconnect
+      hint, // email hint — GIS matches this against the active Google account session
       callback: (response) => {
-        if (response.error) { reject(new Error(response.error_description || response.error)); return }
+        if (response.error) {
+          console.warn('[PACER Google] silent auth callback error:', response.error, response.error_description)
+          reject(new Error(response.error_description || response.error))
+          return
+        }
         resolve({
           access_token: response.access_token,
           expires_at: Date.now() + (response.expires_in * 1000),
         })
       },
-      error_callback: (err) => reject(new Error(err.type || 'OAuth error')),
+      error_callback: (err) => {
+        // Common values: 'immediate_failed' (ITP/no active session), 'popup_closed_by_user',
+        // 'access_denied', 'popup_blocked_by_browser'
+        console.warn('[PACER Google] silent auth error_callback:', err?.type, err)
+        reject(new Error(err?.type || 'OAuth error'))
+      },
     })
     tokenClient.requestAccessToken({ prompt: '' })
   })

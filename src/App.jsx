@@ -276,7 +276,8 @@ export default function App() {
         if (email.status === 'fulfilled')    setEmailData(email.value)
         if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
       })
-      .catch(() => {
+      .catch(err => {
+        console.warn('[PACER Google] silent reconnect failed:', err?.message)
         setGoogleReconnecting(false)
         setGoogleReconnectFailed(true)
         // Do NOT clear profile.googleConnected — user did not disconnect intentionally
@@ -694,6 +695,8 @@ export default function App() {
             onMorningBrief={handleArrivalAccept}
             campusStats={campusStats}
             isMobile={isMobile}
+            googleStatus={googleStatus}
+            onReconnectGoogle={GOOGLE_CLIENT_ID ? handleConnectGmail : null}
           />
         )}
 
@@ -800,6 +803,7 @@ export default function App() {
             productions={productions}
             apiKey={apiKey}
             googleToken={googleTokenData?.access_token || null}
+            googleStatus={googleStatus}
             emailData={emailData}
             calendarEvents={calendarEvents}
             onRequestBuilderReview={requestBuilderReview}

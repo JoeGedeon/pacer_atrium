@@ -419,7 +419,7 @@ export default function BusinessCenterRoom({
   observations = [], graduates = [], builderReadiness = 'locked',
   museWorks = [], institutionEvents = [], creatorLogs = [],
   kelReviews = [], productions = [], apiKey = null,
-  googleToken = null, emailData = null, calendarEvents = [],
+  googleToken = null, googleStatus = 'disconnected', emailData = null, calendarEvents = [],
   onRequestBuilderReview, onEnterBuilderStudio, onAddLog, onNavigate,
   onConnectGmail, onDisconnectGmail, isMobile,
 }) {
@@ -540,7 +540,7 @@ export default function BusinessCenterRoom({
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
               Calendar
             </p>
-            {googleToken ? (
+            {googleStatus === 'connected' && (
               <button
                 onClick={onDisconnectGmail}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
@@ -548,22 +548,39 @@ export default function BusinessCenterRoom({
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b98160', flexShrink: 0 }} />
                 Gmail connected
               </button>
-            ) : onConnectGmail ? (
+            )}
+            {googleStatus === 'reconnecting' && (
+              <span style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic' }}>
+                Reconnecting…
+              </span>
+            )}
+            {googleStatus === 'reconnect-required' && (
               <button
                 onClick={onConnectGmail}
-                style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: 'var(--text-4)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
+                disabled={!onConnectGmail}
+                style={{ background: 'none', border: '1px solid #92400e', borderRadius: '5px', padding: '3px 10px', color: '#f59e0b', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
               >
-                + Connect Gmail
+                ↺ Reconnect
               </button>
-            ) : (
-              <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-                Set VITE_GOOGLE_CLIENT_ID to connect
-              </span>
+            )}
+            {googleStatus === 'disconnected' && (
+              onConnectGmail ? (
+                <button
+                  onClick={onConnectGmail}
+                  style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', padding: '3px 10px', color: 'var(--text-4)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em' }}
+                >
+                  + Connect Gmail
+                </button>
+              ) : (
+                <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                  Set VITE_GOOGLE_CLIENT_ID to connect
+                </span>
+              )
             )}
           </div>
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden' }}>
             {/* Today's schedule from Google Calendar */}
-            {googleToken && (
+            {(googleToken || calendarEvents.length > 0) && (
               <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-0)' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
                   Today
