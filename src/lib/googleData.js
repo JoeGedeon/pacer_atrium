@@ -75,12 +75,11 @@ function formatTime(dateTimeStr) {
 
 export async function fetchTodayEvents(accessToken) {
   const now = new Date()
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const endOfDay   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  const endOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2)
 
   const params = new URLSearchParams({
-    timeMin: startOfDay.toISOString(),
-    timeMax: endOfDay.toISOString(),
+    timeMin: now.toISOString(),
+    timeMax: endOfTomorrow.toISOString(),
     singleEvents: 'true',
     orderBy: 'startTime',
     maxResults: '15',
@@ -124,6 +123,11 @@ export function emailContextString(emailData) {
 }
 
 export function calendarContextString(events) {
-  if (!events || events.length === 0) return 'No events scheduled today.'
-  return events.map(e => `${e.timeLabel} — ${e.title}`).join('; ')
+  if (!events || events.length === 0) return 'No upcoming events.'
+  const today = new Date().toDateString()
+  return events.map(e => {
+    const eventDate = e.startTime ? new Date(e.startTime).toDateString() : today
+    const dayLabel = eventDate === today ? 'Today' : 'Tomorrow'
+    return `${dayLabel} ${e.timeLabel} — ${e.title}`
+  }).join('; ')
 }
