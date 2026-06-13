@@ -4,6 +4,38 @@ import { createMultiManifestTest } from '../lib/db'
 import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
+export function videoEmbed(url) {
+  if (!url) return null
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
+  if (yt) return { type: 'iframe', src: `https://www.youtube.com/embed/${yt[1]}` }
+  const vi = url.match(/(?:vimeo\.com\/)(\d+)/)
+  if (vi) return { type: 'iframe', src: `https://player.vimeo.com/video/${vi[1]}` }
+  if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(url)) return { type: 'video', src: url }
+  return null
+}
+
+function VideoPlayer({ url }) {
+  const embed = videoEmbed(url)
+  if (!embed) return null
+  if (embed.type === 'iframe') {
+    return (
+      <iframe
+        src={embed.src}
+        style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    )
+  }
+  return (
+    <video
+      controls
+      src={embed.src}
+      style={{ width: '100%', display: 'block', maxHeight: '260px', objectFit: 'contain', background: '#000' }}
+    />
+  )
+}
+
 const THEATER_TABS = [
   { id: 'office',    label: '📦 Production Office' },
   { id: 'stage',     label: '🎭 Staging' },
@@ -180,6 +212,7 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
         deliveryDestination: production.deliveryDestination || '',
         humanGateStatus:     production.humanGateStatus     || '',
         notes:               production.notes              || '',
+        videoUrl:            production.videoUrl            || '',
       })
       onToggle(production.id)
     }
@@ -194,6 +227,7 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
       deliveryDestination: edit.deliveryDestination || null,
       humanGateStatus:     edit.humanGateStatus     || null,
       notes:               edit.notes,
+      videoUrl:            edit.videoUrl            || null,
     })
     setSaving(false)
   }
@@ -399,6 +433,30 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Video URL */}
+          <div style={{ marginBottom: '12px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>Video URL</p>
+            <input
+              value={edit.videoUrl}
+              onChange={e => setEdit(p => ({ ...p, videoUrl: e.target.value }))}
+              placeholder="YouTube, Vimeo, or direct .mp4 link…"
+              style={{
+                width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)',
+                borderRadius: '6px', padding: '8px 12px', color: 'var(--text-1)',
+                fontSize: '12px', fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Video preview */}
+          {production.videoUrl && (
+            <div style={{ marginBottom: '14px', borderRadius: '8px', overflow: 'hidden',
+              border: '1px solid var(--border-1)', background: '#000' }}>
+              <VideoPlayer url={production.videoUrl} />
             </div>
           )}
 

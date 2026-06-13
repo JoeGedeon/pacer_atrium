@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+import { videoEmbed } from './TheaterRoom'
 
 const SIGNAL_TYPES = [
   { id: 'revenue',       label: 'Revenue Risk',       color: '#ef4444', pattern: /revenue|finance|billing|money|cost|price|budget/i },
@@ -154,7 +155,14 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
       source:   `${observations.length} observation${observations.length !== 1 ? 's' : ''} in system`,
       strength: null,
     }
-  }, [threads, attentionQueue, activeSignals, signalCounts, patterns, observations, now])
+  }, [threads, attentionQueue, activeSignals, signalCounts, patterns, observations, now, productions])
+
+  // Most recently published production (for featured broadcast panel)
+  const featuredProduction = useMemo(() =>
+    [...productions]
+      .filter(p => p.publishedAt && p.opsCoreSignal)
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0] || null
+  , [productions])
 
   const strengthColor = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
@@ -213,51 +221,79 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
       {/* Body */}
       <div className={`flex-1 overflow-y-auto ${px} py-5`} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-        {/* ── LEAD SIGNAL — command card ───────────────────────────────────── */}
+        {/* ── LEAD SIGNAL / FEATURED BROADCAST — command card ─────────────── */}
         <div style={{
           background: lead.bg,
           border: `1px solid ${lead.border}`,
           borderLeft: `4px solid ${lead.color}`,
           borderRadius: '0 10px 10px 0',
-          padding: isMobile ? '18px 16px' : '22px 24px',
+          overflow: 'hidden',
         }}>
-          {/* Headline row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <span style={{ color: lead.color, fontSize: '18px', lineHeight: 1 }}>{lead.icon}</span>
-            <p style={{
-              color: lead.color, fontSize: '11px', fontWeight: 800,
-              letterSpacing: '0.18em', textTransform: 'uppercase',
-            }}>
-              {lead.headline}
-            </p>
-            {lead.strength && (
-              <span style={{
-                background: strengthColor[lead.strength] + '15',
-                border: `1px solid ${strengthColor[lead.strength]}30`,
-                color: strengthColor[lead.strength],
-                fontSize: '9px', fontWeight: 700, borderRadius: '4px',
-                padding: '2px 7px', letterSpacing: '0.1em', textTransform: 'uppercase',
-                marginLeft: 'auto',
+          <div style={{ padding: isMobile ? '18px 16px' : '22px 24px' }}>
+            {/* Headline row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <span style={{ color: lead.color, fontSize: '18px', lineHeight: 1 }}>{lead.icon}</span>
+              <p style={{
+                color: lead.color, fontSize: '11px', fontWeight: 800,
+                letterSpacing: '0.18em', textTransform: 'uppercase',
               }}>
-                {lead.strength}
-              </span>
-            )}
+                {lead.headline}
+              </p>
+              {lead.strength && (
+                <span style={{
+                  background: strengthColor[lead.strength] + '15',
+                  border: `1px solid ${strengthColor[lead.strength]}30`,
+                  color: strengthColor[lead.strength],
+                  fontSize: '9px', fontWeight: 700, borderRadius: '4px',
+                  padding: '2px 7px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                  marginLeft: 'auto',
+                }}>
+                  {lead.strength}
+                </span>
+              )}
+            </div>
+
+            {/* Action */}
+            <div style={{ marginBottom: featuredProduction?.videoUrl ? '16px' : '14px' }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>
+                {featuredProduction?.videoUrl ? 'Featured Broadcast' : 'Recommended Action'}
+              </p>
+              <p style={{ color: 'var(--text-0)', fontSize: isMobile ? '14px' : '15px', fontWeight: 500, lineHeight: 1.55 }}>
+                {lead.action}
+              </p>
+            </div>
           </div>
 
-          {/* Action */}
-          <div style={{ marginBottom: '14px' }}>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>
-              Recommended Action
-            </p>
-            <p style={{ color: 'var(--text-0)', fontSize: isMobile ? '14px' : '15px', fontWeight: 500, lineHeight: 1.55 }}>
-              {lead.action}
-            </p>
-          </div>
+          {/* Video player — shown when published production has a videoUrl */}
+          {featuredProduction?.videoUrl && (() => {
+            const embed = videoEmbed(featuredProduction.videoUrl)
+            if (!embed) return null
+            return (
+              <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
+                {embed.type === 'iframe' ? (
+                  <iframe
+                    src={embed.src}
+                    style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    controls
+                    src={embed.src}
+                    style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }}
+                  />
+                )}
+              </div>
+            )
+          })()}
 
           {/* Source */}
-          <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
-            {lead.source}
-          </p>
+          <div style={{ padding: featuredProduction?.videoUrl ? '10px 24px 14px' : '0 24px 14px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+              {lead.source}
+            </p>
+          </div>
         </div>
 
         {/* ── SUPPORTING: Attention Map + Emerging Patterns ────────────────── */}
