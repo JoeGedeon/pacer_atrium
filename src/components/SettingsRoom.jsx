@@ -58,6 +58,10 @@ function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, o
   async function save() {
     const trimmed = draft.trim()
     if (!trimmed) return
+    if ([...trimmed].some(c => c.charCodeAt(0) > 127)) {
+      setSaveError('Key contains invalid characters. Copy directly from the Anthropic Console.')
+      return
+    }
     setSaving(true)
     setSaveError('')
     try {

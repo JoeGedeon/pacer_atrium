@@ -12,6 +12,10 @@ export default function APIKeyGate({ onKey }) {
       setError('Key should start with sk-')
       return
     }
+    if ([...k].some(c => c.charCodeAt(0) > 127)) {
+      setError('Key contains invalid characters. Copy directly from the Anthropic Console.')
+      return
+    }
     setSaving(true)
     setError('')
     try {

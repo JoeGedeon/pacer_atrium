@@ -34,9 +34,13 @@ exports.handler = async (event) => {
   let apiKey
   try {
     apiKey = decryptKey(keyBundle.encrypted, keyBundle.iv, secret)
-    console.log('[ai] key decrypted ok, last4:', apiKey.slice(-4), '| length:', apiKey.length)
   } catch {
     return { statusCode: 401, body: JSON.stringify({ error: 'Invalid key bundle' }) }
+  }
+
+  // Guard: API keys must be ASCII-only. Non-ASCII means corrupted key bundle.
+  if ([...apiKey].some(c => c.charCodeAt(0) > 127)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Key integrity error — re-enter the key in Settings.' }) }
   }
 
   try {
@@ -55,8 +59,7 @@ exports.handler = async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }
-  } catch (err) {
-    console.error('[ai] upstream fetch failed:', err?.name, err?.message, '| cause:', err?.cause?.message || err?.cause)
+  } catch {
     return { statusCode: 502, body: JSON.stringify({ error: 'Upstream request failed' }) }
   }
 }

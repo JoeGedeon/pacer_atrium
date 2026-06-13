@@ -14,6 +14,9 @@ exports.handler = async (event) => {
   if (!rawKey || typeof rawKey !== 'string' || rawKey.length < 10) {
     return { statusCode: 400, body: JSON.stringify({ error: 'rawKey required' }) }
   }
+  if ([...rawKey].some(c => c.charCodeAt(0) > 127)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Key contains invalid characters. Copy directly from the Anthropic Console — do not use screenshots, OCR, or password managers.' }) }
+  }
 
   const secret = process.env.ENCRYPTION_SECRET
   if (!secret) {
