@@ -131,6 +131,11 @@ export default function App() {
   // Load or seed campus profile once user is known
   useEffect(() => {
     if (!user) { setProfile(undefined); setCampusStats(null); return }
+    // New auth session — reset nav so login always lands at home, not last room
+    setCurrentRoom('home')
+    hasArrived.current = false
+    setArrivalState(null)
+    setArrivalText('')
     if (isCreator(user)) {
       const creatorBase = { campusId: 'creator', campusName: 'JPG Ventures', bypass: true }
       setProfile(creatorBase) // instant access — no loading state
