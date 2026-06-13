@@ -230,9 +230,17 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
           )}
 
           {analysisError && (
-            <p style={{ color: '#ef4444', fontSize: '11px' }}>
-              Analysis unavailable: {analysisError}
-            </p>
+            <div>
+              <p style={{ color: '#ef4444', fontSize: '11px', marginBottom: '8px' }}>
+                {analysisError.toLowerCase().includes('invalid') || analysisError.toLowerCase().includes('api_key') || analysisError.toLowerCase().includes('auth')
+                  ? 'API key is invalid or expired.'
+                  : `Analysis unavailable: ${analysisError}`}
+              </p>
+              <button onClick={onConnectClaude} style={{ background: 'none', border: 'none',
+                color: '#60a5fa', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                ✦ Update key in Settings →
+              </button>
+            </div>
           )}
 
           {patterns?.emerging?.map((p, i) => (
