@@ -829,7 +829,11 @@ export default function App() {
           />
         )}
         {isBuilderStudio && (
-          <BuilderStudioRoom isMobile={isMobile} />
+          <BuilderStudioRoom
+            isMobile={isMobile}
+            builderReadiness={builderReadiness}
+            onNavigate={setCurrentRoom}
+          />
         )}
         {isKEL && (
           <KELRoom
