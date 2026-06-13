@@ -36,6 +36,28 @@ export async function requestGoogleToken(clientId) {
   })
 }
 
+// Silent reconnect — no popup. Works when Google session is still active in browser.
+// Rejects if silent grant fails; caller should fall back to requestGoogleToken.
+export async function requestGoogleTokenSilent(clientId, hint) {
+  await loadGISScript()
+  return new Promise((resolve, reject) => {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: SCOPES,
+      hint, // email hint for the account to reconnect
+      callback: (response) => {
+        if (response.error) { reject(new Error(response.error_description || response.error)); return }
+        resolve({
+          access_token: response.access_token,
+          expires_at: Date.now() + (response.expires_in * 1000),
+        })
+      },
+      error_callback: (err) => reject(new Error(err.type || 'OAuth error')),
+    })
+    tokenClient.requestAccessToken({ prompt: '' })
+  })
+}
+
 export function revokeGoogleToken(accessToken) {
   if (!accessToken || !window.google?.accounts?.oauth2) return
   window.google.accounts.oauth2.revoke(accessToken)

@@ -35,7 +35,7 @@ import {
   incrementCampusStat, listenCampusStats,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
-import { requestGoogleToken, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
+import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import PACERVoice from './components/PACERVoice'
@@ -190,6 +190,32 @@ export default function App() {
     return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubEvents(); unsubLogs(); unsubProds() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Silent Google reconnect on login ─────────────────────────────────────────
+  // If Firestore says this user has authorized Google before, try to get a token
+  // without showing a popup. Works when the Google session is still alive in browser.
+  // Falls back gracefully — no error shown to user, button stays available.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+    if (!profile || profile.googleConnected !== true) return
+    if (googleTokenData && !isTokenExpired(googleTokenData)) return // already have a valid token
+    const hint = profile.googleEmail || undefined
+    requestGoogleTokenSilent(GOOGLE_CLIENT_ID, hint)
+      .then(tokenData => {
+        setGoogleTokenData(tokenData)
+        sessionStorage.setItem('pacer_google_token', JSON.stringify(tokenData))
+        return Promise.allSettled([
+          fetchEmailSummary(tokenData.access_token),
+          fetchTodayEvents(tokenData.access_token),
+        ])
+      })
+      .then(([email, calendar]) => {
+        if (!email || !calendar) return
+        if (email.status === 'fulfilled')    setEmailData(email.value)
+        if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
+      })
+      .catch(() => {}) // silent — user will see Connect button if needed
+  }, [profile?.googleConnected, profile?.googleEmail]) // eslint-disable-line
+
   // ── Google / Gmail connect ────────────────────────────────────────────────────
   async function handleConnectGmail() {
     if (!GOOGLE_CLIENT_ID) return
@@ -197,12 +223,22 @@ export default function App() {
       const tokenData = await requestGoogleToken(GOOGLE_CLIENT_ID)
       setGoogleTokenData(tokenData)
       sessionStorage.setItem('pacer_google_token', JSON.stringify(tokenData))
-      const [email, calendar] = await Promise.allSettled([
+      const [emailResult, calResult] = await Promise.allSettled([
         fetchEmailSummary(tokenData.access_token),
         fetchTodayEvents(tokenData.access_token),
       ])
-      if (email.status === 'fulfilled')    setEmailData(email.value)
-      if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
+      if (emailResult.status === 'fulfilled') setEmailData(emailResult.value)
+      if (calResult.status === 'fulfilled')   setCalendarEvents(calResult.value)
+      // Persist connection to Firestore — enables silent reconnect after logout
+      if (user) {
+        const patch = {
+          googleConnected: true,
+          googleConnectedAt: new Date().toISOString(),
+          googleEmail: user.email || null, // hint for silent re-auth
+        }
+        updateUserProfile(user.uid, patch)
+        setProfile(prev => prev ? { ...prev, ...patch } : prev)
+      }
     } catch (err) {
       console.error('[PACER Gmail]', err)
     }
@@ -214,6 +250,10 @@ export default function App() {
     setGoogleTokenData(null)
     setEmailData(null)
     setCalendarEvents([])
+    if (user) {
+      updateUserProfile(user.uid, { googleConnected: false })
+      setProfile(prev => prev ? { ...prev, googleConnected: false } : prev)
+    }
   }
 
   // ── Arrival Protocol ─────────────────────────────────────────────────────────
