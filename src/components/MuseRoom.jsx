@@ -48,7 +48,7 @@ const CONSTELLATIONS = [
   { a: 'FleetFlow',           b: 'Isles',     note: 'movement as narrative' },
   { a: 'PACER',               b: 'Doctrine',  note: 'intelligence requires governance' },
   { a: 'Blue Pineapple',      b: 'Atrium',    note: 'brand as entry point' },
-  { a: 'Crossing the Bridge', b: 'Theater',   note: 'story finds its stage' },
+  { a: 'Crossing the Bridge', b: 'OpsCore',   note: 'signal finds its field view' },
 ]
 
 function nextStatus(current) {
@@ -332,9 +332,9 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
                 {onNavigate && (
                   <button onClick={() => onNavigate('content')} style={{
                     padding: '8px 16px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
-                    background: '#7c3aed', border: '1px solid #8b5cf6', color: '#fff', cursor: 'pointer',
+                    background: '#1d3f6e', border: '1px solid #3b82f6', color: '#93c5fd', cursor: 'pointer',
                   }}>
-                    🎬 Open Theater →
+                    📡 Open OpsCore →
                   </button>
                 )}
               </>

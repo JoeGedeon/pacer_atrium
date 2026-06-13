@@ -6,7 +6,7 @@ const PACER_ROOMS = [
   { id: 'muse',      label: 'Muse',      icon: '🎭' },
   { id: 'vera',      label: 'VERA',      icon: '✨', infra: true },
   { id: 'kel',       label: 'KEL',       icon: '◎',  infra: true },
-  { id: 'content',        label: 'Theater',   icon: '🎬' },
+  { id: 'content',        label: 'OpsCore',   icon: '📡' },
   { id: 'businesscenter', label: 'Business',   icon: '🏢' },
   { id: 'isles',     label: 'Isles',     icon: '🏝️' },
   { id: 'archive',   label: 'Archivist', icon: '📚' },

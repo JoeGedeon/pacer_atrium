@@ -258,7 +258,7 @@ function ForgeArtifact({ artifact }) {
       )}
 
       <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '8px', fontStyle: 'italic' }}>
-        Sent to Theater · Thread outcome recorded
+        Sent to OpsCore · Thread outcome recorded
       </p>
     </div>
   )
@@ -611,7 +611,7 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
               {[
                 'Manufacture artifacts from approved KEL decisions',
                 'Generate domain-specific action packages',
-                'Send production cargo to Theater',
+                'Surface artifacts in OpsCore Field View',
                 'Record outcomes back to Archivist Hall',
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>

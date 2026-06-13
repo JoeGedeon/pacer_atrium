@@ -184,15 +184,15 @@ function GrowthCard({ obs, onRoute, onNavigate }) {
 
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
-          onClick={() => onRoute(obs.id, 'Theater')}
+          onClick={() => onRoute(obs.id, 'OpsCore')}
           style={{
-            background: '#130a20', border: '1px solid #6b21a820',
-            color: '#a855f7', fontSize: '10px', fontWeight: 600,
+            background: '#030d1a', border: '1px solid #3b82f620',
+            color: '#60a5fa', fontSize: '10px', fontWeight: 600,
             padding: '4px 10px', borderRadius: '5px', cursor: 'pointer',
             fontFamily: 'inherit',
           }}
         >
-          → Theater
+          → OpsCore
         </button>
         <button
           onClick={() => onNavigate('kel')}

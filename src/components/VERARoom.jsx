@@ -7,7 +7,7 @@ const MUSE_CONSTELLATIONS = [
   { a: 'FleetFlow',           b: 'Isles',     note: 'movement as narrative' },
   { a: 'PACER',               b: 'Doctrine',  note: 'intelligence requires governance' },
   { a: 'Blue Pineapple',      b: 'Atrium',    note: 'brand as entry point' },
-  { a: 'Crossing the Bridge', b: 'Theater',   note: 'story finds its stage' },
+  { a: 'Crossing the Bridge', b: 'OpsCore',   note: 'signal finds its field view' },
 ]
 
 const SECTION_LABEL = {

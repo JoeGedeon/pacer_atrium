@@ -26,7 +26,7 @@ const ENTRY_TYPES = [
   { id: 'market',    label: 'Market Signal',  icon: '📡' },
   { id: 'build',     label: 'Build Event',    icon: '🔨' },
   { id: 'fleetflow', label: 'FleetFlow',      icon: '🚚' },
-  { id: 'theater',   label: 'Theater',        icon: '🎭' },
+  { id: 'theater',   label: 'OpsCore',        icon: '📡' },
   { id: 'doctrine',  label: 'Doctrine',       icon: '📜' },
   { id: 'outreach',  label: 'Outreach',       icon: '📞' },
   { id: 'stress',    label: 'Stress / Issue', icon: '⚠️' },
@@ -36,7 +36,7 @@ const ENTRY_TYPES = [
 ]
 
 const LINKED_ROOMS = [
-  '', 'Atrium', 'MUSE', 'Theater', 'Doctrine',
+  '', 'Atrium', 'MUSE', 'OpsCore', 'Doctrine',
   'Business', 'FleetFlow', 'Archivist Hall', 'K.E.L.', 'VERA', 'Personal',
 ]
 
@@ -86,7 +86,7 @@ function staticPulse({ totalObs, pendingCount, stagedCount, constitutionalTests,
     parts.push('All observations routed.')
   }
   if (stagedCount > 0) {
-    parts.push(`${stagedCount} production${stagedCount !== 1 ? 's' : ''} staged for Theater.`)
+    parts.push(`${stagedCount} observation${stagedCount !== 1 ? 's' : ''} routed to OpsCore.`)
   } else {
     parts.push('No productions staged.')
   }
@@ -111,7 +111,7 @@ function buildActionItems(observations, productions, kelReviews) {
     items.push({
       id: 'routing', icon: '🍍',
       label: `${unrouted.length} observation${unrouted.length !== 1 ? 's' : ''} unrouted`,
-      detail: 'Route to MUSE, Theater, FleetFlow, Doctrine, or Archive.',
+      detail: 'Route to MUSE, OpsCore, FleetFlow, Doctrine, or Archive.',
       room: 'atrium',
     })
   }
@@ -223,7 +223,7 @@ function buildHealth(observations, productions, institutionEvents, apiKey) {
     { id: 'atrium',   label: 'Atrium',    icon: '🍍', status: totalObs > 0 ? 'active' : 'quiet',                           detail: totalObs > 0 ? `${totalObs} obs` : 'Empty'          },
     { id: 'muse',     label: 'MUSE',      icon: '🎭', status: analyzedObs > 0 ? 'active' : totalObs > 0 ? 'idle' : 'quiet', detail: analyzedObs > 0 ? `${analyzedObs} analyzed` : 'No decisions' },
     { id: 'vera',     label: 'VERA',      icon: '✨', status: 'active',                                                     detail: 'Operational'                                        },
-    { id: 'theater',  label: 'Theater',   icon: '🎬', status: productions.length > 0 ? 'active' : 'quiet',                  detail: productions.length > 0 ? `${productions.length} prods` : 'Empty' },
+    { id: 'content',  label: 'OpsCore',   icon: '📡', status: 'active',                                                     detail: 'Field View'                                         },
     { id: 'archivist',label: 'Archivist', icon: '📚', status: institutionEvents.length > 0 ? 'active' : 'quiet',            detail: institutionEvents.length > 0 ? `${institutionEvents.length} events` : 'Empty' },
     { id: 'kel',      label: 'K.E.L.',    icon: '◎',  status: 'active',                                                     detail: 'Operational'                                        },
     { id: 'fleetflow',label: 'FleetFlow', icon: '🚚', status: FLEETFLOW_URL ? 'connected' : 'offline',                      detail: FLEETFLOW_URL ? 'Connected' : 'Not linked'           },
@@ -436,7 +436,7 @@ export default function BusinessCenterRoom({
   // ── Derived metrics ──────────────────────────────────────────────────────────
   const totalObs            = observations.length
   const pendingCount        = observations.filter(o => !o.destination).length
-  const stagedToTheater     = observations.filter(o => o.destination === 'Theater').length
+  const stagedToTheater     = observations.filter(o => o.destination === 'OpsCore' || o.destination === 'Theater').length
   const constitutionalTests = institutionEvents.filter(e => e.eventType === 'multi_manifest_test_completed').length
   const humanGateApprovals  = kelReviews.filter(r => r.status === 'approved').length
   const calendarEntries     = creatorLogs.length

@@ -9,7 +9,7 @@ import ObservationStream from './components/ObservationStream'
 import PACERProcessing from './components/PACERProcessing'
 import AtriumDashboard from './components/AtriumDashboard'
 import DoctrineRoom from './components/DoctrineRoom'
-import TheaterRoom from './components/TheaterRoom'
+import OpsCoreRoom from './components/OpsCoreRoom'
 import MuseRoom from './components/MuseRoom'
 import VERARoom from './components/VERARoom'
 import ArchiveRoom from './components/ArchiveRoom'
@@ -614,7 +614,7 @@ export default function App() {
     await createInstitutionEvent(user.uid, {
       eventType:       'forge_artifact_created',
       title:           'Forge Artifact Created',
-      description:     `"${artifact.title}" manufactured from approved decision. Sent to Theater.`,
+      description:     `"${artifact.title}" manufactured from approved decision. Surfaced in OpsCore.`,
       relatedEntityId: threadId,
     })
   }
@@ -685,7 +685,7 @@ export default function App() {
   const isHome     = currentRoom === 'home'
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
-  const isTheater  = currentRoom === 'content'
+  const isOpsCore  = currentRoom === 'content'
   const isMuse     = currentRoom === 'muse'
   const isVERA     = currentRoom === 'vera'
   const isArchive  = currentRoom === 'archive'
@@ -876,16 +876,10 @@ export default function App() {
           />
         )}
         {isDoctrine && <DoctrineRoom isMobile={isMobile} voiceMode={voiceMode} />}
-        {isTheater  && (
-          <TheaterRoom
-            graduates={graduates}
+        {isOpsCore  && (
+          <OpsCoreRoom
             observations={observations}
-            productions={productions}
-            onCreateProduction={createProductionRecord}
-            onUpdateProduction={updateProductionRecord}
-            apiKey={apiKey}
-            onConnectClaude={() => setShowKeyGate(true)}
-            uid={user?.uid}
+            threads={threads}
             isMobile={isMobile}
           />
         )}
@@ -980,7 +974,7 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isOpsCore && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
