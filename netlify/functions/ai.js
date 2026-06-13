@@ -34,6 +34,7 @@ exports.handler = async (event) => {
   let apiKey
   try {
     apiKey = decryptKey(keyBundle.encrypted, keyBundle.iv, secret)
+    console.log('[ai] key decrypted ok, last4:', apiKey.slice(-4), '| length:', apiKey.length)
   } catch {
     return { statusCode: 401, body: JSON.stringify({ error: 'Invalid key bundle' }) }
   }

@@ -19,6 +19,7 @@ export async function callClaude(anthropicBody, apiKeyOrBundle) {
 
   // Legacy path: raw string key (not yet migrated to encrypted bundle)
   if (typeof apiKeyOrBundle === 'string') {
+    console.info('[callClaude] path=legacy last4=', apiKeyOrBundle.slice(-4))
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -37,6 +38,7 @@ export async function callClaude(anthropicBody, apiKeyOrBundle) {
   }
 
   // Encrypted bundle path: key decrypted server-side, never exposed to browser
+  console.info('[callClaude] path=bundle last4=', apiKeyOrBundle?.last4 || 'unknown')
   const res = await fetch('/.netlify/functions/ai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
