@@ -16,6 +16,7 @@ import ArchiveRoom from './components/ArchiveRoom'
 import KELRoom from './components/KELRoom'
 import BusinessCenterRoom from './components/BusinessCenterRoom'
 import BuilderStudioRoom from './components/BuilderStudioRoom'
+import IslesRoom from './components/IslesRoom'
 import SettingsRoom from './components/SettingsRoom'
 import PlaceholderRoom from './components/PlaceholderRoom'
 import Intake from './components/Intake'
@@ -632,6 +633,7 @@ export default function App() {
   const isMuse     = currentRoom === 'muse'
   const isVERA     = currentRoom === 'vera'
   const isArchive  = currentRoom === 'archive'
+  const isIsles          = currentRoom === 'isles'
   const isKEL            = currentRoom === 'kel'
   const isBusinessCenter = currentRoom === 'businesscenter'
   const isBuilderStudio  = currentRoom === 'builderstudio'
@@ -807,6 +809,14 @@ export default function App() {
           />
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} uid={user?.uid} isMobile={isMobile} />}
+        {isIsles && (
+          <IslesRoom
+            observations={observations}
+            onRoute={routeObservation}
+            onNavigate={setCurrentRoom}
+            isMobile={isMobile}
+          />
+        )}
         {isDoctrine && <DoctrineRoom isMobile={isMobile} />}
         {isTheater  && (
           <TheaterRoom
@@ -909,7 +919,7 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
