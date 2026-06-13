@@ -13,7 +13,11 @@ const STATS_DOC = doc(db, 'campus_stats', 'summary')
 export async function incrementCampusStat(field) {
   try {
     await setDoc(STATS_DOC, { [field]: increment(1) }, { merge: true })
-  } catch (_) { /* best-effort — never block user flows */ }
+  } catch (err) {
+    // Silent failure — but log so Firestore rule issues are diagnosable.
+    // If you see PERMISSION_DENIED here, deploy firestore.rules via Firebase Console.
+    console.warn('[campus_stats] increment failed:', err?.code || err)
+  }
 }
 
 export function listenCampusStats(callback) {
