@@ -39,6 +39,7 @@ import {
   incrementCampusStat, listenCampusStats,
   getLatestBrief, saveLatestBrief,
   createThread, listenThreads, updateThread,
+  createMediaAsset, updateMediaAsset, listenMediaAssets,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -116,6 +117,7 @@ export default function App() {
   const [institutionEvents, setInstitutionEvents] = useState([])
   const [creatorLogs, setCreatorLogs]             = useState([])
   const [productions, setProductions]             = useState([])
+  const [mediaAssets, setMediaAssets]             = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -265,7 +267,8 @@ export default function App() {
     const unsubEvents    = listenInstitutionEvents(user.uid, setInstitutionEvents)
     const unsubLogs      = listenCreatorLogs(user.uid, setCreatorLogs)
     const unsubProds     = listenProductions(user.uid, setProductions)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds() }
+    const unsubMedia     = listenMediaAssets(user.uid, setMediaAssets)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -644,6 +647,30 @@ export default function App() {
     })
   }
 
+  async function createMediaAssetRecord(data) {
+    if (!user) return null
+    return await createMediaAsset(user.uid, data)
+  }
+
+  async function updateMediaAssetRecord(id, patch) {
+    if (!user) return
+    await updateMediaAsset(user.uid, id, patch)
+  }
+
+  async function publishMediaAssetRecord(assetId, title) {
+    if (!user) return
+    await updateMediaAsset(user.uid, assetId, {
+      opsCoreSignal: true,
+      publishedAt:   new Date().toISOString(),
+    })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'media_asset_published',
+      title:           'Media Asset Published to OpsCore',
+      description:     `"${title}" is now broadcasting in OpsCore Field View.`,
+      relatedEntityId: assetId,
+    })
+  }
+
   async function addCreatorLog(data) {
     if (!user) return
     await createCreatorLog(user.uid, data)
@@ -897,9 +924,13 @@ export default function App() {
             graduates={graduates}
             observations={observations}
             productions={productions}
+            mediaAssets={mediaAssets}
             onCreateProduction={createProductionRecord}
             onUpdateProduction={updateProductionRecord}
             onPublish={publishToOpsCore}
+            onCreateMediaAsset={createMediaAssetRecord}
+            onUpdateMediaAsset={updateMediaAssetRecord}
+            onPublishMediaAsset={publishMediaAssetRecord}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             uid={user?.uid}
@@ -911,6 +942,7 @@ export default function App() {
             observations={observations}
             threads={threads}
             productions={productions}
+            mediaAssets={mediaAssets}
             isMobile={isMobile}
           />
         )}

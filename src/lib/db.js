@@ -422,3 +422,41 @@ export async function createGraduate(uid, data) {
   })
   return ref.id
 }
+
+
+// ── Media Assets — video, audio, and transcript library ──────────────────────
+
+function mediaColl(uid) { return collection(db, 'users', uid, 'media_assets') }
+
+export async function createMediaAsset(uid, data) {
+  const ref = await addDoc(mediaColl(uid), {
+    title:             data.title             || 'Untitled Asset',
+    description:       data.description       || '',
+    type:              data.type              || 'video',
+    videoUrl:          data.videoUrl          || null,
+    audioUrl:          data.audioUrl          || null,
+    transcript:        data.transcript        || '',
+    productionId:      data.productionId      || null,
+    sourceObservation: data.sourceObservation || null,
+    status:            'draft',
+    opsCoreSignal:     false,
+    publishedAt:       null,
+    createdAt:         serverTimestamp(),
+    updatedAt:         serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateMediaAsset(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'media_assets', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function listenMediaAssets(uid, callback) {
+  const q = query(mediaColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ ...d.data(), id: d.id })))
+  })
+}

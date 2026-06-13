@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { enrichForFormat, FORMATS } from '../lib/theaterEnrichment'
 import { createMultiManifestTest } from '../lib/db'
+import { uploadMediaVideo, uploadMediaAudio } from '../lib/mediaUpload'
 import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 
@@ -12,6 +13,39 @@ export function videoEmbed(url) {
   if (vi) return { type: 'iframe', src: `https://player.vimeo.com/video/${vi[1]}` }
   if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(url)) return { type: 'video', src: url }
   return null
+}
+
+export function audioEmbed(url) {
+  if (!url) return null
+  if (/soundcloud\.com\//.test(url)) return {
+    type: 'iframe',
+    src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23a855f7&inverse=false&auto_play=false&show_user=true`,
+  }
+  if (/\.(mp3|wav|ogg|m4a|aac|opus|flac)(\?|$)/i.test(url)) return { type: 'audio', src: url }
+  return null
+}
+
+function AudioPlayer({ url }) {
+  const embed = audioEmbed(url)
+  if (!embed) return null
+  if (embed.type === 'iframe') {
+    return (
+      <iframe
+        src={embed.src}
+        style={{ width: '100%', height: '120px', border: 'none', display: 'block' }}
+        allow="autoplay"
+        scrolling="no"
+        frameBorder="no"
+      />
+    )
+  }
+  return (
+    <audio
+      controls
+      src={embed.src}
+      style={{ width: '100%', display: 'block' }}
+    />
+  )
 }
 
 function VideoPlayer({ url }) {
@@ -39,6 +73,7 @@ function VideoPlayer({ url }) {
 const THEATER_TABS = [
   { id: 'office',    label: '📦 Production Office' },
   { id: 'stage',     label: '🎭 Staging' },
+  { id: 'media',     label: '🎬 Media' },
   { id: 'published', label: 'Published' },
   { id: 'archive',   label: 'Archive' },
   { id: 'about',     label: 'About' },
@@ -1231,6 +1266,429 @@ function StagingWing({ observations, productions, apiKey, onConnectClaude, onSav
   )
 }
 
+// ── Media Wing ────────────────────────────────────────────────────────────────
+
+function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobile }) {
+  const [edit, setEdit] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [videoUploading, setVideoUploading] = useState(false)
+  const [audioUploading, setAudioUploading] = useState(false)
+  const videoInputRef = useRef(null)
+  const audioInputRef = useRef(null)
+
+  function handleToggle() {
+    if (expanded) { setEdit(null); onToggle(null) }
+    else {
+      setEdit({
+        title:           asset.title           || '',
+        videoUrl:        asset.videoUrl        || '',
+        audioUrl:        asset.audioUrl        || '',
+        transcript:      asset.transcript      || '',
+        humanGateStatus: asset.humanGateStatus || '',
+      })
+      onToggle(asset.id)
+    }
+  }
+
+  async function handleVideoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file || !uid) return
+    setVideoUploading(true)
+    try {
+      const url = await uploadMediaVideo(file, uid)
+      setEdit(p => ({ ...p, videoUrl: url }))
+    } catch (err) { console.error('[MediaWing] video upload:', err) }
+    finally { setVideoUploading(false); e.target.value = '' }
+  }
+
+  async function handleAudioUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file || !uid) return
+    setAudioUploading(true)
+    try {
+      const url = await uploadMediaAudio(file, uid)
+      setEdit(p => ({ ...p, audioUrl: url }))
+    } catch (err) { console.error('[MediaWing] audio upload:', err) }
+    finally { setAudioUploading(false); e.target.value = '' }
+  }
+
+  async function handleSave() {
+    if (!edit || saving) return
+    setSaving(true)
+    try {
+      await onUpdate(asset.id, {
+        title:           edit.title           || 'Untitled Asset',
+        videoUrl:        edit.videoUrl        || null,
+        audioUrl:        edit.audioUrl        || null,
+        transcript:      edit.transcript      || '',
+        humanGateStatus: edit.humanGateStatus || null,
+        type:            edit.videoUrl ? 'video' : edit.audioUrl ? 'audio' : 'transcript',
+      })
+    } finally { setSaving(false) }
+  }
+
+  async function handlePublish() {
+    if (publishing || !onPublish) return
+    setPublishing(true)
+    try { await onPublish(asset.id, asset.title || 'Untitled Asset') }
+    finally { setPublishing(false) }
+  }
+
+  const gateColor = { pending: '#f59e0b', approved: '#10b981', denied: '#ef4444' }
+
+  return (
+    <div style={{
+      border: `1px solid ${expanded ? '#a855f735' : 'var(--border-1)'}`,
+      borderLeft: `3px solid ${asset.publishedAt ? '#10b981' : '#a855f7'}`,
+      borderRadius: '0 8px 8px 0', overflow: 'hidden',
+    }}>
+      <button
+        onClick={handleToggle}
+        style={{
+          width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+          background: expanded ? '#08031a' : 'var(--bg-2)',
+          padding: '12px 16px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: '10px',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+            {asset.videoUrl && <span style={{ color: '#a855f7', fontSize: '10px' }}>🎬 Video</span>}
+            {asset.audioUrl && <span style={{ color: '#a855f7', fontSize: '10px' }}>🔊 Audio</span>}
+            {asset.transcript && <span style={{ color: '#a855f7', fontSize: '10px' }}>📄 Script</span>}
+            {asset.humanGateStatus && (
+              <span style={{ color: gateColor[asset.humanGateStatus] || 'var(--text-5)', fontSize: '10px', fontWeight: 600 }}>
+                👤 {asset.humanGateStatus}
+              </span>
+            )}
+            {asset.publishedAt && (
+              <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600 }}>📡 OpsCore</span>
+            )}
+          </div>
+          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+            {asset.title || 'Untitled Asset'}
+          </p>
+        </div>
+        <span style={{ color: 'var(--text-5)', fontSize: '11px', flexShrink: 0 }}>
+          {expanded ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {expanded && edit && (
+        <div style={{ padding: '16px', borderTop: '1px solid #a855f720', background: 'var(--bg-1)' }}>
+
+          {/* Title */}
+          <div style={{ marginBottom: '12px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>Title</p>
+            <input
+              value={edit.title}
+              onChange={e => setEdit(p => ({ ...p, title: e.target.value }))}
+              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-0)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+            />
+          </div>
+
+          {/* Video */}
+          <div style={{ marginBottom: '12px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🎬 Video</p>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                value={edit.videoUrl}
+                onChange={e => setEdit(p => ({ ...p, videoUrl: e.target.value }))}
+                placeholder="YouTube, Vimeo, or direct .mp4 link…"
+                style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+              />
+              <input ref={videoInputRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={handleVideoUpload} />
+              <button
+                onClick={() => videoInputRef.current?.click()}
+                disabled={videoUploading}
+                style={{ flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: videoUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: videoUploading ? 'default' : 'pointer' }}
+              >
+                {videoUploading ? 'Uploading…' : 'Upload'}
+              </button>
+            </div>
+            {(edit.videoUrl || asset.videoUrl) && (
+              <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-1)', background: '#000' }}>
+                <VideoPlayer url={edit.videoUrl || asset.videoUrl} />
+              </div>
+            )}
+          </div>
+
+          {/* Audio */}
+          <div style={{ marginBottom: '12px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🔊 Audio</p>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                value={edit.audioUrl}
+                onChange={e => setEdit(p => ({ ...p, audioUrl: e.target.value }))}
+                placeholder="SoundCloud URL or direct .mp3 link…"
+                style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+              />
+              <input ref={audioInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleAudioUpload} />
+              <button
+                onClick={() => audioInputRef.current?.click()}
+                disabled={audioUploading}
+                style={{ flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: audioUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: audioUploading ? 'default' : 'pointer' }}
+              >
+                {audioUploading ? 'Uploading…' : 'Upload'}
+              </button>
+            </div>
+            {(edit.audioUrl || asset.audioUrl) && (
+              <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-1)', background: 'var(--bg-2)' }}>
+                <AudioPlayer url={edit.audioUrl || asset.audioUrl} />
+              </div>
+            )}
+          </div>
+
+          {/* Transcript / Script */}
+          <div style={{ marginBottom: '12px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>📄 Script / Transcript</p>
+            <textarea
+              value={edit.transcript}
+              onChange={e => setEdit(p => ({ ...p, transcript: e.target.value }))}
+              placeholder="Write or paste the script, transcript, or supporting text…"
+              rows={4}
+              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+            />
+          </div>
+
+          {/* Human Gate */}
+          <div style={{ marginBottom: '14px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '7px' }}>👤 Human Gate</p>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[
+                { id: 'pending',  label: 'Pending',  color: '#f59e0b' },
+                { id: 'approved', label: 'Approved', color: '#10b981' },
+                { id: 'denied',   label: 'Denied',   color: '#ef4444' },
+              ].map(gate => (
+                <button
+                  key={gate.id}
+                  onClick={() => setEdit(p => ({ ...p, humanGateStatus: p.humanGateStatus === gate.id ? '' : gate.id }))}
+                  style={{
+                    padding: '5px 12px', borderRadius: '5px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                    background: edit.humanGateStatus === gate.id ? gate.color + '15' : 'var(--bg-2)',
+                    border: `1px solid ${edit.humanGateStatus === gate.id ? gate.color : 'var(--border-2)'}`,
+                    color: edit.humanGateStatus === gate.id ? gate.color : 'var(--text-4)',
+                  }}
+                >
+                  {gate.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid var(--border-0)' }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                background: saving ? 'var(--bg-2)' : '#041208',
+                border: `1px solid ${saving ? 'var(--border-1)' : '#10b98140'}`,
+                borderRadius: '6px', padding: '7px 16px',
+                color: saving ? 'var(--text-5)' : '#10b981',
+                fontSize: '11px', fontWeight: 600, cursor: saving ? 'default' : 'pointer',
+              }}
+            >
+              {saving ? 'Saving…' : 'Save ✓'}
+            </button>
+          </div>
+
+          {/* Publish to OpsCore — only when approved and not yet published */}
+          {edit.humanGateStatus === 'approved' && !asset.publishedAt && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98118' }}>
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                style={{
+                  width: '100%', background: publishing ? 'var(--bg-2)' : '#041208',
+                  border: `1px solid ${publishing ? 'var(--border-1)' : '#10b98140'}`,
+                  borderRadius: '7px', padding: '10px 16px',
+                  color: publishing ? 'var(--text-5)' : '#10b981',
+                  fontSize: '12px', fontWeight: 700, cursor: publishing ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                }}
+              >
+                {publishing ? 'Publishing…' : '📡 Broadcast on OpsCore'}
+              </button>
+            </div>
+          )}
+
+          {/* Published confirmation */}
+          {asset.publishedAt && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98115', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span style={{ color: '#10b981', fontSize: '11px', fontWeight: 600 }}>✓ Broadcasting on OpsCore</span>
+              <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+                · {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          )}
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, uid, isMobile }) {
+  const [expandedId, setExpandedId] = useState(null)
+  const [form, setForm] = useState({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
+  const [creating, setCreating] = useState(false)
+  const [videoUploading, setVideoUploading] = useState(false)
+  const [audioUploading, setAudioUploading] = useState(false)
+  const videoInputRef = useRef(null)
+  const audioInputRef = useRef(null)
+
+  async function handleVideoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file || !uid) return
+    setVideoUploading(true)
+    try {
+      const url = await uploadMediaVideo(file, uid)
+      setForm(p => ({ ...p, videoUrl: url }))
+    } catch (err) { console.error('[MediaWing] video upload:', err) }
+    finally { setVideoUploading(false); e.target.value = '' }
+  }
+
+  async function handleAudioUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file || !uid) return
+    setAudioUploading(true)
+    try {
+      const url = await uploadMediaAudio(file, uid)
+      setForm(p => ({ ...p, audioUrl: url }))
+    } catch (err) { console.error('[MediaWing] audio upload:', err) }
+    finally { setAudioUploading(false); e.target.value = '' }
+  }
+
+  async function handleCreate() {
+    if (!form.title.trim() || creating) return
+    setCreating(true)
+    try {
+      await onCreateMediaAsset({
+        title:      form.title,
+        videoUrl:   form.videoUrl  || null,
+        audioUrl:   form.audioUrl  || null,
+        transcript: form.transcript || '',
+        type:       form.videoUrl ? 'video' : form.audioUrl ? 'audio' : 'transcript',
+      })
+      setForm({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
+    } finally { setCreating(false) }
+  }
+
+  const px = isMobile ? 'px-4' : 'px-8'
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+      <div style={{ maxWidth: '640px' }}>
+
+        {/* New asset form */}
+        <div style={{
+          background: 'var(--bg-2)', border: '1px solid #a855f720',
+          borderLeft: '3px solid #a855f7', borderRadius: '0 10px 10px 0',
+          padding: '16px 18px', marginBottom: '24px',
+        }}>
+          <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '14px' }}>
+            New Media Asset
+          </p>
+
+          {/* Title */}
+          <div style={{ marginBottom: '12px' }}>
+            <input
+              value={form.title}
+              onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="Asset title…"
+              style={{ width: '100%', background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-0)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+              onKeyDown={e => { if (e.key === 'Enter' && form.title.trim()) handleCreate() }}
+            />
+          </div>
+
+          {/* Video URL + upload */}
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+            <input
+              value={form.videoUrl}
+              onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))}
+              placeholder="🎬 Video URL (YouTube, Vimeo, .mp4)…"
+              style={{ flex: 1, background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+            />
+            <input ref={videoInputRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={handleVideoUpload} />
+            <button
+              onClick={() => videoInputRef.current?.click()}
+              disabled={videoUploading}
+              style={{ flexShrink: 0, background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: videoUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: videoUploading ? 'default' : 'pointer' }}
+            >
+              {videoUploading ? 'Uploading…' : '↑ Upload'}
+            </button>
+          </div>
+
+          {/* Audio URL + upload */}
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+            <input
+              value={form.audioUrl}
+              onChange={e => setForm(p => ({ ...p, audioUrl: e.target.value }))}
+              placeholder="🔊 Audio URL (SoundCloud, .mp3)…"
+              style={{ flex: 1, background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+            />
+            <input ref={audioInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleAudioUpload} />
+            <button
+              onClick={() => audioInputRef.current?.click()}
+              disabled={audioUploading}
+              style={{ flexShrink: 0, background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 12px', color: audioUploading ? 'var(--text-5)' : '#a855f7', fontSize: '11px', cursor: audioUploading ? 'default' : 'pointer' }}
+            >
+              {audioUploading ? 'Uploading…' : '↑ Upload'}
+            </button>
+          </div>
+
+          <button
+            onClick={handleCreate}
+            disabled={!form.title.trim() || creating}
+            style={{
+              background: form.title.trim() && !creating ? '#7c3aed' : 'var(--bg-1)',
+              border: `1px solid ${form.title.trim() && !creating ? '#a855f7' : 'var(--border-1)'}`,
+              borderRadius: '7px', padding: '8px 18px',
+              color: form.title.trim() && !creating ? '#fff' : 'var(--text-5)',
+              fontSize: '11px', fontWeight: 600, cursor: form.title.trim() && !creating ? 'pointer' : 'default',
+            }}
+          >
+            {creating ? 'Creating…' : '+ Add Asset'}
+          </button>
+        </div>
+
+        {/* Assets list */}
+        {mediaAssets.length === 0 ? (
+          <div style={{ border: '1px dashed var(--border-0)', borderRadius: '10px', padding: '24px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>No media assets yet.</p>
+            <p style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '4px' }}>
+              Add a title above to create your first asset. Upload a video, audio file, or paste a URL.
+            </p>
+          </div>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+              Media Library — {mediaAssets.length} asset{mediaAssets.length !== 1 ? 's' : ''}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {mediaAssets.map(asset => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  onUpdate={onUpdateMediaAsset}
+                  onPublish={onPublishMediaAsset}
+                  expanded={expandedId === asset.id}
+                  onToggle={setExpandedId}
+                  uid={uid}
+                  isMobile={isMobile}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
 // ── About ─────────────────────────────────────────────────────────────────────
 
 function AboutTab({ graduates, isMobile }) {
@@ -1326,8 +1784,9 @@ function AboutTab({ graduates, isMobile }) {
 // ── Theater Room ──────────────────────────────────────────────────────────────
 
 export default function TheaterRoom({
-  graduates = [], observations = [], productions = [],
+  graduates = [], observations = [], productions = [], mediaAssets = [],
   onCreateProduction, onUpdateProduction, onPublish,
+  onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset,
   apiKey, onConnectClaude, uid, isMobile,
 }) {
   const px = isMobile ? 'px-4' : 'px-8'
@@ -1371,6 +1830,16 @@ export default function TheaterRoom({
           onUpdateProduction={onUpdateProduction}
           onPublish={onPublish}
           onStage={openInStaging}
+          isMobile={isMobile}
+        />
+      )}
+      {view === 'media' && (
+        <MediaWing
+          mediaAssets={mediaAssets}
+          onCreateMediaAsset={onCreateMediaAsset}
+          onUpdateMediaAsset={onUpdateMediaAsset}
+          onPublishMediaAsset={onPublishMediaAsset}
+          uid={uid}
           isMobile={isMobile}
         />
       )}

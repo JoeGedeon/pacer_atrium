@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
-import { videoEmbed } from './TheaterRoom'
+import { videoEmbed, audioEmbed } from './TheaterRoom'
 
 const SIGNAL_TYPES = [
   { id: 'revenue',       label: 'Revenue Risk',       color: '#ef4444', pattern: /revenue|finance|billing|money|cost|price|budget/i },
@@ -28,7 +28,7 @@ const px = 'px-4 md:px-6'
 const day  = 86400000
 const week = 7 * day
 
-export default function OpsCoreRoom({ observations = [], threads = [], productions = [], isMobile }) {
+export default function OpsCoreRoom({ observations = [], threads = [], productions = [], mediaAssets = [], isMobile }) {
   const [briefing, setBriefing] = useState(false)
   const now = Date.now()
 
@@ -71,7 +71,22 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
   // ── LEAD PRIORITY — what hits you in the face ──────────────────────────────
   const lead = useMemo(() => {
-    // P0: Published production from Theater — survived the gate
+    // P0a: Published media asset — explicitly broadcast content
+    const recentMedia = [...mediaAssets]
+      .filter(a => a.publishedAt && a.opsCoreSignal)
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
+    if (recentMedia) return {
+      icon:     '📡',
+      headline: 'BROADCAST READY',
+      color:    '#10b981',
+      bg:       '#041208',
+      border:   '#10b98130',
+      action:   `"${recentMedia.title || 'Untitled Asset'}" is live. Press play.`,
+      source:   `Theater Media · ${new Date(recentMedia.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
+      strength: 'High',
+    }
+
+    // P0b: Published production from Theater — survived the gate
     const recentPublished = [...productions]
       .filter(p => p.publishedAt && p.opsCoreSignal)
       .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
@@ -155,14 +170,20 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
       source:   `${observations.length} observation${observations.length !== 1 ? 's' : ''} in system`,
       strength: null,
     }
-  }, [threads, attentionQueue, activeSignals, signalCounts, patterns, observations, now, productions])
+  }, [threads, attentionQueue, activeSignals, signalCounts, patterns, observations, now, productions, mediaAssets])
 
-  // Most recently published production (for featured broadcast panel)
-  const featuredProduction = useMemo(() =>
-    [...productions]
+  // Featured broadcast — media asset takes precedence over production
+  const featuredBroadcast = useMemo(() => {
+    const recentMedia = [...mediaAssets]
+      .filter(a => a.publishedAt && a.opsCoreSignal)
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
+    if (recentMedia) return { type: 'media', asset: recentMedia }
+    const recentProd = [...productions]
       .filter(p => p.publishedAt && p.opsCoreSignal)
-      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0] || null
-  , [productions])
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
+    if (recentProd) return { type: 'production', asset: recentProd }
+    return null
+  }, [mediaAssets, productions])
 
   const strengthColor = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
@@ -254,9 +275,9 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             </div>
 
             {/* Action */}
-            <div style={{ marginBottom: featuredProduction?.videoUrl ? '16px' : '14px' }}>
+            <div style={{ marginBottom: featuredBroadcast ? '16px' : '14px' }}>
               <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>
-                {featuredProduction?.videoUrl ? 'Featured Broadcast' : 'Recommended Action'}
+                {featuredBroadcast ? 'Featured Broadcast' : 'Recommended Action'}
               </p>
               <p style={{ color: 'var(--text-0)', fontSize: isMobile ? '14px' : '15px', fontWeight: 500, lineHeight: 1.55 }}>
                 {lead.action}
@@ -264,32 +285,60 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             </div>
           </div>
 
-          {/* Video player — shown when published production has a videoUrl */}
-          {featuredProduction?.videoUrl && (() => {
-            const embed = videoEmbed(featuredProduction.videoUrl)
+          {/* Featured broadcast — media asset (video + audio + transcript) */}
+          {featuredBroadcast?.type === 'media' && (() => {
+            const asset = featuredBroadcast.asset
+            const videoE = videoEmbed(asset.videoUrl)
+            const audioE = audioEmbed(asset.audioUrl)
+            return (
+              <>
+                {videoE && (
+                  <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
+                    {videoE.type === 'iframe' ? (
+                      <iframe src={videoE.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                    ) : (
+                      <video controls src={videoE.src} style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }} />
+                    )}
+                  </div>
+                )}
+                {audioE && (
+                  <div style={{ borderTop: `1px solid ${lead.color}15`, background: 'var(--bg-2)' }}>
+                    {audioE.type === 'iframe' ? (
+                      <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
+                    ) : (
+                      <audio controls src={audioE.src} style={{ width: '100%', display: 'block', padding: '12px 16px' }} />
+                    )}
+                  </div>
+                )}
+                {asset.transcript && (
+                  <div style={{ borderTop: `1px solid ${lead.color}15`, padding: '14px 24px' }}>
+                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>📄 Script</p>
+                    <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                      {asset.transcript.length > 400 ? asset.transcript.slice(0, 400) + '…' : asset.transcript}
+                    </p>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
+          {/* Featured broadcast — published production with videoUrl */}
+          {featuredBroadcast?.type === 'production' && featuredBroadcast.asset.videoUrl && (() => {
+            const embed = videoEmbed(featuredBroadcast.asset.videoUrl)
             if (!embed) return null
             return (
               <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
                 {embed.type === 'iframe' ? (
-                  <iframe
-                    src={embed.src}
-                    style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  <iframe src={embed.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                 ) : (
-                  <video
-                    controls
-                    src={embed.src}
-                    style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }}
-                  />
+                  <video controls src={embed.src} style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }} />
                 )}
               </div>
             )
           })()}
 
           {/* Source */}
-          <div style={{ padding: featuredProduction?.videoUrl ? '10px 24px 14px' : '0 24px 14px' }}>
+          <div style={{ padding: featuredBroadcast ? '10px 24px 14px' : '0 24px 14px' }}>
             <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
               {lead.source}
             </p>
@@ -472,6 +521,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             {threads.length} K.E.L. thread{threads.length !== 1 ? 's' : ''}
             {' · '}
             {patterns.length} active constellation{patterns.length !== 1 ? 's' : ''}
+            {mediaAssets.length > 0 && ` · ${mediaAssets.length} media asset${mediaAssets.length !== 1 ? 's' : ''}`}
           </p>
         </div>
 
