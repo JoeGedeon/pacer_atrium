@@ -1,4 +1,259 @@
-export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate }) {
+import { useState } from 'react'
+
+// ── Artifact Renderer ──────────────────────────────────────────────────────────
+
+function ArtifactSection({ label, children }) {
+  return (
+    <div style={{ marginBottom: '14px' }}>
+      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.12em',
+        textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+        {label}
+      </p>
+      {children}
+    </div>
+  )
+}
+
+function ForgeArtifact({ artifact }) {
+  const domain = artifact.domain || ''
+  const isFleetFlow = domain === 'FleetFlow'
+  const isIsles     = domain === 'Isles of the Awakening'
+
+  return (
+    <div style={{
+      background: 'var(--bg-3)', border: '1px solid var(--border-1)',
+      borderTop: '2px solid #10b981', borderRadius: '0 0 8px 8px',
+      padding: '16px 18px', marginTop: '-1px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+        <span style={{ color: '#10b981', fontSize: '10px' }}>⚒</span>
+        <p style={{ color: '#10b981', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
+          textTransform: 'uppercase' }}>
+          Recommended Action Package
+        </p>
+      </div>
+      <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600,
+        lineHeight: 1.5, marginBottom: '16px' }}>
+        {artifact.title}
+      </p>
+
+      {isFleetFlow && (
+        <>
+          {artifact.actionSummary && (
+            <ArtifactSection label="Action Summary">
+              <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7 }}>
+                {artifact.actionSummary}
+              </p>
+            </ArtifactSection>
+          )}
+          {artifact.taskList?.length > 0 && (
+            <ArtifactSection label="Task List">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {artifact.taskList.map((task, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--text-5)', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>
+                      {i + 1}.
+                    </span>
+                    <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.55 }}>{task}</p>
+                  </div>
+                ))}
+              </div>
+            </ArtifactSection>
+          )}
+          {artifact.outreachDraft && (
+            <ArtifactSection label="Outreach Draft">
+              <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7,
+                fontStyle: 'italic', paddingLeft: '10px', borderLeft: '2px solid var(--border-2)' }}>
+                {artifact.outreachDraft}
+              </p>
+            </ArtifactSection>
+          )}
+          {artifact.successMetric && (
+            <ArtifactSection label="Success Metric">
+              <p style={{ color: '#10b981', fontSize: '12px', lineHeight: 1.6 }}>
+                {artifact.successMetric}
+              </p>
+            </ArtifactSection>
+          )}
+        </>
+      )}
+
+      {isIsles && (
+        <>
+          {artifact.conceptSummary && (
+            <ArtifactSection label="Concept Summary">
+              <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7 }}>
+                {artifact.conceptSummary}
+              </p>
+            </ArtifactSection>
+          )}
+          {artifact.nextCreativeStep && (
+            <ArtifactSection label="Next Creative Step">
+              <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.6, fontWeight: 500 }}>
+                {artifact.nextCreativeStep}
+              </p>
+            </ArtifactSection>
+          )}
+          {artifact.expansionQuestions?.length > 0 && (
+            <ArtifactSection label="Expansion Questions">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {artifact.expansionQuestions.map((q, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--text-5)', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>?</span>
+                    <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.55, fontStyle: 'italic' }}>{q}</p>
+                  </div>
+                ))}
+              </div>
+            </ArtifactSection>
+          )}
+          {artifact.productionRecommendation && (
+            <ArtifactSection label="Production Recommendation">
+              <p style={{ color: '#a855f7', fontSize: '12px', lineHeight: 1.6 }}>
+                {artifact.productionRecommendation}
+              </p>
+            </ArtifactSection>
+          )}
+        </>
+      )}
+
+      {!isFleetFlow && !isIsles && (
+        <>
+          {artifact.strategicSummary && (
+            <ArtifactSection label="Strategic Summary">
+              <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.7 }}>
+                {artifact.strategicSummary}
+              </p>
+            </ArtifactSection>
+          )}
+          {artifact.recommendedAction && (
+            <ArtifactSection label="Recommended Action">
+              <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.6, fontWeight: 500 }}>
+                {artifact.recommendedAction}
+              </p>
+            </ArtifactSection>
+          )}
+          {artifact.stakeholders?.length > 0 && (
+            <ArtifactSection label="Stakeholders">
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {artifact.stakeholders.map((s, i) => (
+                  <span key={i} style={{
+                    background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                    color: 'var(--text-3)', fontSize: '10px', padding: '3px 8px', borderRadius: '4px',
+                  }}>{s}</span>
+                ))}
+              </div>
+            </ArtifactSection>
+          )}
+          {artifact.followUpSteps?.length > 0 && (
+            <ArtifactSection label="Follow-Up Steps">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {artifact.followUpSteps.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--text-5)', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>→</span>
+                    <p style={{ color: 'var(--text-2)', fontSize: '12px', lineHeight: 1.55 }}>{step}</p>
+                  </div>
+                ))}
+              </div>
+            </ArtifactSection>
+          )}
+        </>
+      )}
+
+      <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '8px', fontStyle: 'italic' }}>
+        Sent to Theater · Thread outcome recorded
+      </p>
+    </div>
+  )
+}
+
+// ── Approved Thread Card ───────────────────────────────────────────────────────
+
+function ThreadCard({ thread, onForge, hasApiKey }) {
+  const [forging, setForging] = useState(false)
+  const [forgeError, setForgeError] = useState(null)
+
+  async function handleForge() {
+    setForgeError(null)
+    setForging(true)
+    try {
+      await onForge(thread.id, thread)
+    } catch (err) {
+      setForgeError(err.message || 'Forge failed. Try again.')
+    } finally {
+      setForging(false)
+    }
+  }
+
+  const hasArtifact = !!thread.artifact
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{
+        background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+        borderLeft: '3px solid #10b981',
+        borderRadius: hasArtifact ? '0 8px 0 0' : '0 8px 8px 0',
+        borderBottom: hasArtifact ? 'none' : undefined,
+        padding: '14px 18px',
+      }}>
+        <p style={{ color: 'var(--text-0)', fontSize: '13px', lineHeight: 1.6, marginBottom: '10px' }}>
+          {thread.recommendation}
+        </p>
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {thread.domain && (
+            <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{thread.domain}</span>
+          )}
+          {thread.constellation && (
+            <span style={{ color: '#a07830', fontSize: '10px' }}>◈ {thread.constellation}</span>
+          )}
+          {hasArtifact ? (
+            <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600 }}>⚒ Artifact forged</span>
+          ) : (
+            <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+              Awaiting manufacture
+            </span>
+          )}
+        </div>
+
+        {!hasArtifact && (
+          <div style={{ marginTop: '12px' }}>
+            <button
+              onClick={handleForge}
+              disabled={forging || !hasApiKey}
+              style={{
+                background: forging ? 'var(--bg-3)' : '#0a1f1240',
+                border: `1px solid ${forging ? 'var(--border-1)' : '#10b98160'}`,
+                color: forging ? 'var(--text-5)' : '#10b981',
+                fontSize: '11px', fontWeight: 600, padding: '6px 14px',
+                borderRadius: '6px', cursor: forging || !hasApiKey ? 'default' : 'pointer',
+                fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px',
+              }}
+            >
+              {forging ? (
+                <>
+                  <span style={{ opacity: 0.6 }}>⚒</span> Forging…
+                </>
+              ) : !hasApiKey ? (
+                'API key required to forge'
+              ) : (
+                <>⚒ Forge Artifact</>
+              )}
+            </button>
+            {forgeError && (
+              <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px' }}>{forgeError}</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {hasArtifact && <ForgeArtifact artifact={thread.artifact} />}
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey }) {
   const px = isMobile ? 'px-6' : 'px-10'
   const approvedThreads = threads.filter(t => t.decision === 'approved')
 
@@ -45,53 +300,31 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
               </span>
             </div>
 
-            {approvedThreads.length > 0 && (
+            {approvedThreads.length > 0 ? (
               <div style={{ marginBottom: '32px' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', fontWeight: 600, marginBottom: '14px' }}>
-                  Approved Decisions — Build from these
+                  Approved Decisions
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {approvedThreads.map(t => (
-                    <div key={t.id} style={{
-                      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-                      borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0',
-                      padding: '14px 18px',
-                    }}>
-                      <p style={{ color: 'var(--text-0)', fontSize: '13px',
-                        lineHeight: 1.6, marginBottom: '8px' }}>
-                        {t.recommendation}
-                      </p>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        {t.domain && (
-                          <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{t.domain}</span>
-                        )}
-                        {t.outcome ? (
-                          <span style={{ color: '#10b981', fontSize: '10px' }}>Outcome recorded</span>
-                        ) : (
-                          <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-                            Outcome pending
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {approvedThreads.map(t => (
+                  <ThreadCard
+                    key={t.id}
+                    thread={t}
+                    onForge={onForge}
+                    hasApiKey={!!apiKey}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                borderRadius: '8px', padding: '20px 24px', marginBottom: '32px',
+              }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
+                  No approved decisions yet. K.E.L. approvals will appear here.
+                </p>
               </div>
             )}
-
-            <div style={{
-              background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-              borderRadius: '8px', padding: '20px 24px',
-            }}>
-              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-                textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-                Forge Tools
-              </p>
-              <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
-                Build tools are being prepared. Return shortly.
-              </p>
-            </div>
           </div>
         )}
 
@@ -160,9 +393,9 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
               {[
-                'Create implementation plans from approved decisions',
-                'Generate execution sequences',
-                'Track build milestones',
+                'Manufacture artifacts from approved KEL decisions',
+                'Generate domain-specific action packages',
+                'Send production cargo to Theater',
                 'Record outcomes back to Archivist Hall',
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>

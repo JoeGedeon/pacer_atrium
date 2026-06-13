@@ -25,6 +25,7 @@ import ArrivalBrief from './components/ArrivalBrief'
 import OnboardingCard from './components/OnboardingCard'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation, generateInstitutionalPulse } from './lib/claudeRouting'
+import { generateForgeArtifact } from './lib/claudeForge'
 import { saveProviderKey } from './lib/anthropicProxy'
 import {
   listenObservations, createObservation, updateObservation,
@@ -36,7 +37,7 @@ import {
   createProduction, listenProductions, updateProduction,
   incrementCampusStat, listenCampusStats,
   getLatestBrief, saveLatestBrief,
-  createThread, listenThreads,
+  createThread, listenThreads, updateThread,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -581,6 +582,25 @@ export default function App() {
     })
   }
 
+  async function forgeArtifact(threadId, thread) {
+    if (!user || !apiKey) return
+    const obsText = observations.find(o => thread.observationIds?.includes(o.id))?.text || ''
+    const artifact = await generateForgeArtifact({ ...thread, observationText: obsText }, apiKey)
+    await updateThread(user.uid, threadId, { artifact, outcome: 'artifact_generated', outcomeAt: true })
+    await createProduction(user.uid, {
+      title:        artifact.title,
+      sourceText:   thread.recommendation,
+      status:       'incoming',
+      notes:        `Forged from approved KEL decision. Domain: ${thread.domain || 'unknown'}.`,
+    })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'forge_artifact_created',
+      title:           'Forge Artifact Created',
+      description:     `"${artifact.title}" manufactured from approved decision. Sent to Theater.`,
+      relatedEntityId: threadId,
+    })
+  }
+
   async function createProductionRecord(data) {
     if (!user) return
     await createProduction(user.uid, data)
@@ -880,6 +900,8 @@ export default function App() {
             builderReadiness={builderReadiness}
             threads={threads}
             onNavigate={setCurrentRoom}
+            onForge={forgeArtifact}
+            apiKey={apiKey}
           />
         )}
         {isKEL && (
