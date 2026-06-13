@@ -19,6 +19,8 @@ These phrases are institutional doctrine. Do not rewrite, paraphrase, or "improv
 - **"A successful system is not measured by what it creates. A successful system is measured by what arrives."** — Constitutional Principle #2, The Last Inch Principle.
 - **"Nothing important should be lost in the hallway."** — closing line of The Last Inch Principle. Do not rewrite.
 - **The five duties of The Last Inch Principle** (exact names, no paraphrasing): Identify the Path · Clear the Obstruction · Protect the Cargo · Document the Journey · Deliver the Outcome.
+- **"Treat records as evidence that people were here."** — Constitutional Principle #3, Memory Serves the Person. Do not rewrite.
+- **"Memory serves the person. The person does not serve the memory."** — closing line of Constitutional Principle #3. Do not rewrite.
 
 ### MUSE Institutional Mandate (locked June 2026)
 

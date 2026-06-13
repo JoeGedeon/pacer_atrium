@@ -21,6 +21,19 @@ const CONSTITUTIONAL_PRINCIPLES = [
     note: 'Most failures do not occur at the point of creation. Most failures occur during transit. An idea can be correct and still arrive damaged. A truth can be observed and still fail to reach the people who need it. A decision can be approved and still fail in execution. The responsibility of a system is not merely to create value. The responsibility of a system is to preserve value while it moves. These duties apply equally to ideas, decisions, records, people, projects, and physical objects.',
     closing: 'The observation that enters the system should be recognizable when it leaves. Nothing important should be lost in the hallway.',
   },
+  {
+    number: 3,
+    title: 'Memory Serves the Person',
+    text: 'Treat records as evidence that people were here.',
+    ratified: 'June 2026',
+    note: 'Records are not the purpose of the institution. Records are the witness of an encounter, an observation, a decision, a lesson, a contribution, or a life intersecting with the institution. The institution does not exist to accumulate records. The institution exists to serve people. Memory is valuable because people are valuable. Data is valuable because experience occurred. When trade-offs appear, the institution chooses the person before the record.',
+    test: {
+      question: 'Does this help memory serve the person?',
+      yes: 'Proceed.',
+      no: 'Stop.',
+    },
+    closing: 'Memory serves the person. The person does not serve the memory.',
+  },
 ]
 
 const CANDIDATE_PRINCIPLES = [
@@ -354,6 +367,21 @@ export default function DoctrineRoom({ isMobile }) {
                 <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.7 }}>
                   {p.note}
                 </p>
+                {p.test && (
+                  <div style={{ marginTop: '14px', paddingTop: '14px',
+                    borderTop: '1px solid #f59e0b15' }}>
+                    <p style={{ color: '#f59e0b50', fontSize: '9px', letterSpacing: '0.12em',
+                      textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+                      The Test
+                    </p>
+                    <p style={{ color: 'var(--text-2)', fontSize: '12px', fontStyle: 'italic',
+                      marginBottom: '8px' }}>{p.test.question}</p>
+                    <div style={{ display: 'flex', gap: '24px' }}>
+                      <p style={{ color: '#10b981', fontSize: '11px' }}>If yes — {p.test.yes}</p>
+                      <p style={{ color: '#ef4444aa', fontSize: '11px' }}>If no — {p.test.no}</p>
+                    </div>
+                  </div>
+                )}
                 {p.closing && (
                   <p style={{ color: '#f59e0b90', fontSize: '11px', fontStyle: 'italic',
                     marginTop: '12px', lineHeight: 1.7 }}>
