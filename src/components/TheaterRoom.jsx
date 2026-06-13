@@ -1586,10 +1586,11 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
   }
 
   async function handleCreate() {
+    console.log('[MediaWing] handleCreate fired', { title: form.title, titleTrim: form.title.trim(), creating })
     if (!form.title.trim() || creating) return
     setCreating(true)
     setCreateError(null)
-    console.log('[MediaWing] handleCreate called', { title: form.title, videoUrl: form.videoUrl, audioUrl: form.audioUrl })
+    console.log('[MediaWing] handleCreate proceeding to write', { title: form.title, videoUrl: form.videoUrl, audioUrl: form.audioUrl })
     try {
       const id = await onCreateMediaAsset({
         title:      form.title,
@@ -1618,9 +1619,14 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
           borderLeft: '3px solid #a855f7', borderRadius: '0 10px 10px 0',
           padding: '16px 18px', marginBottom: '24px',
         }}>
-          <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '14px' }}>
-            New Media Asset
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
+              New Media Asset
+            </p>
+            <span style={{ color: '#a855f740', fontSize: '9px', letterSpacing: '0.08em' }}>
+              MediaWing diagnostics active · 2026-06-13-v4
+            </span>
+          </div>
 
           {/* Title */}
           <div style={{ marginBottom: '12px' }}>
@@ -1687,7 +1693,10 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <button
-              onClick={handleCreate}
+              onClick={() => {
+                console.log('[MediaWing] Add Asset button clicked', { title: form.title, disabled: !form.title.trim() || creating })
+                handleCreate()
+              }}
               disabled={!form.title.trim() || creating}
               style={{
                 background: form.title.trim() && !creating ? '#7c3aed' : 'var(--bg-1)',
