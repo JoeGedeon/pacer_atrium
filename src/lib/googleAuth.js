@@ -32,7 +32,7 @@ export async function requestGoogleToken(clientId) {
       },
       error_callback: (err) => reject(new Error(err.type || 'OAuth error')),
     })
-    tokenClient.requestAccessToken({ prompt: '' })
+    tokenClient.requestAccessToken({ prompt: 'select_account' })
   })
 }
 
