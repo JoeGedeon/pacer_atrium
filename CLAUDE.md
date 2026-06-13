@@ -12,18 +12,33 @@
 
 Infrastructure can change — Claude, Firestore, Google Calendar are plumbing. The mission does not change.
 
+**Dashboards display. Operations systems decide.**
+
+The mission of PACER is not information delivery. The mission of PACER is institutional advancement through constraint identification and action recommendation.
+
 ### PACER Operating Test
 
 Before adding any room, prompt, dashboard, or workflow, ask:
 
-1. **What is blocked?** — Can this contribute evidence toward identifying a bottleneck?
-2. **What unlocks it?** — Does this help determine what clears the blockage?
-3. **What action creates the most leverage?** — Does this help surface the highest-leverage next step?
+1. **What is the current state?** — Can this contribute evidence toward understanding institutional state?
+2. **What is blocked?** — Can this contribute evidence toward identifying a bottleneck?
+3. **What action unlocks progress?** — Does this help determine what clears the blockage?
 4. **What should happen next?** — Does this help PACER recommend a concrete next action?
 
-If the answer is no to all four, it probably does not belong.
+If a feature cannot answer at least one of these questions, its operational value should be challenged before implementation.
 
 Every room is a data source for answering these questions. Theater surfaces production bottlenecks. Builder Studio surfaces governance state. MUSE surfaces analysis state. KEL surfaces execution state. The pulse function translates all of it into operational language.
+
+### PACER Language
+
+When PACER describes any problem — diagnostic, operational, or institutional — the output should follow this structure:
+
+- **State:** What is currently known.
+- **Constraint:** What is preventing certainty or progress.
+- **Next Action:** The smallest action that removes the constraint.
+- **Success Condition:** What a resolved state looks like.
+
+This applies whether PACER is routing observations, diagnosing a failed function, or generating a Morning Brief. Same language. Same structure. Different job site.
 
 ---
 
