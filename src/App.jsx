@@ -100,7 +100,15 @@ export default function App() {
   const [creatorLogs, setCreatorLogs]             = useState([])
   const [productions, setProductions]             = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
-  const [googleTokenData, setGoogleTokenData]     = useState(null) // { access_token, expires_at }
+  const [googleTokenData, setGoogleTokenData]     = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('pacer_google_token')
+      if (!raw) return null
+      const data = JSON.parse(raw)
+      if (isTokenExpired(data)) { sessionStorage.removeItem('pacer_google_token'); return null }
+      return data
+    } catch { return null }
+  })
   const [emailData, setEmailData]                 = useState(null)
   const [calendarEvents, setCalendarEvents]       = useState([])
   const [campusStats, setCampusStats]             = useState(null) // creator-only beta counters
@@ -111,6 +119,7 @@ export default function App() {
   const [arrivalLoading, setArrivalLoading] = useState(false)
   const [arrivalSpeaking, setArrivalSpeaking] = useState(false)
   const hasArrived                          = useRef(false)
+  const briefRefreshedForGoogle             = useRef(false)
 
   // Builder readiness derives from the ledger — not from local state
   const builderReadiness = useMemo(() => {
@@ -135,6 +144,7 @@ export default function App() {
     // New auth session — reset nav so login always lands at home, not last room
     setCurrentRoom('home')
     hasArrived.current = false
+    briefRefreshedForGoogle.current = false
     setArrivalState(null)
     setArrivalText('')
     if (isCreator(user)) {
@@ -186,6 +196,7 @@ export default function App() {
     try {
       const tokenData = await requestGoogleToken(GOOGLE_CLIENT_ID)
       setGoogleTokenData(tokenData)
+      sessionStorage.setItem('pacer_google_token', JSON.stringify(tokenData))
       const [email, calendar] = await Promise.allSettled([
         fetchEmailSummary(tokenData.access_token),
         fetchTodayEvents(tokenData.access_token),
@@ -199,6 +210,7 @@ export default function App() {
 
   function handleDisconnectGmail() {
     if (googleTokenData?.access_token) revokeGoogleToken(googleTokenData.access_token)
+    sessionStorage.removeItem('pacer_google_token')
     setGoogleTokenData(null)
     setEmailData(null)
     setCalendarEvents([])
@@ -309,6 +321,20 @@ export default function App() {
       if (calendar.status === 'fulfilled') setCalendarEvents(calendar.value)
     })
   }, [googleTokenData]) // eslint-disable-line
+
+  // ── Refresh brief when Google data first arrives (handles slow network / late connect) ─
+  useEffect(() => {
+    if (briefRefreshedForGoogle.current) return
+    if (!emailData && calendarEvents.length === 0) return
+    briefRefreshedForGoogle.current = true
+    if (arrivalState !== 'text' && arrivalState !== 'voice') return
+    if (arrivalLoading) return
+    setArrivalLoading(true)
+    buildArrivalText().then(text => {
+      setArrivalText(text || '')
+      setArrivalLoading(false)
+    })
+  }, [emailData, calendarEvents]) // eslint-disable-line
 
   async function submitObservation(obs) {
     if (!isCreator(user)) incrementCampusStat('observations')
