@@ -27,7 +27,7 @@ const px = 'px-4 md:px-6'
 const day  = 86400000
 const week = 7 * day
 
-export default function OpsCoreRoom({ observations = [], threads = [], isMobile }) {
+export default function OpsCoreRoom({ observations = [], threads = [], productions = [], isMobile }) {
   const [briefing, setBriefing] = useState(false)
   const now = Date.now()
 
@@ -70,6 +70,21 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
 
   // ── LEAD PRIORITY — what hits you in the face ──────────────────────────────
   const lead = useMemo(() => {
+    // P0: Published production from Theater — survived the gate
+    const recentPublished = [...productions]
+      .filter(p => p.publishedAt && p.opsCoreSignal)
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
+    if (recentPublished) return {
+      icon:     '📡',
+      headline: 'PUBLISHED ASSET READY',
+      color:    '#10b981',
+      bg:       '#041208',
+      border:   '#10b98130',
+      action:   `"${recentPublished.title || 'Untitled'}" has been approved by Human Gate and published from Theater. It is now live.`,
+      source:   `Theater → OpsCore · ${new Date(recentPublished.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
+      strength: 'High',
+    }
+
     // P1: Approved KEL decision with no outcome yet
     const urgentKEL = threads.find(t => t.decision === 'approved' && !t.outcomeAt)
     if (urgentKEL) return {

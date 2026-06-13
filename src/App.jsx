@@ -10,6 +10,7 @@ import PACERProcessing from './components/PACERProcessing'
 import AtriumDashboard from './components/AtriumDashboard'
 import DoctrineRoom from './components/DoctrineRoom'
 import OpsCoreRoom from './components/OpsCoreRoom'
+import TheaterRoom from './components/TheaterRoom'
 import MuseRoom from './components/MuseRoom'
 import VERARoom from './components/VERARoom'
 import ArchiveRoom from './components/ArchiveRoom'
@@ -629,6 +630,20 @@ export default function App() {
     await updateProduction(user.uid, id, patch)
   }
 
+  async function publishToOpsCore(productionId, title) {
+    if (!user) return
+    await updateProduction(user.uid, productionId, {
+      publishedAt:    new Date().toISOString(),
+      opsCoreSignal:  true,
+    })
+    await createInstitutionEvent(user.uid, {
+      eventType:       'production_published',
+      title:           'Production Published to OpsCore',
+      description:     `"${title}" survived Theater review and is now live in OpsCore Field View.`,
+      relatedEntityId: productionId,
+    })
+  }
+
   async function addCreatorLog(data) {
     if (!user) return
     await createCreatorLog(user.uid, data)
@@ -685,6 +700,7 @@ export default function App() {
   const isHome     = currentRoom === 'home'
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
+  const isTheater  = currentRoom === 'theater'
   const isOpsCore  = currentRoom === 'content'
   const isMuse     = currentRoom === 'muse'
   const isVERA     = currentRoom === 'vera'
@@ -876,10 +892,25 @@ export default function App() {
           />
         )}
         {isDoctrine && <DoctrineRoom isMobile={isMobile} voiceMode={voiceMode} />}
+        {isTheater  && (
+          <TheaterRoom
+            graduates={graduates}
+            observations={observations}
+            productions={productions}
+            onCreateProduction={createProductionRecord}
+            onUpdateProduction={updateProductionRecord}
+            onPublish={publishToOpsCore}
+            apiKey={apiKey}
+            onConnectClaude={() => setShowKeyGate(true)}
+            uid={user?.uid}
+            isMobile={isMobile}
+          />
+        )}
         {isOpsCore  && (
           <OpsCoreRoom
             observations={observations}
             threads={threads}
+            productions={productions}
             isMobile={isMobile}
           />
         )}
@@ -974,7 +1005,7 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isOpsCore && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isOpsCore && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>

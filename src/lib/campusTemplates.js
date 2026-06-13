@@ -12,13 +12,13 @@ export const CAMPUS_TEMPLATES = {
     id: 'professional',
     name: 'Professional',
     tagline: 'Deeper understanding. More tools.',
-    rooms: ['atrium', 'muse', 'vera', 'content', 'archive', 'doctrine', 'settings'],
+    rooms: ['atrium', 'muse', 'vera', 'theater', 'content', 'archive', 'doctrine', 'settings'],
   },
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
     tagline: 'Your institution. Your rules.',
-    rooms: ['atrium', 'muse', 'vera', 'content', 'businesscenter', 'kel', 'archive', 'doctrine', 'settings'],
+    rooms: ['atrium', 'muse', 'vera', 'theater', 'content', 'businesscenter', 'kel', 'archive', 'doctrine', 'settings'],
   },
   fleetflow: {
     id: 'fleetflow',

@@ -142,10 +142,21 @@ function productionToNarration(production) {
   return parts.filter(Boolean).join(' ')
 }
 
-function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArchive, isMobile }) {
+function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArchive, onPublish, isMobile }) {
   const [edit, setEdit] = useState(null)
   const [saving, setSaving] = useState(false)
   const [narrating, setNarrating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+
+  async function handlePublish() {
+    if (publishing || !onPublish) return
+    setPublishing(true)
+    try {
+      await onPublish(production.id, production.title || 'Untitled Production')
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   function handleNarrate() {
     if (narrating) return
@@ -213,6 +224,9 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
             <StatusBadge status={production.status} />
             {studioLabel && production.studio && (
               <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{studioLabel}</span>
+            )}
+            {production.publishedAt && (
+              <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600 }}>📡 OpsCore</span>
             )}
             {outputCount > 0 && (
               <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>
@@ -461,19 +475,52 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
               {saving ? 'Saving…' : 'Save ✓'}
             </button>
           </div>
+
+          {/* Publish gate — only when Human Gate approved and not yet published */}
+          {production.humanGateStatus === 'approved' && !production.publishedAt && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98118' }}>
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                style={{
+                  width: '100%', background: publishing ? 'var(--bg-2)' : '#041208',
+                  border: `1px solid ${publishing ? 'var(--border-1)' : '#10b98140'}`,
+                  borderRadius: '7px', padding: '10px 16px',
+                  color: publishing ? 'var(--text-5)' : '#10b981',
+                  fontSize: '12px', fontWeight: 700,
+                  cursor: publishing ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                }}
+              >
+                {publishing ? 'Publishing…' : '📡 Publish to OpsCore'}
+              </button>
+            </div>
+          )}
+
+          {/* Published confirmation */}
+          {production.publishedAt && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #10b98115',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span style={{ color: '#10b981', fontSize: '11px', fontWeight: 600 }}>✓ Published to OpsCore</span>
+              <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+                · {new Date(production.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          )}
+
         </div>
       )}
     </div>
   )
 }
 
-function ProductionOffice({ observations, productions, onCreateProduction, onUpdateProduction, onStage, isMobile }) {
+function ProductionOffice({ observations, productions, onCreateProduction, onUpdateProduction, onPublish, onStage, isMobile }) {
   const [expandedId, setExpandedId]   = useState(null)
   const [startingId, setStartingId]   = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
 
   const incomingObs = observations.filter(o =>
-    o.destination === 'Theater' &&
+    o.destination === 'Theater' || o.destination === 'OpsCore' &&
     !productions.some(p => p.sourceObservationId === o.id)
   )
 
@@ -595,6 +642,7 @@ function ProductionOffice({ observations, productions, onCreateProduction, onUpd
                   onSave={handleSave}
                   onStage={concept => onStage(concept)}
                   onArchive={handleArchive}
+                  onPublish={onPublish}
                   isMobile={isMobile}
                 />
               ))}
@@ -635,7 +683,7 @@ function SingleManifest({ observations, productions, apiKey, onConnectClaude, on
   const [saved, setSaved]           = useState(false)
 
   const selectedFormat = FORMATS.find(f => f.id === formatId)
-  const incoming = (observations || []).filter(o => o.destination === 'Theater')
+  const incoming = (observations || []).filter(o => o.destination === 'Theater' || o.destination === 'OpsCore')
   const activeProdOptions = (productions || []).filter(p => p.status !== 'archived')
 
   async function handleStage() {
@@ -886,7 +934,7 @@ function MultiManifestView({ observations, apiKey, onConnectClaude, uid, isMobil
   const [archiving, setArchiving] = useState(false)
   const [archived, setArchived]   = useState(false)
 
-  const incoming = (observations || []).filter(o => o.destination === 'Theater')
+  const incoming = (observations || []).filter(o => o.destination === 'Theater' || o.destination === 'OpsCore')
   const allDone = manifests && LIVE_FORMATS.every(f => manifests[f.id]?.status !== 'loading')
   const scoredCount    = manifests ? LIVE_FORMATS.filter(f => manifests[f.id]?.score).length : 0
   const preservedCount = manifests ? LIVE_FORMATS.filter(f => manifests[f.id]?.score === 'preserved').length : 0
@@ -1221,7 +1269,7 @@ function AboutTab({ graduates, isMobile }) {
 
 export default function TheaterRoom({
   graduates = [], observations = [], productions = [],
-  onCreateProduction, onUpdateProduction,
+  onCreateProduction, onUpdateProduction, onPublish,
   apiKey, onConnectClaude, uid, isMobile,
 }) {
   const px = isMobile ? 'px-4' : 'px-8'
@@ -1263,6 +1311,7 @@ export default function TheaterRoom({
           productions={productions}
           onCreateProduction={onCreateProduction}
           onUpdateProduction={onUpdateProduction}
+          onPublish={onPublish}
           onStage={openInStaging}
           isMobile={isMobile}
         />
@@ -1283,15 +1332,57 @@ export default function TheaterRoom({
         <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4' : 'px-8'} py-6`}>
           <div style={{ maxWidth: '580px' }}>
             <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
-              textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
-              Published Productions
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+              Published to OpsCore
             </p>
-            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
-              Published artifacts — observations that became deliverables and were deployed.
-              A produced artifact and a deployed artifact are not the same thing.
-              Published is the proof that the institution acted.
-              Coming soon.
+            <p style={{ color: 'var(--text-6)', fontSize: '11px', marginBottom: '20px' }}>
+              These survived Theater review. They are now live in OpsCore Field View.
             </p>
+            {productions.filter(p => p.publishedAt).length === 0 ? (
+              <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                  No published productions yet. When a Human Gate-approved production is published,
+                  it appears here and in OpsCore.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {productions
+                  .filter(p => p.publishedAt)
+                  .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+                  .map(p => (
+                    <div key={p.id} style={{
+                      background: '#041208',
+                      border: '1px solid #10b98125',
+                      borderLeft: '3px solid #10b981',
+                      borderRadius: '0 8px 8px 0', padding: '14px 16px',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                        <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600 }}>
+                          {p.title || 'Untitled Production'}
+                        </p>
+                        <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
+                          letterSpacing: '0.1em', flexShrink: 0 }}>
+                          {new Date(p.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                      {p.deliveryDestination && (
+                        <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+                          Destination: {p.deliveryDestination}
+                        </p>
+                      )}
+                      {p.notes && (
+                        <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.5, marginTop: '4px' }}>
+                          {p.notes.length > 120 ? p.notes.slice(0, 120) + '…' : p.notes}
+                        </p>
+                      )}
+                      <p style={{ color: '#10b981', fontSize: '10px', marginTop: '8px', fontWeight: 600 }}>
+                        ✓ Live in OpsCore Field View
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
       )}
