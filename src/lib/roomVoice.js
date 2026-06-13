@@ -85,9 +85,19 @@ export function speakWithVoice(text, config, { onStart, onEnd, onError } = {}) {
   const utt   = new SpeechSynthesisUtterance(text)
   utt.rate    = cfg.rate
   utt.pitch   = cfg.pitch
-  utt.onstart = () => { console.debug('[PACER voice] onstart fired'); onStart?.() }
-  utt.onend   = () => { console.debug('[PACER voice] onend fired'); onEnd?.() }
-  utt.onerror = (e) => { console.debug('[PACER voice] onerror:', e.error); onError?.() }
+
+  // iOS WebKit silently pauses speech after onstart without firing onpause.
+  // A resume() heartbeat keeps it alive throughout the utterance.
+  let keepAlive = null
+  utt.onstart = () => {
+    console.debug('[PACER voice] onstart fired')
+    keepAlive = setInterval(() => {
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume()
+    }, 250)
+    onStart?.()
+  }
+  utt.onend   = () => { clearInterval(keepAlive); console.debug('[PACER voice] onend fired'); onEnd?.() }
+  utt.onerror = (e) => { clearInterval(keepAlive); console.debug('[PACER voice] onerror:', e.error); onError?.() }
 
   const doSpeak = () => {
     const voice = pickVoice(cfg.gender)
