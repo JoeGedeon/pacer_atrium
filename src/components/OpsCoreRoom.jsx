@@ -17,20 +17,21 @@ function matchSignal(constellation) {
   return null
 }
 
-const px = 'px-4 md:px-6'
 const SECTION = {
   color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
   textTransform: 'uppercase', fontWeight: 700, marginBottom: '10px',
 }
 
+const px = 'px-4 md:px-6'
+
+const day  = 86400000
+const week = 7 * day
+
 export default function OpsCoreRoom({ observations = [], threads = [], isMobile }) {
   const [briefing, setBriefing] = useState(false)
-
   const now = Date.now()
-  const day  = 86400000
-  const week = 7  * day
-  const month = 30 * day
 
+  // Signal counts by type
   const signalCounts = useMemo(() => {
     const counts = {}
     for (const sig of SIGNAL_TYPES) counts[sig.id] = 0
@@ -42,9 +43,8 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
   }, [observations])
 
   const activeSignals = SIGNAL_TYPES.filter(s => signalCounts[s.id] > 0)
-  const totalSignals  = SIGNAL_TYPES.reduce((sum, s) => sum + signalCounts[s.id], 0)
 
-  // Unrouted observations — oldest first (most overdue at top)
+  // Unrouted observations — oldest first
   const attentionQueue = useMemo(() =>
     observations
       .filter(o => !o.destination)
@@ -52,7 +52,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
       .slice(0, 6)
   , [observations])
 
-  // Constellation frequency
+  // Constellation frequency — all of them, not just regex-matched
   const patterns = useMemo(() => {
     const freq = {}
     for (const obs of observations) {
@@ -65,29 +65,93 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
 
   // KEL threads awaiting outcome
   const pendingActions = useMemo(() =>
-    threads.filter(t => t.recommendation && !t.outcomeAt).slice(0, 4)
+    threads.filter(t => t.recommendation && !t.outcomeAt)
   , [threads])
+
+  // ── LEAD PRIORITY — what hits you in the face ──────────────────────────────
+  const lead = useMemo(() => {
+    // P1: Approved KEL decision with no outcome yet
+    const urgentKEL = threads.find(t => t.decision === 'approved' && !t.outcomeAt)
+    if (urgentKEL) return {
+      icon:           '⚡',
+      headline:       'APPROVED ACTION PENDING',
+      color:          '#10b981',
+      bg:             '#041208',
+      border:         '#10b98130',
+      action:         urgentKEL.recommendation
+        ? (urgentKEL.recommendation.length > 160 ? urgentKEL.recommendation.slice(0, 160) + '…' : urgentKEL.recommendation)
+        : 'Act on this approved K.E.L. decision.',
+      source:         `K.E.L. decision · ${urgentKEL.domain || 'General'}`,
+      strength:       'High',
+    }
+
+    // P2: Observation unrouted for 7+ days
+    const oldest = attentionQueue[0]
+    if (oldest) {
+      const age = now - (oldest.timestamp?.toMillis?.() || 0)
+      if (age > week) return {
+        icon:     '⚠',
+        headline: 'ATTENTION REQUIRED',
+        color:    '#f97316',
+        bg:       '#1a0e05',
+        border:   '#f9731630',
+        action:   `${attentionQueue.length} observation${attentionQueue.length !== 1 ? 's' : ''} waiting to be routed — oldest unrouted for ${Math.floor(age / day)} days.`,
+        source:   'Attention Map · Route through Atrium',
+        strength: age > 14 * day ? 'High' : 'Medium',
+      }
+    }
+
+    // P3: Dominant signal type
+    const topSig = [...activeSignals].sort((a, b) => signalCounts[b.id] - signalCounts[a.id])[0]
+    if (topSig) return {
+      icon:     '◎',
+      headline: topSig.label.toUpperCase(),
+      color:    topSig.color,
+      bg:       topSig.color + '10',
+      border:   topSig.color + '25',
+      action:   `${signalCounts[topSig.id]} observation${signalCounts[topSig.id] !== 1 ? 's' : ''} carry a ${topSig.label} signal. Review and route.`,
+      source:   `Active Signal · ${patterns.length} constellation${patterns.length !== 1 ? 's' : ''} named`,
+      strength: signalCounts[topSig.id] >= 5 ? 'High' : signalCounts[topSig.id] >= 2 ? 'Medium' : 'Low',
+    }
+
+    // P4: Unrouted observations (but not old enough to flag)
+    if (attentionQueue.length > 0) return {
+      icon:     '◈',
+      headline: 'OBSERVATIONS AWAITING ROUTING',
+      color:    '#6b7280',
+      bg:       'var(--bg-2)',
+      border:   'var(--border-1)',
+      action:   `${attentionQueue.length} observation${attentionQueue.length !== 1 ? 's' : ''} entered but haven't been routed yet.`,
+      source:   'Attention Map · Route through Atrium',
+      strength: 'Low',
+    }
+
+    // All clear
+    return {
+      icon:     '✓',
+      headline: 'ALL CLEAR',
+      color:    '#6b7280',
+      bg:       'var(--bg-2)',
+      border:   'var(--border-1)',
+      action:   observations.length === 0
+        ? 'No observations in system. Reality enters through the Atrium.'
+        : 'No urgent signals detected. PACER is monitoring.',
+      source:   `${observations.length} observation${observations.length !== 1 ? 's' : ''} in system`,
+      strength: null,
+    }
+  }, [threads, attentionQueue, activeSignals, signalCounts, patterns, observations, now])
+
+  const strengthColor = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
   function handleBrief() {
     if (briefing) return
     const parts = ['OpsCore field briefing.']
-    if (totalSignals > 0) {
-      parts.push(`${totalSignals} signal${totalSignals !== 1 ? 's' : ''} detected across ${activeSignals.length} categor${activeSignals.length !== 1 ? 'ies' : 'y'}.`)
-      for (const sig of activeSignals) {
-        parts.push(`${sig.label}: ${signalCounts[sig.id]} observation${signalCounts[sig.id] !== 1 ? 's' : ''}.`)
-      }
-    } else {
-      parts.push('No classified signals detected.')
-    }
+    parts.push(`Lead signal: ${lead.headline}. ${lead.action}`)
     if (attentionQueue.length > 0) {
       parts.push(`${attentionQueue.length} observation${attentionQueue.length !== 1 ? 's' : ''} awaiting routing.`)
-      const oldest = attentionQueue[0]
-      if (oldest?.text) parts.push(`Oldest unrouted: "${oldest.text.slice(0, 80)}".`)
     }
     if (pendingActions.length > 0) {
       parts.push(`${pendingActions.length} K.E.L. recommendation${pendingActions.length !== 1 ? 's' : ''} pending action.`)
-      const first = pendingActions[0]
-      if (first?.recommendation) parts.push(`First: ${first.recommendation.slice(0, 100)}.`)
     }
     if (patterns.length > 0) {
       parts.push(`Leading pattern: ${patterns[0][0]}, appearing ${patterns[0][1]} time${patterns[0][1] !== 1 ? 's' : ''}.`)
@@ -132,78 +196,85 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
       </div>
 
       {/* Body */}
-      <div className={`flex-1 overflow-y-auto ${px} py-6`} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div className={`flex-1 overflow-y-auto ${px} py-5`} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-        {/* ACTIVE SIGNALS */}
-        <section>
-          <p style={SECTION}>Active Signals</p>
-          {activeSignals.length === 0 ? (
-            <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '18px', textAlign: 'center' }}>
-              <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
-                No classified signals yet.{' '}
-                {observations.length === 0
-                  ? 'Observations enter through the Atrium.'
-                  : `${observations.length} observation${observations.length !== 1 ? 's' : ''} in system — VERA names the patterns.`}
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {SIGNAL_TYPES.filter(s => signalCounts[s.id] > 0).map(sig => (
-                <div key={sig.id} style={{
-                  background: sig.color + '10',
-                  border: `1px solid ${sig.color}30`,
-                  borderLeft: `3px solid ${sig.color}`,
-                  borderRadius: '0 8px 8px 0',
-                  padding: '10px 16px',
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                }}>
-                  <span style={{ color: sig.color, fontSize: '22px', fontWeight: 700, lineHeight: 1 }}>
-                    {signalCounts[sig.id]}
-                  </span>
-                  <div>
-                    <p style={{ color: sig.color, fontSize: '11px', fontWeight: 600 }}>{sig.label}</p>
-                    <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>
-                      {signalCounts[sig.id]} observation{signalCounts[sig.id] !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        {/* ── LEAD SIGNAL — command card ───────────────────────────────────── */}
+        <div style={{
+          background: lead.bg,
+          border: `1px solid ${lead.border}`,
+          borderLeft: `4px solid ${lead.color}`,
+          borderRadius: '0 10px 10px 0',
+          padding: isMobile ? '18px 16px' : '22px 24px',
+        }}>
+          {/* Headline row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <span style={{ color: lead.color, fontSize: '18px', lineHeight: 1 }}>{lead.icon}</span>
+            <p style={{
+              color: lead.color, fontSize: '11px', fontWeight: 800,
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+            }}>
+              {lead.headline}
+            </p>
+            {lead.strength && (
+              <span style={{
+                background: strengthColor[lead.strength] + '15',
+                border: `1px solid ${strengthColor[lead.strength]}30`,
+                color: strengthColor[lead.strength],
+                fontSize: '9px', fontWeight: 700, borderRadius: '4px',
+                padding: '2px 7px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                marginLeft: 'auto',
+              }}>
+                {lead.strength}
+              </span>
+            )}
+          </div>
 
-        {/* Two-column: Attention Map + Emerging Patterns */}
+          {/* Action */}
+          <div style={{ marginBottom: '14px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>
+              Recommended Action
+            </p>
+            <p style={{ color: 'var(--text-0)', fontSize: isMobile ? '14px' : '15px', fontWeight: 500, lineHeight: 1.55 }}>
+              {lead.action}
+            </p>
+          </div>
+
+          {/* Source */}
+          <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+            {lead.source}
+          </p>
+        </div>
+
+        {/* ── SUPPORTING: Attention Map + Emerging Patterns ────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', alignItems: 'start' }}>
 
           {/* ATTENTION MAP */}
           <section>
             <p style={SECTION}>Attention Map</p>
             <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
-              Observations awaiting routing — oldest first.
+              Unrouted observations — oldest first.
             </p>
             {attentionQueue.length === 0 ? (
               <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
-                  {observations.length === 0
-                    ? 'No observations in system.'
-                    : 'All observations have been routed.'}
+                  {observations.length === 0 ? 'No observations yet.' : 'All observations routed.'}
                 </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {attentionQueue.map((obs, i) => {
-                  const ts    = obs.timestamp?.toDate?.() || new Date()
-                  const age   = now - ts.getTime()
-                  const ageLabel = age > month ? `${Math.floor(age / month)}mo ago`
-                    : age > week  ? `${Math.floor(age / week)}w ago`
-                    : age > day   ? `${Math.floor(age / day)}d ago`
+                  const ts  = obs.timestamp?.toDate?.() || new Date()
+                  const age = now - ts.getTime()
+                  const ageLabel = age > 30 * day ? `${Math.floor(age / (30 * day))}mo ago`
+                    : age > week ? `${Math.floor(age / week)}w ago`
+                    : age > day  ? `${Math.floor(age / day)}d ago`
                     : 'Today'
-                  const isOldest = i === 0
+                  const urgent = age > week
                   return (
                     <div key={obs.id} style={{
                       background: 'var(--bg-2)',
-                      border: `1px solid ${isOldest ? '#ef444420' : 'var(--border-0)'}`,
-                      borderLeft: `3px solid ${isOldest ? '#ef4444' : 'var(--border-2)'}`,
+                      border: `1px solid ${urgent ? '#f9731618' : 'var(--border-0)'}`,
+                      borderLeft: `3px solid ${urgent ? '#f97316' : 'var(--border-2)'}`,
                       borderRadius: '0 6px 6px 0', padding: '10px 12px',
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: obs.constellation ? '4px' : '0' }}>
@@ -212,7 +283,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
                             ✦ {obs.constellation}
                           </span>
                         )}
-                        <span style={{ color: isOldest ? '#ef4444' : 'var(--text-6)', fontSize: '9px', marginLeft: 'auto', flexShrink: 0 }}>
+                        <span style={{ color: urgent ? '#f97316' : 'var(--text-6)', fontSize: '9px', marginLeft: 'auto', flexShrink: 0 }}>
                           {ageLabel}
                         </span>
                       </div>
@@ -226,7 +297,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
             )}
           </section>
 
-          {/* EMERGING PATTERNS */}
+          {/* EMERGING PATTERNS — all constellations, no filter */}
           <section>
             <p style={SECTION}>Emerging Patterns</p>
             <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
@@ -240,21 +311,29 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {patterns.map(([name, count]) => {
+                {patterns.map(([name, count], i) => {
                   const sig = matchSignal(name)
                   const barPct = Math.max(6, Math.round((count / maxPattern) * 100))
+                  const isLead = i === 0
                   return (
                     <div key={name}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ color: sig?.color || '#a07830', fontSize: '11px', fontWeight: 500 }}>
+                        <span style={{
+                          color: sig?.color || (isLead ? '#a07830' : 'var(--text-3)'),
+                          fontSize: isLead ? '12px' : '11px',
+                          fontWeight: isLead ? 600 : 400,
+                        }}>
                           ✦ {name}
                         </span>
-                        <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{count}</span>
+                        <span style={{ color: isLead ? 'var(--text-3)' : 'var(--text-5)', fontSize: '10px' }}>
+                          {count}
+                        </span>
                       </div>
-                      <div style={{ height: '3px', background: 'var(--bg-3)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ height: isLead ? '4px' : '3px', background: 'var(--bg-3)', borderRadius: '2px', overflow: 'hidden' }}>
                         <div style={{
                           height: '100%', width: `${barPct}%`,
-                          background: sig?.color || '#a07830', borderRadius: '2px',
+                          background: sig?.color || (isLead ? '#a07830' : 'var(--border-2)'),
+                          borderRadius: '2px',
                         }} />
                       </div>
                     </div>
@@ -266,36 +345,54 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
 
         </div>
 
-        {/* RECOMMENDED ACTIONS */}
-        <section>
-          <p style={SECTION}>Recommended Actions</p>
-          <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
-            K.E.L. decisions awaiting outcome.
-          </p>
-          {pendingActions.length === 0 ? (
-            <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '18px', textAlign: 'center' }}>
-              <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
-                {threads.length === 0
-                  ? 'No K.E.L. threads yet. Decisions are generated from approved observations.'
-                  : 'No pending actions — all K.E.L. decisions have been acted on.'}
-              </p>
+        {/* ── ACTIVE SIGNALS — supporting context ──────────────────────────── */}
+        {activeSignals.length > 0 && (
+          <section>
+            <p style={SECTION}>Active Signals</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {SIGNAL_TYPES.filter(s => signalCounts[s.id] > 0).map(sig => (
+                <div key={sig.id} style={{
+                  background: sig.color + '08',
+                  border: `1px solid ${sig.color}25`,
+                  borderLeft: `3px solid ${sig.color}`,
+                  borderRadius: '0 7px 7px 0',
+                  padding: '8px 14px',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span style={{ color: sig.color, fontSize: '18px', fontWeight: 700, lineHeight: 1 }}>
+                    {signalCounts[sig.id]}
+                  </span>
+                  <div>
+                    <p style={{ color: sig.color, fontSize: '11px', fontWeight: 600 }}>{sig.label}</p>
+                    <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>
+                      {signalCounts[sig.id]} observation{signalCounts[sig.id] !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
-              {pendingActions.map(thread => (
+          </section>
+        )}
+
+        {/* ── SUPPORTING KEL ACTIONS — when more than one pending ─────────── */}
+        {pendingActions.length > 1 && (
+          <section>
+            <p style={SECTION}>Additional Pending Actions</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {pendingActions.slice(1).map(thread => (
                 <div key={thread.id} style={{
                   background: 'var(--bg-2)',
                   border: `1px solid ${thread.decision === 'approved' ? '#10b98118' : 'var(--border-0)'}`,
                   borderLeft: `3px solid ${thread.decision === 'approved' ? '#10b981' : 'var(--border-2)'}`,
-                  borderRadius: '0 8px 8px 0', padding: '12px 14px',
+                  borderRadius: '0 7px 7px 0', padding: '10px 14px',
                 }}>
-                  <div style={{ display: 'flex', gap: '6px', marginBottom: '7px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '5px', alignItems: 'center' }}>
                     {thread.decision && (
                       <span style={{
-                        background: thread.decision === 'approved' ? '#10b98115' : 'var(--bg-3)',
-                        border: `1px solid ${thread.decision === 'approved' ? '#10b98140' : 'var(--border-1)'}`,
+                        background: thread.decision === 'approved' ? '#10b98112' : 'var(--bg-3)',
+                        border: `1px solid ${thread.decision === 'approved' ? '#10b98135' : 'var(--border-1)'}`,
                         color: thread.decision === 'approved' ? '#10b981' : 'var(--text-5)',
-                        fontSize: '9px', fontWeight: 600, borderRadius: '4px', padding: '2px 7px',
+                        fontSize: '9px', fontWeight: 600, borderRadius: '4px', padding: '2px 6px',
                         letterSpacing: '0.08em', textTransform: 'uppercase',
                       }}>
                         {thread.decision}
@@ -305,7 +402,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
                       <span style={{ color: 'var(--text-5)', fontSize: '9px' }}>{thread.domain}</span>
                     )}
                   </div>
-                  <p style={{ color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.55 }}>
+                  <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
                     {(thread.recommendation || '').length > 130
                       ? thread.recommendation.slice(0, 130) + '…'
                       : thread.recommendation || '—'}
@@ -313,8 +410,8 @@ export default function OpsCoreRoom({ observations = [], threads = [], isMobile 
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* Footer */}
         <div style={{ paddingBottom: '16px', textAlign: 'center' }}>
