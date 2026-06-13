@@ -456,9 +456,10 @@ export async function updateMediaAsset(uid, id, patch) {
 
 export function listenMediaAssets(uid, callback) {
   const q = query(mediaColl(uid), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ ...d.data(), id: d.id })))
-  })
+  return onSnapshot(q,
+    snap => { callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))) },
+    err  => { console.error('[listenMediaAssets] snapshot error:', err) },
+  )
 }
 
 // ── Doctrine Cases — constitutional review records ────────────────────────────
@@ -500,17 +501,20 @@ export async function updateDoctrineCase(uid, id, patch) {
 
 export function listenDoctrineCases(uid, callback) {
   const q = query(doctrineColl(uid), orderBy('createdAt', 'asc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id:            d.id,
-        createdAt:     data.createdAt?.toDate?.()     ?? new Date(),
-        updatedAt:     data.updatedAt?.toDate?.()     ?? new Date(),
-        establishedAt: data.establishedAt,
-        overturnedAt:  data.overturnedAt,
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id:            d.id,
+          createdAt:     data.createdAt?.toDate?.()     ?? new Date(),
+          updatedAt:     data.updatedAt?.toDate?.()     ?? new Date(),
+          establishedAt: data.establishedAt,
+          overturnedAt:  data.overturnedAt,
+        }
+      }))
+    },
+    err => { console.error('[listenDoctrineCases] snapshot error:', err) },
+  )
 }
