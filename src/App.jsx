@@ -219,7 +219,11 @@ export default function App() {
     try {
       if (apiKey) {
         const text = await generateInstitutionalPulse(
-          { observations, productions, institutionEvents, creatorLogs },
+          {
+            observations, productions, institutionEvents, creatorLogs,
+            emailContext:    emailContextString(emailData),
+            calendarContext: calendarContextString(calendarEvents),
+          },
           apiKey
         )
         if (text) return text
@@ -668,6 +672,9 @@ export default function App() {
               updateUserProfile(user.uid, { aiProvider: provider })
               setProfile(prev => prev ? { ...prev, aiProvider: provider } : prev)
             }}
+            googleConnected={!!googleTokenData?.access_token}
+            onConnectGmail={GOOGLE_CLIENT_ID ? handleConnectGmail : null}
+            onDisconnectGmail={handleDisconnectGmail}
           />
         )}
 

@@ -234,6 +234,7 @@ export default function SettingsRoom({
   middayPulseMode = 'off', onMiddayPulseModeChange,
   eveningReviewMode = 'off', onEveningReviewModeChange,
   onPreferredLanguageChange, onNativeLanguageChange, onAiProviderChange,
+  googleConnected = false, onConnectGmail, onDisconnectGmail,
 }) {
   const anthropicConnected  = !!apiKey
   const [rhythmSaved, setRhythmSaved] = useState(false)
@@ -455,6 +456,43 @@ export default function SettingsRoom({
           <Row label="Theme">
             <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
           </Row>
+        </Section>
+
+        {/* Connections */}
+        <Section title="Connections">
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 16px', borderRadius: '8px',
+            background: 'var(--bg-1)', border: '1px solid var(--border-0)',
+            marginBottom: '10px',
+          }}>
+            <div>
+              <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>
+                Google
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+                {googleConnected ? 'Gmail and Calendar connected' : 'Connect to include email and calendar in Morning Brief'}
+              </p>
+            </div>
+            {googleConnected ? (
+              <button onClick={onDisconnectGmail} style={{
+                background: 'none', border: '1px solid var(--border-1)',
+                color: 'var(--text-3)', fontSize: '11px', cursor: 'pointer',
+                padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
+              }}>Disconnect</button>
+            ) : (
+              <button onClick={onConnectGmail} disabled={!onConnectGmail} style={{
+                background: onConnectGmail ? '#0d1a2e' : 'var(--bg-2)',
+                border: `1px solid ${onConnectGmail ? '#1d4ed8' : 'var(--border-1)'}`,
+                color: onConnectGmail ? '#93c5fd' : 'var(--text-5)',
+                fontSize: '11px', cursor: onConnectGmail ? 'pointer' : 'default',
+                padding: '5px 12px', borderRadius: '6px', fontFamily: 'inherit',
+              }}>Connect</button>
+            )}
+          </div>
+          <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>
+            Read-only. PACER reads calendar events and email activity. It does not send, modify, or store your messages.
+          </p>
         </Section>
 
         {/* AI Providers */}
