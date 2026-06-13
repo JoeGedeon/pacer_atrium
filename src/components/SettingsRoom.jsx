@@ -325,14 +325,22 @@ export default function SettingsRoom({
               options={AI_PROVIDER_OPTIONS}
             />
           </Row>
-          <Row label="Session">
-            <button onClick={onSignOut} style={{
-              background: 'none', border: '1px solid var(--border-1)',
-              color: 'var(--text-3)', fontSize: '11px', cursor: 'pointer',
-              padding: '5px 12px', borderRadius: '6px',
-            }}>Sign out</button>
-          </Row>
         </Section>
+
+        {/* Sign Out — account action, not a preference */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '40px',
+        }}>
+          <span style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+            Signed in as {user?.displayName || user?.email}
+          </span>
+          <button onClick={onSignOut} style={{
+            background: 'none', border: '1px solid var(--border-1)',
+            color: 'var(--text-3)', fontSize: '11px', cursor: 'pointer',
+            padding: '5px 14px', borderRadius: '6px', fontFamily: 'inherit',
+          }}>Sign out</button>
+        </div>
 
         {/* Campus Rhythm */}
         <Section title="Campus Rhythm">
