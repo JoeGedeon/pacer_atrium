@@ -199,6 +199,11 @@ export default function App() {
   }
 
   // ── Arrival Protocol ─────────────────────────────────────────────────────────
+  // Derive from Firebase Auth — never hardcode a name
+  const arrivedFirstName = user?.displayName?.split(' ')?.[0]
+    || user?.email?.split('@')?.[0]
+    || null
+
   function getArrivalGreeting(name) {
     const h = new Date().getHours()
     const salutation = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
@@ -235,7 +240,7 @@ export default function App() {
       console.debug('[arrival voice] text length:', text?.length)
       console.debug('[arrival voice] typeof text:', typeof text)
       console.debug('[arrival voice] currentRoom:', currentRoom)
-      const greeting = getArrivalGreeting('Joe')
+      const greeting = getArrivalGreeting(arrivedFirstName)
       console.debug('[arrival voice] greeting:', greeting)
       const full = text ? `${greeting} ${text}` : greeting
       console.debug('[arrival voice] full text length:', full?.length)
@@ -678,7 +683,7 @@ export default function App() {
       {arrivalState && (
         <ArrivalBrief
           mode={arrivalState === 'asking' ? 'ask' : arrivalState}
-          greeting={getArrivalGreeting('Joe')}
+          greeting={getArrivalGreeting(arrivedFirstName)}
           text={arrivalText}
           loading={arrivalLoading}
           isSpeaking={arrivalSpeaking}
