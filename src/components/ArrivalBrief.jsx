@@ -29,7 +29,7 @@ function btn(primary) {
 // mode: 'ask' | 'text' | 'voice'
 // Both 'text' and 'voice' render a card + Play button.
 // The explicit tap to open the card satisfies browser autoplay policy in all modes.
-export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking, onDismiss, onAccept, onDecline, onSpeak }) {
+export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking, onDismiss, onAccept, onDecline, onSpeak, onRefresh }) {
   const dismissed = useRef(false)
   function dismiss() { if (!dismissed.current) { dismissed.current = true; onDismiss() } }
 
@@ -88,7 +88,7 @@ export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking
               </p>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             {!loading && text && (
               <button
                 style={btn(true)}
@@ -99,6 +99,11 @@ export default function ArrivalBrief({ mode, greeting, text, loading, isSpeaking
                 }}
               >
                 {isSpeaking ? '🔊 Speaking…' : '▶ Play'}
+              </button>
+            )}
+            {!loading && onRefresh && (
+              <button style={btn(false)} onClick={onRefresh} title="Refresh with latest data">
+                ↺ Refresh
               </button>
             )}
             <button style={btn(false)} onClick={dismiss}>Dismiss</button>

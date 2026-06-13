@@ -274,8 +274,8 @@ export default function App() {
         const text = await generateInstitutionalPulse(
           {
             observations, productions, institutionEvents, creatorLogs,
-            emailContext:    emailContextString(emailData),
-            calendarContext: calendarContextString(calendarEvents),
+            emailContext:    googleTokenData ? emailContextString(emailData) : null,
+            calendarContext: googleTokenData ? calendarContextString(calendarEvents) : null,
           },
           apiKey
         )
@@ -783,6 +783,12 @@ export default function App() {
           onAccept={handleArrivalAccept}
           onDecline={() => setArrivalState(null)}
           onSpeak={() => speakArrivalText(arrivalText)}
+          onRefresh={arrivalState !== 'asking' ? async () => {
+            setArrivalLoading(true)
+            const text = await buildArrivalText()
+            setArrivalText(text || '')
+            setArrivalLoading(false)
+          } : undefined}
         />
       )}
     </div>

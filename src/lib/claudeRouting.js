@@ -54,14 +54,17 @@ ${recentEvents || 'None recorded yet.'}`
 export async function generateInstitutionalPulse(context, apiKey) {
   const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], emailContext = null, calendarContext = null } = context
 
-  const summary = [
-    `Observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`,
-    `Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting Human Gate approval`,
-    `Institution events this session: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ') || 'none'}`,
-    `Calendar entries logged: ${creatorLogs.length}`,
-    emailContext    ? `Email: ${emailContext}`    : 'Email: not connected',
-    calendarContext ? `Calendar: ${calendarContext}` : 'Calendar: not connected',
-  ].join('\n')
+  // Calendar and email lead — data order reflects priority, not just system prompt
+  const lines = []
+  if (calendarContext) lines.push(`Google Calendar: ${calendarContext}`)
+  else lines.push('Google Calendar: not connected')
+  if (emailContext) lines.push(`Gmail: ${emailContext}`)
+  else lines.push('Gmail: not connected')
+  lines.push('—')
+  lines.push(`Campus observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`)
+  lines.push(`Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting approval`)
+  if (institutionEvents.length > 0) lines.push(`Recent events: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ')}`)
+  const summary = lines.join('\n')
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

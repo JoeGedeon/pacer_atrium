@@ -42,9 +42,14 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
     if (!apiKey || observations.length < 3 || hasAnalyzed.current) return
     hasAnalyzed.current = true
     setAnalyzing(true)
+    setAnalysisError(null)
     analyzePatterns(observations, apiKey)
       .then(r  => { setPatterns(r); setAnalyzing(false) })
-      .catch(e => { setAnalysisError(e.message); setAnalyzing(false) })
+      .catch(e => {
+        setAnalysisError(e.message)
+        setAnalyzing(false)
+        hasAnalyzed.current = false // allow retry when apiKey changes
+      })
   }, [observations.length, apiKey]) // eslint-disable-line
 
   return (
