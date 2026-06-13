@@ -1,3 +1,5 @@
+import { callClaude } from './anthropicProxy'
+
 const MODEL = 'claude-haiku-4-5-20251001'
 
 const SYSTEM = `You are PACER's routing intelligence inside PACER Atrium.
@@ -54,36 +56,25 @@ ${recentEvents || 'None recorded yet.'}`
 export async function generateInstitutionalPulse(context, apiKey) {
   const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], emailContext = null, calendarContext = null } = context
 
-  // Calendar and email lead — data order reflects priority, not just system prompt
+  // PACER institutional data always leads — Google is enrichment, not a dependency
   const lines = []
-  if (calendarContext) lines.push(`Google Calendar: ${calendarContext}`)
-  else lines.push('Google Calendar: not connected')
-  if (emailContext) lines.push(`Gmail: ${emailContext}`)
-  else lines.push('Gmail: not connected')
-  lines.push('—')
   lines.push(`Campus observations: ${observations.length} total, ${observations.filter(o => !o.destination).length} unrouted, ${observations.filter(o => o.claude).length} analyzed by MUSE`)
   lines.push(`Productions: ${productions.length} total, ${productions.filter(p => p.status === 'staged').length} staged, ${productions.filter(p => p.humanGateStatus === 'pending').length} awaiting approval`)
-  if (institutionEvents.length > 0) lines.push(`Recent events: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ')}`)
+  if (institutionEvents.length > 0) {
+    lines.push(`Recent events: ${institutionEvents.slice(0, 3).map(e => e.title).join('; ')}`)
+  }
+  // Google context appended only when available — omitted entirely if not connected
+  if (calendarContext) lines.push(`\nGoogle Calendar: ${calendarContext}`)
+  if (emailContext)    lines.push(`Gmail: ${emailContext}`)
   const summary = lines.join('\n')
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 200,
-      system: 'You are PACER\'s institutional intelligence delivering a personal executive briefing. Write 3-5 declarative sentences. Lead with what matters most to the person RIGHT NOW in this order: (1) if calendar events exist, name specific upcoming events with times — "You have a FleetFlow demo at 10:00 AM"; (2) if email priority items exist, name them specifically — "Two FleetFlow opportunities in inbox. One message requires a response."; (3) brief campus state — active observations, pending decisions, productions awaiting approval. Be specific, not abstract. Never say "calendar capacity available" or "email connected" — say what is actually in the calendar and inbox. No preamble. No headers. Plain prose only.',
-      messages: [{ role: 'user', content: summary }],
-    }),
-  })
+  const data = await callClaude({
+    model: MODEL,
+    max_tokens: 200,
+    system: 'You are PACER\'s institutional intelligence delivering a personal executive briefing. Write 3-5 declarative sentences in plain prose. Lead with what requires the resident\'s attention: unrouted observations, pending approvals, staged productions. If Google Calendar data is provided, name specific upcoming events with times. If Gmail data is provided, note priority items. Be specific and direct — cite actual numbers and names. No preamble, no headers, no "I cannot see" language. Only report what is known.',
+    messages: [{ role: 'user', content: summary }],
+  }, apiKey)
 
-  if (!res.ok) throw new Error('Pulse failed')
-  const data = await res.json()
   return data.content?.[0]?.text?.trim() || ''
 }
 
@@ -109,62 +100,30 @@ export async function conversationQuery(userText, context, history, apiKey) {
     content: msg.text,
   }))
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 350,
-      system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents, emailContext, calendarContext),
-      messages: [
-        ...historyMessages,
-        { role: 'user', content: userText },
-      ],
-    }),
-  })
+  const data = await callClaude({
+    model: MODEL,
+    max_tokens: 350,
+    system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents, emailContext, calendarContext),
+    messages: [
+      ...historyMessages,
+      { role: 'user', content: userText },
+    ],
+  }, apiKey)
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error?.message || `HTTP ${res.status}`)
-  }
-
-  const data = await res.json()
   return data.content?.[0]?.text?.trim() || ''
 }
 
 export async function analyzeObservation(text, apiKey) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 600,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: `Observation: "${text}"` }],
-    }),
-  })
+  const data = await callClaude({
+    model: MODEL,
+    max_tokens: 600,
+    system: SYSTEM,
+    messages: [{ role: 'user', content: `Observation: "${text}"` }],
+  }, apiKey)
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    const msg = err.error?.message || `HTTP ${res.status}`
-    console.error('[PACER routing] Claude API error:', res.status, err)
-    throw new Error(msg)
-  }
-
-  const data = await res.json()
   const raw = data.content?.[0]?.text || '{}'
   const start = raw.indexOf('{')
-  const end = raw.lastIndexOf('}')
+  const end   = raw.lastIndexOf('}')
   if (start === -1) {
     console.error('[PACER routing] No JSON in response:', raw)
     throw new Error('No JSON in response')

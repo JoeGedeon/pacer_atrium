@@ -1,17 +1,26 @@
 import { useState } from 'react'
+import { saveProviderKey } from '../lib/anthropicProxy'
 
 export default function APIKeyGate({ onKey }) {
-  const [value, setValue] = useState('')
-  const [error, setError] = useState('')
+  const [value, setValue]   = useState('')
+  const [error, setError]   = useState('')
+  const [saving, setSaving] = useState(false)
 
-  function save() {
+  async function save() {
     const k = value.trim()
     if (!k.startsWith('sk-')) {
       setError('Key should start with sk-')
       return
     }
-    localStorage.setItem('pacer_api_key', k)
-    onKey(k)
+    setSaving(true)
+    setError('')
+    try {
+      const bundle = await saveProviderKey(k)
+      onKey(bundle)
+    } catch {
+      setError('Failed to secure key. Check your connection and try again.')
+      setSaving(false)
+    }
   }
 
   function skip() {
@@ -40,7 +49,7 @@ export default function APIKeyGate({ onKey }) {
             Claude routing requires an Anthropic API key.
           </p>
           <p className="mt-1 text-xs" style={{ color: 'var(--text-5)' }}>
-            Stored only on this device. Never sent anywhere except Anthropic.
+            Encrypted on save. Never stored in plaintext.
           </p>
         </div>
 
@@ -50,15 +59,17 @@ export default function APIKeyGate({ onKey }) {
           onChange={e => { setValue(e.target.value); setError('') }}
           placeholder="sk-ant-..."
           autoFocus
+          disabled={saving}
           className="w-full rounded-lg px-4 py-3 text-sm outline-none mb-2"
           style={{
             background: 'var(--bg-input)',
             color: 'var(--text-0)',
             border: '1px solid var(--border-2)',
+            opacity: saving ? 0.6 : 1,
           }}
           onFocus={e => { e.target.style.borderColor = '#2563eb' }}
           onBlur={e => { e.target.style.borderColor = '#1f2937' }}
-          onKeyDown={e => { if (e.key === 'Enter') save() }}
+          onKeyDown={e => { if (e.key === 'Enter' && !saving) save() }}
         />
 
         {error && (
@@ -67,19 +78,21 @@ export default function APIKeyGate({ onKey }) {
 
         <button
           onClick={save}
+          disabled={saving}
           className="w-full py-2.5 rounded-lg text-sm font-medium mb-3"
           style={{
-            background: '#1d4ed8',
-            color: '#e0eaff',
+            background: saving ? 'var(--bg-2)' : '#1d4ed8',
+            color: saving ? 'var(--text-5)' : '#e0eaff',
             border: 'none',
-            cursor: 'pointer',
+            cursor: saving ? 'default' : 'pointer',
           }}
         >
-          Enter the Atrium
+          {saving ? 'Securing key…' : 'Enter the Atrium'}
         </button>
 
         <button
           onClick={skip}
+          disabled={saving}
           className="w-full text-xs"
           style={{
             background: 'none',

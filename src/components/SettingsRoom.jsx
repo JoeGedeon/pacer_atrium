@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import ThemeToggle from './ThemeToggle'
 import { ROOM_VOICE_CONFIG, ROOM_DISPLAY_NAMES, getRoomSample, speakWithVoice } from '../lib/roomVoice'
+import { saveProviderKey } from '../lib/anthropicProxy'
 
 function Section({ title, children }) {
   return (
@@ -46,14 +47,29 @@ function GovernancePill({ on }) {
 function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, onClear }) {
   const [open, setOpen]   = useState(false)
   const [draft, setDraft] = useState('')
-  const isConnected = !!storedKey
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
-  function save() {
+  // storedKey is either a keyBundle {encrypted, iv, last4} or a legacy raw string
+  const isBundle    = storedKey && typeof storedKey === 'object'
+  const isConnected = !!(isBundle ? storedKey.encrypted : storedKey)
+  const last4       = isBundle ? storedKey.last4 : (storedKey?.slice(-4) || '')
+
+  async function save() {
     const trimmed = draft.trim()
     if (!trimmed) return
-    onSave(trimmed)
-    setDraft('')
-    setOpen(false)
+    setSaving(true)
+    setSaveError('')
+    try {
+      const bundle = await saveProviderKey(trimmed)
+      onSave(bundle)
+      setDraft('')
+      setOpen(false)
+    } catch {
+      setSaveError('Failed to save. Check your connection and try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function clear() {
@@ -102,7 +118,7 @@ function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, o
           {isConnected ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ color: 'var(--text-3)', fontSize: '11px', fontFamily: 'monospace' }}>
-                ••••••••{storedKey.slice(-4)}
+                ••••••••{last4}
               </span>
               <button onClick={clear} style={{
                 background: 'none', border: '1px solid var(--border-1)',
@@ -111,30 +127,37 @@ function ProviderRow({ name, description, status, keyLabel, storedKey, onSave, o
               }}>Remove</button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="password"
-                value={draft}
-                onChange={e => setDraft(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && save()}
-                placeholder="Paste key…"
-                style={{
-                  flex: 1, background: 'var(--bg-0)', border: '1px solid var(--border-1)',
-                  color: 'var(--text-0)', fontSize: '12px', padding: '7px 10px',
-                  borderRadius: '6px', outline: 'none', fontFamily: 'monospace',
-                }}
-              />
-              <button onClick={save} disabled={!draft.trim()} style={{
-                background: draft.trim() ? '#1d4ed8' : 'var(--bg-2)',
-                border: '1px solid', borderColor: draft.trim() ? '#2563eb' : 'var(--border-1)',
-                color: draft.trim() ? '#e0eaff' : 'var(--text-5)',
-                fontSize: '11px', cursor: draft.trim() ? 'pointer' : 'default',
-                padding: '7px 14px', borderRadius: '6px',
-              }}>Save</button>
-            </div>
+            <>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="password"
+                  value={draft}
+                  onChange={e => { setDraft(e.target.value); setSaveError('') }}
+                  onKeyDown={e => e.key === 'Enter' && !saving && save()}
+                  placeholder="Paste key…"
+                  disabled={saving}
+                  style={{
+                    flex: 1, background: 'var(--bg-0)', border: '1px solid var(--border-1)',
+                    color: 'var(--text-0)', fontSize: '12px', padding: '7px 10px',
+                    borderRadius: '6px', outline: 'none', fontFamily: 'monospace',
+                    opacity: saving ? 0.6 : 1,
+                  }}
+                />
+                <button onClick={save} disabled={!draft.trim() || saving} style={{
+                  background: draft.trim() && !saving ? '#1d4ed8' : 'var(--bg-2)',
+                  border: '1px solid', borderColor: draft.trim() && !saving ? '#2563eb' : 'var(--border-1)',
+                  color: draft.trim() && !saving ? '#e0eaff' : 'var(--text-5)',
+                  fontSize: '11px', cursor: draft.trim() && !saving ? 'pointer' : 'default',
+                  padding: '7px 14px', borderRadius: '6px',
+                }}>{saving ? 'Saving…' : 'Save'}</button>
+              </div>
+              {saveError && (
+                <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '6px' }}>{saveError}</p>
+              )}
+            </>
           )}
           <p style={{ color: 'var(--text-6)', fontSize: '9px', marginTop: '8px' }}>
-            Stored only on this device. Never sent anywhere except the provider's own API.
+            {isConnected ? 'Encrypted and stored securely. Key is never visible after saving.' : 'Encrypted server-side on save. Never stored in plaintext.'}
           </p>
         </div>
       )}
@@ -236,7 +259,7 @@ export default function SettingsRoom({
   onPreferredLanguageChange, onNativeLanguageChange, onAiProviderChange,
   googleStatus = 'disconnected', onConnectGmail, onDisconnectGmail,
 }) {
-  const anthropicConnected = !!apiKey
+  const anthropicConnected = !!(typeof apiKey === 'object' ? apiKey?.encrypted : apiKey)
   const googleConnected    = googleStatus === 'connected'
   const [rhythmSaved, setRhythmSaved] = useState(false)
   const rhythmSavedTimer = useRef(null)
@@ -267,13 +290,12 @@ export default function SettingsRoom({
   function handleMiddayChange(mode)  { onMiddayPulseModeChange?.(mode); markRhythmSaved() }
   function handleEveningChange(mode) { onEveningReviewModeChange?.(mode); markRhythmSaved() }
 
-  function saveAnthropicKey(key) {
-    localStorage.setItem('pacer_api_key', key)
-    onApiKeyChange(key)
+  function saveAnthropicKey(bundle) {
+    // bundle is a keyBundle object from ProviderRow's saveProviderKey call
+    onApiKeyChange(bundle)
   }
 
   function clearAnthropicKey() {
-    localStorage.removeItem('pacer_api_key')
     onApiKeyChange(null)
   }
 

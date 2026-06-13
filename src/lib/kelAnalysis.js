@@ -1,3 +1,5 @@
+import { callClaude } from './anthropicProxy'
+
 const SYSTEM = `You are KEL, PACER's recommendation engine.
 
 PACER is the observation and preservation system for JPG Ventures:
@@ -38,30 +40,13 @@ export async function requestKELRecommendation(observations, apiKey) {
     })
     .join('\n\n')
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: `Observations:\n\n${context}` }],
-    }),
-  })
+  const data = await callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    system: SYSTEM,
+    messages: [{ role: 'user', content: `Observations:\n\n${context}` }],
+  }, apiKey)
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    const msg = err.error?.message || `HTTP ${res.status}`
-    console.error('[KEL] Claude API error:', res.status, err)
-    throw new Error(msg)
-  }
-
-  const data = await res.json()
   const raw = data.content?.[0]?.text || ''
   const match = raw.match(/\{[\s\S]*\}/)
   if (!match) {

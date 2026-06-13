@@ -1,3 +1,5 @@
+import { callClaude } from './anthropicProxy'
+
 const MODEL = 'claude-haiku-4-5-20251001'
 
 export const DECISION_META = {
@@ -51,33 +53,17 @@ Return ONLY valid JSON. No preamble. No explanation. No markdown code fences. Ju
 }`
 
 export async function getManifestDecision(observation, apiKey) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 350,
-      system: SYSTEM,
-      messages: [{
-        role: 'user',
-        content: `Observation: "${observation}"\n\nAs Creative Director, make a Manifest Decision.`,
-      }],
-    }),
-  })
+  const data = await callClaude({
+    model: MODEL,
+    max_tokens: 350,
+    system: SYSTEM,
+    messages: [{
+      role: 'user',
+      content: `Observation: "${observation}"\n\nAs Creative Director, make a Manifest Decision.`,
+    }],
+  }, apiKey)
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error?.message || `HTTP ${res.status}`)
-  }
-
-  const data = await res.json()
   const text = data.content?.[0]?.text?.trim() || '{}'
-
   try {
     return JSON.parse(text)
   } catch {

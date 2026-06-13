@@ -1,3 +1,5 @@
+import { callClaude } from './anthropicProxy'
+
 const THEME_KEYWORDS = {
   'Revenue & Finance':    ['revenue', 'payment', 'invoice', 'cost', 'pricing', 'billing', 'money', 'profit', 'loss', 'rate'],
   'Trust & Verification': ['trust', 'verify', 'verification', 'approval', 'gate', 'confirm', 'validate', 'honest'],
@@ -56,20 +58,12 @@ export async function analyzePatterns(observations, apiKey) {
     .map((o, i) => `${i + 1}. ${o.text}${o.constellation ? ` [${o.constellation}]` : ''}`)
     .join('\n')
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 900,
-      messages: [{
-        role: 'user',
-        content: `You are VERA, the pattern recognition layer of PACER University. Your role is to notice, not to decide.
+  const data = await callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 900,
+    messages: [{
+      role: 'user',
+      content: `You are VERA, the pattern recognition layer of PACER University. Your role is to notice, not to decide.
 
 Analyze these observations. Find patterns that actually appear in the data. Do not invent patterns.
 
@@ -96,17 +90,9 @@ Respond with valid JSON only — no markdown, no explanation outside the JSON:
 }
 
 Constraints: 2–4 emerging patterns, 1–3 unnamed relationships. Confidence reflects how clearly the pattern appears in the actual text. Be specific, not generic.`,
-      }],
-    }),
-  })
+    }],
+  }, apiKey)
 
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}))
-    const msg = errBody.error?.message || `HTTP ${response.status}`
-    console.error('[VERA] Claude API error:', response.status, errBody)
-    throw new Error(msg)
-  }
-  const data = await response.json()
   const text = data.content?.[0]?.text || ''
   const match = text.match(/\{[\s\S]*\}/)
   if (!match) {

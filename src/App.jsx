@@ -24,6 +24,7 @@ import ArrivalBrief from './components/ArrivalBrief'
 import OnboardingCard from './components/OnboardingCard'
 import APIKeyGate from './components/APIKeyGate'
 import { analyzeObservation, generateInstitutionalPulse } from './lib/claudeRouting'
+import { saveProviderKey } from './lib/anthropicProxy'
 import {
   listenObservations, createObservation, updateObservation,
   listenMuseWorks, createKELDecision, listenGraduates,
@@ -42,7 +43,6 @@ import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import PACERVoice from './components/PACERVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
-console.debug('[PACER env] GOOGLE_CLIENT_ID present:', !!GOOGLE_CLIENT_ID, '| length:', GOOGLE_CLIENT_ID?.length ?? 0)
 
 const CREATOR_EMAIL = (import.meta.env.VITE_CREATOR_EMAIL || 'jgedeon22@gmail.com').toLowerCase()
 const CREATOR_UID   = import.meta.env.VITE_CREATOR_UID   || null
@@ -94,7 +94,15 @@ export default function App() {
   const [graduates, setGraduates]                 = useState([])
   const [activeObservationId, setActiveObservationId] = useState(null)
   const [analyzingIds, setAnalyzingIds]           = useState(new Set())
-  const [apiKey, setApiKey]                       = useState(() => localStorage.getItem('pacer_api_key') || null)
+  const [apiKey, setApiKey]                       = useState(() => {
+    // v2: encrypted keyBundle stored as JSON
+    try {
+      const v2 = localStorage.getItem('pacer_api_key_v2')
+      if (v2) return JSON.parse(v2)
+    } catch {}
+    // v1 legacy: raw string key (migrated to encrypted on next save)
+    return localStorage.getItem('pacer_api_key') || null
+  })
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
   const [institutionEvents, setInstitutionEvents] = useState([])
@@ -171,9 +179,23 @@ export default function App() {
         } else {
           setProfile({ ...creatorBase, ...existing })
           // Load API key from Firestore if not already in localStorage
-          if (existing.anthropicApiKey && !localStorage.getItem('pacer_api_key')) {
-            localStorage.setItem('pacer_api_key', existing.anthropicApiKey)
-            setApiKey(existing.anthropicApiKey)
+          if (existing.anthropicKeyBundle && !localStorage.getItem('pacer_api_key_v2')) {
+            localStorage.setItem('pacer_api_key_v2', JSON.stringify(existing.anthropicKeyBundle))
+            setApiKey(existing.anthropicKeyBundle)
+          } else if (existing.anthropicApiKey && !localStorage.getItem('pacer_api_key_v2') && !localStorage.getItem('pacer_api_key')) {
+            // Legacy plaintext key — migrate to encrypted bundle
+            saveProviderKey(existing.anthropicApiKey)
+              .then(bundle => {
+                localStorage.setItem('pacer_api_key_v2', JSON.stringify(bundle))
+                localStorage.removeItem('pacer_api_key')
+                setApiKey(bundle)
+                return updateUserProfile(user.uid, { anthropicKeyBundle: bundle, anthropicApiKey: null })
+              })
+              .catch(() => {
+                // Migration failed (no server yet) — use legacy string temporarily
+                localStorage.setItem('pacer_api_key', existing.anthropicApiKey)
+                setApiKey(existing.anthropicApiKey)
+              })
           }
         }
       })
@@ -186,9 +208,21 @@ export default function App() {
       setProfile(p ?? null)
       if (p) {
         // Load API key from Firestore if not already in localStorage
-        if (p.anthropicApiKey && !localStorage.getItem('pacer_api_key')) {
-          localStorage.setItem('pacer_api_key', p.anthropicApiKey)
-          setApiKey(p.anthropicApiKey)
+        if (p.anthropicKeyBundle && !localStorage.getItem('pacer_api_key_v2')) {
+          localStorage.setItem('pacer_api_key_v2', JSON.stringify(p.anthropicKeyBundle))
+          setApiKey(p.anthropicKeyBundle)
+        } else if (p.anthropicApiKey && !localStorage.getItem('pacer_api_key_v2') && !localStorage.getItem('pacer_api_key')) {
+          saveProviderKey(p.anthropicApiKey)
+            .then(bundle => {
+              localStorage.setItem('pacer_api_key_v2', JSON.stringify(bundle))
+              localStorage.removeItem('pacer_api_key')
+              setApiKey(bundle)
+              return updateUserProfile(user.uid, { anthropicKeyBundle: bundle, anthropicApiKey: null })
+            })
+            .catch(() => {
+              localStorage.setItem('pacer_api_key', p.anthropicApiKey)
+              setApiKey(p.anthropicApiKey)
+            })
         }
         // Track return visits — only when user has visited before
         if (p.lastVisitDate && p.lastVisitDate !== today) {
@@ -303,20 +337,21 @@ export default function App() {
 
   async function buildArrivalText(forceRefresh = false) {
     const today = new Date().toDateString()
-    // Read from ref to get current values — avoids stale closure from when the effect fired
-    const { tokenData, emailData: currentEmail, calendarEvents: currentCalendar } = googleStateRef.current
-    const calendarIncluded = !!tokenData && currentCalendar.length > 0
-    const emailIncluded    = !!tokenData && !!currentEmail
+    // Read from ref — avoids stale closure from when the effect fired
+    const { emailData: currentEmail, calendarEvents: currentCalendar } = googleStateRef.current
+
+    // Use whatever Google data we have regardless of token validity
+    // Expired token ≠ disconnected: if we have calendar/email data, use it
+    const calendarIncluded = currentCalendar.length > 0
+    const emailIncluded    = !!currentEmail
 
     // Check Firestore for a brief generated today on any device
     if (!forceRefresh && user) {
       try {
         const stored = await getLatestBrief(user.uid)
         if (stored && new Date(stored.generatedAt).toDateString() === today) {
-          // Only reuse if the stored brief had at least as much data as we have now
-          const storedHasCalendar = stored.calendarIncluded
-          const storedHasEmail    = stored.emailIncluded
-          const weHaveMore = (calendarIncluded && !storedHasCalendar) || (emailIncluded && !storedHasEmail)
+          // Reuse cached brief unless we now have Google data that it lacked
+          const weHaveMore = (calendarIncluded && !stored.calendarIncluded) || (emailIncluded && !stored.emailIncluded)
           if (!weHaveMore) return stored.text
         }
       } catch (_) {} // network issue — fall through to generate
@@ -334,7 +369,6 @@ export default function App() {
           apiKey
         )
         if (text) {
-          // Write to Firestore so all devices see the same brief
           if (user) saveLatestBrief(user.uid, { text, calendarIncluded, emailIncluded }).catch(() => {})
           return text
         }
@@ -409,7 +443,7 @@ export default function App() {
     setArrivalLoading(false)
   }
 
-  // Keep a ref current so buildArrivalText always reads latest Google state (avoids stale closure)
+  // Keep ref current — buildArrivalText reads from here to avoid stale closures
   useEffect(() => {
     googleStateRef.current = { tokenData: googleTokenData, emailData, calendarEvents }
   }, [googleTokenData, emailData, calendarEvents]) // eslint-disable-line
@@ -427,18 +461,16 @@ export default function App() {
   }, [googleTokenData]) // eslint-disable-line
 
   // ── Refresh brief when Google data first arrives ──────────────────────────────
-  // Always regenerate and write to Firestore so next session gets Google-enriched brief.
-  // Also updates the visible card if it's still showing.
+  // Regenerates with Google context and updates the visible card unconditionally —
+  // avoids the stale-closure problem of checking arrivalState inside an async .then().
   useEffect(() => {
     if (briefRefreshedForGoogle.current) return
     if (!emailData && calendarEvents.length === 0) return
     briefRefreshedForGoogle.current = true
     buildArrivalText(true).then(text => {
       if (!text) return
-      // Update UI if brief is still showing
-      if ((arrivalState === 'text' || arrivalState === 'voice') && !arrivalLoading) {
-        setArrivalText(text)
-      }
+      setArrivalText(text)
+      setArrivalLoading(false) // clears spinner in case brief was in loading state
     })
   }, [emailData, calendarEvents]) // eslint-disable-line
 
@@ -478,25 +510,37 @@ export default function App() {
     await updateObservation(user.uid, id, { constellation })
   }
 
-  function handleApiKey(key) {
+  function handleApiKey(keyOrBundle) {
     setShowKeyGate(false)
-    if (key) {
-      localStorage.setItem('pacer_api_key', key)
-      setApiKey(key)
-      // Persist to Firestore so all devices share the same key
-      if (user) updateUserProfile(user.uid, { anthropicApiKey: key })
+    if (keyOrBundle) {
+      // keyOrBundle is a keyBundle object from APIKeyGate (or raw string for legacy)
+      const isBundle = typeof keyOrBundle === 'object' && keyOrBundle.encrypted
+      if (isBundle) {
+        localStorage.setItem('pacer_api_key_v2', JSON.stringify(keyOrBundle))
+        if (user) updateUserProfile(user.uid, { anthropicKeyBundle: keyOrBundle, anthropicApiKey: null })
+      } else {
+        localStorage.setItem('pacer_api_key', keyOrBundle)
+      }
+      setApiKey(keyOrBundle)
     }
   }
 
-  function handleApiKeyChange(key) {
-    if (key) {
-      localStorage.setItem('pacer_api_key', key)
-      setApiKey(key)
-      if (user) updateUserProfile(user.uid, { anthropicApiKey: key })
+  function handleApiKeyChange(keyOrBundle) {
+    if (keyOrBundle) {
+      const isBundle = typeof keyOrBundle === 'object' && keyOrBundle.encrypted
+      if (isBundle) {
+        localStorage.setItem('pacer_api_key_v2', JSON.stringify(keyOrBundle))
+        localStorage.removeItem('pacer_api_key')
+        if (user) updateUserProfile(user.uid, { anthropicKeyBundle: keyOrBundle, anthropicApiKey: null })
+      } else {
+        localStorage.setItem('pacer_api_key', keyOrBundle)
+      }
+      setApiKey(keyOrBundle)
     } else {
+      localStorage.removeItem('pacer_api_key_v2')
       localStorage.removeItem('pacer_api_key')
       setApiKey(null)
-      if (user) updateUserProfile(user.uid, { anthropicApiKey: null })
+      if (user) updateUserProfile(user.uid, { anthropicKeyBundle: null, anthropicApiKey: null })
     }
   }
 

@@ -1,3 +1,5 @@
+import { callClaude } from './anthropicProxy'
+
 const MODEL = 'claude-haiku-4-5-20251001'
 
 const PACER_CONTEXT = `You are Theater, PACER's production studio. Your role is to stage observations — to transform institutional thoughts into artifacts for audiences.
@@ -76,31 +78,16 @@ export async function enrichForFormat(observation, formatId, apiKey) {
   const format = FORMATS.find(f => f.id === formatId)
   if (!format || !format.available) throw new Error('Format not available')
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 450,
-      system: PACER_CONTEXT,
-      messages: [{
-        role: 'user',
-        content: `Observation: "${observation}"\n\n${format.instruction}`,
-      }],
-    }),
-  })
+  const data = await callClaude({
+    model: MODEL,
+    max_tokens: 450,
+    system: PACER_CONTEXT,
+    messages: [{
+      role: 'user',
+      content: `Observation: "${observation}"\n\n${format.instruction}`,
+    }],
+  }, apiKey)
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error?.message || `HTTP ${res.status}`)
-  }
-
-  const data = await res.json()
   return data.content?.[0]?.text?.trim() || observation
 }
 
