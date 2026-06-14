@@ -1470,7 +1470,7 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
               <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600 }}>📡 OpsCore</span>
             )}
           </div>
-          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+          <p style={{ color: expanded ? '#e2e8f0' : 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
             {asset.title || 'Untitled Asset'}
           </p>
         </div>
