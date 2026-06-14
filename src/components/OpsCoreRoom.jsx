@@ -389,13 +389,14 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   }, [threads, attentionQueue, activeSignals, signalCounts, patterns, observations, now, productions, mediaAssets])
 
   // Featured broadcast — media asset takes precedence over production
+  // Requires actual media URL so a broken/empty asset doesn't hold the featured slot
   const featuredBroadcast = useMemo(() => {
     const recentMedia = [...mediaAssets]
-      .filter(a => a.publishedAt && a.opsCoreSignal)
+      .filter(a => a.publishedAt && a.opsCoreSignal && (a.videoUrl || a.audioUrl))
       .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
     if (recentMedia) return { type: 'media', asset: recentMedia }
     const recentProd = [...productions]
-      .filter(p => p.publishedAt && p.opsCoreSignal)
+      .filter(p => p.publishedAt && p.opsCoreSignal && p.videoUrl)
       .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0]
     if (recentProd) return { type: 'production', asset: recentProd }
     return null
