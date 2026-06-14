@@ -82,16 +82,19 @@ function museColl(uid) { return collection(db, 'users', uid, 'muse_works') }
 
 export function listenObservations(uid, callback) {
   const q = query(obsColl(uid), orderBy('timestamp', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        timestamp: data.timestamp?.toDate?.() ?? new Date(),
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          timestamp: data.timestamp?.toDate?.() ?? new Date(),
+        }
+      }))
+    },
+    err => { console.error('[listenObservations] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 export async function createObservation(uid, data) {
@@ -114,16 +117,19 @@ export async function updateObservation(uid, id, patch) {
 
 export function listenMuseWorks(uid, callback) {
   const q = query(museColl(uid), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        createdAt: data.createdAt?.toDate?.() ?? new Date(),
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+        }
+      }))
+    },
+    err => { console.error('[listenMuseWorks] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 export async function createMuseWork(uid, data) {
@@ -160,16 +166,19 @@ export function listenKELDecisions(uid, callback) {
     collection(db, 'users', uid, 'kel_decisions'),
     orderBy('decidedAt', 'desc')
   )
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        decidedAt: data.decidedAt?.toDate?.() ?? new Date(),
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          decidedAt: data.decidedAt?.toDate?.() ?? new Date(),
+        }
+      }))
+    },
+    err => { console.error('[listenKELDecisions] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 // ── KEL Review Ledger — institutional review records, not observation decisions ─
@@ -191,17 +200,20 @@ export async function createKELReview(uid, data) {
 
 export function listenKELReviews(uid, callback) {
   const q = query(kelReviewColl(uid), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        createdAt:  data.createdAt?.toDate?.()  ?? new Date(),
-        reviewedAt: data.reviewedAt?.toDate?.() ?? null,
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          createdAt:  data.createdAt?.toDate?.()  ?? new Date(),
+          reviewedAt: data.reviewedAt?.toDate?.() ?? null,
+        }
+      }))
+    },
+    err => { console.error('[listenKELReviews] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 export async function updateKELReview(uid, id, patch) {
@@ -228,12 +240,15 @@ export async function createInstitutionEvent(uid, data) {
 
 export function listenInstitutionEvents(uid, callback) {
   const q = query(eventColl(uid), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return { ...data, id: d.id, createdAt: data.createdAt?.toDate?.() ?? new Date() }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return { ...data, id: d.id, createdAt: data.createdAt?.toDate?.() ?? new Date() }
+      }))
+    },
+    err => { console.error('[listenInstitutionEvents] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 // ── Creator Logs — timestamped logbook entries ────────────────────────────────
@@ -254,16 +269,19 @@ export async function createCreatorLog(uid, data) {
 
 export function listenCreatorLogs(uid, callback) {
   const q = query(logColl(uid), orderBy('createdAt', 'asc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        createdAt: data.createdAt?.toDate?.() ?? new Date(),
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+        }
+      }))
+    },
+    err => { console.error('[listenCreatorLogs] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 // ── Productions — Theater production management records ──────────────────────
@@ -291,17 +309,20 @@ export async function createProduction(uid, data) {
 
 export function listenProductions(uid, callback) {
   const q = query(prodColl(uid), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        createdAt: data.createdAt?.toDate?.() ?? new Date(),
-        updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+          updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+        }
+      }))
+    },
+    err => { console.error('[listenProductions] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 export async function updateProduction(uid, id, patch) {
@@ -370,17 +391,20 @@ export async function updateThread(uid, threadId, patch) {
 
 export function listenThreads(uid, callback) {
   const q = query(threadColl(uid), orderBy('decisionAt', 'desc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id:         d.id,
-        decisionAt: data.decisionAt?.toDate?.() ?? new Date(),
-        outcomeAt:  data.outcomeAt?.toDate?.()  ?? null,
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id:         d.id,
+          decisionAt: data.decisionAt?.toDate?.() ?? new Date(),
+          outcomeAt:  data.outcomeAt?.toDate?.()  ?? null,
+        }
+      }))
+    },
+    err => { console.error('[listenThreads] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 // ── Graduate Registry — written only by Builder Studio, read everywhere ────────
@@ -389,16 +413,19 @@ function gradColl(uid) { return collection(db, 'users', uid, 'graduates') }
 
 export function listenGraduates(uid, callback) {
   const q = query(gradColl(uid), orderBy('sequence', 'asc'))
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => {
-      const data = d.data()
-      return {
-        ...data,
-        id: d.id,
-        graduatedAt: data.graduatedAt?.toDate?.() ?? null,
-      }
-    }))
-  })
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id: d.id,
+          graduatedAt: data.graduatedAt?.toDate?.() ?? null,
+        }
+      }))
+    },
+    err => { console.error('[listenGraduates] snapshot error:', err?.code, err?.message) },
+  )
 }
 
 export async function createGraduate(uid, data) {
