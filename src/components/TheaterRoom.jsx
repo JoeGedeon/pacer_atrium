@@ -48,7 +48,7 @@ function AudioPlayer({ url }) {
   )
 }
 
-function VideoPlayer({ url }) {
+function VideoPlayer({ url, large }) {
   const embed = videoEmbed(url)
   if (!embed) return null
   if (embed.type === 'iframe') {
@@ -65,7 +65,11 @@ function VideoPlayer({ url }) {
     <video
       controls
       src={embed.src}
-      style={{ width: '100%', display: 'block', maxHeight: '260px', objectFit: 'contain', background: '#000' }}
+      style={{
+        width: '100%', display: 'block', objectFit: 'contain', background: '#000',
+        aspectRatio: large ? '16/9' : undefined,
+        maxHeight: large ? '600px' : '260px',
+      }}
     />
   )
 }
@@ -1294,8 +1298,9 @@ function StandbyCard() {
 }
 
 function FeaturedBroadcast({ mediaAssets, productions }) {
+  // Accept newest published asset — video or audio, type-aware (honest about missing URLs)
   const featuredAsset = mediaAssets
-    .filter(a => a.publishedAt && a.videoUrl)
+    .filter(a => a.publishedAt && (a.videoUrl || a.audioUrl || a.type === 'video' || a.type === 'audio'))
     .sort((a, b) => (b.publishedAt > a.publishedAt ? 1 : -1))[0] || null
 
   const featuredProd = !featuredAsset
@@ -1311,12 +1316,19 @@ function FeaturedBroadcast({ mediaAssets, productions }) {
   const pubDate = item.publishedAt ? new Date(item.publishedAt) : null
   const bodyText = isAsset ? item.transcript : item.notes
 
+  const isVideo = isAsset ? !!(item.videoUrl || item.type === 'video') : !!item.videoUrl
+  const isAudio = isAsset && !isVideo && !!(item.audioUrl || item.type === 'audio')
+  const hasMedia = isVideo ? !!item.videoUrl : isAudio ? !!item.audioUrl : true
+
+  const typeLabel = isVideo ? '🎬 Video' : isAudio ? '🔊 Audio' : '🎬 Video'
+
   return (
     <div style={{
       marginBottom: '28px', border: '1px solid #a855f730',
       borderLeft: '3px solid #a855f7', borderRadius: '0 10px 10px 0',
       overflow: 'hidden', background: '#05021a',
     }}>
+      {/* Header bar */}
       <div style={{
         padding: '10px 16px', background: '#08041e',
         borderBottom: '1px solid #a855f720',
@@ -1335,24 +1347,63 @@ function FeaturedBroadcast({ mediaAssets, productions }) {
         )}
       </div>
 
-      <div style={{ background: '#000' }}>
-        <VideoPlayer url={item.videoUrl} />
-      </div>
+      {/* Player area */}
+      {!hasMedia ? (
+        <div style={{
+          background: '#000', aspectRatio: '16/9', maxHeight: '380px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '10px',
+        }}>
+          <p style={{ fontSize: '28px', lineHeight: 1 }}>{isVideo ? '🎬' : '🔊'}</p>
+          <p style={{ color: '#a855f780', fontSize: '13px', fontStyle: 'italic' }}>Media file missing</p>
+          <p style={{ color: '#a855f750', fontSize: '10px', textAlign: 'center', maxWidth: '260px', lineHeight: 1.6 }}>
+            Open this asset in the Media Library and upload a {isVideo ? 'video' : 'audio'} file to broadcast it here.
+          </p>
+        </div>
+      ) : isVideo ? (
+        <div style={{ background: '#000' }}>
+          <VideoPlayer url={item.videoUrl} large />
+        </div>
+      ) : (
+        <div style={{ background: '#0a0618', padding: '28px 24px 20px' }}>
+          <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: '14px' }}>
+            🔊 Audio Broadcast
+          </p>
+          <AudioPlayer url={item.audioUrl} />
+        </div>
+      )}
 
-      <div style={{ padding: '16px 18px' }}>
-        <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 700,
-          marginBottom: '8px', lineHeight: 1.3 }}>
+      {/* Info below player */}
+      <div style={{ padding: '18px 20px' }}>
+        <p style={{ color: '#e2e8f0', fontSize: '16px', fontWeight: 700,
+          marginBottom: '5px', lineHeight: 1.3 }}>
           {item.title || 'Untitled Broadcast'}
         </p>
-        {bodyText && (
-          <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7, marginBottom: '8px' }}>
-            {bodyText.length > 200 ? bodyText.slice(0, 200) + '…' : bodyText}
+        {pubDate && (
+          <p style={{ color: '#a855f780', fontSize: '10px', marginBottom: '10px' }}>
+            Published {pubDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         )}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <span style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
-            textTransform: 'uppercase', fontWeight: 600 }}>
-            {isAsset ? 'Theater Media' : 'Theater Production'}
+        {bodyText && (
+          <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7, marginBottom: '12px' }}>
+            {bodyText.length > 240 ? bodyText.slice(0, 240) + '…' : bodyText}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{
+            background: '#a855f710', border: '1px solid #a855f730', borderRadius: '4px',
+            padding: '2px 8px', color: '#a855f7', fontSize: '9px',
+            fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+          }}>
+            {typeLabel}
+          </span>
+          <span style={{
+            background: '#10b98110', border: '1px solid #10b98130', borderRadius: '4px',
+            padding: '2px 8px', color: '#10b981', fontSize: '9px',
+            fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+          }}>
+            📡 Broadcasting
           </span>
           {!isAsset && item.deliveryDestination && (
             <span style={{ color: 'var(--text-6)', fontSize: '9px' }}>{item.deliveryDestination}</span>
