@@ -1770,14 +1770,24 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
     setVideoUploadErrMsg(null)
     try {
       const url = await uploadMediaVideo(file, uid)
-      setForm(p => ({
-        ...p,
-        videoUrl: url,
-        title: p.title.trim() ? p.title : file.name.replace(/\.[^.]+$/, ''),
-      }))
-      setVideoUploadStatus('complete')
+      // Title: user-typed > filename > timestamp fallback (never empty on iOS)
+      const fileTitle = (file.name || '').replace(/\.[^.]+$/, '').trim()
+      const title = form.title.trim() || fileTitle ||
+        `Video ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+      console.log('[MediaWing] upload OK — auto-saving, title:', title)
+      setVideoUploadStatus('saving')
+      const id = await onCreateMediaAsset({
+        title,
+        videoUrl:   url,
+        audioUrl:   form.audioUrl  || null,
+        transcript: form.transcript || '',
+        type:       'video',
+      })
+      console.log('[MediaWing] asset saved, id:', id)
+      setForm({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
+      setVideoUploadStatus('saved')
     } catch (err) {
-      console.error('[MediaWing] video upload failed:', err?.code, err?.message)
+      console.error('[MediaWing] video upload/save failed:', err?.code, err?.message)
       setVideoUploadStatus('error')
       setVideoUploadErrMsg(err?.code || err?.message || 'Unknown error')
     } finally { setVideoUploading(false); e.target.value = '' }
@@ -1789,16 +1799,26 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
     console.log('[MediaWing] audio selected —', file.name, file.type, file.size, 'bytes | uid:', uid)
     setAudioUploading(true)
     setAudioUploadStatus('uploading')
+    setAudioUploadErrMsg(null)
     try {
       const url = await uploadMediaAudio(file, uid)
-      setForm(p => ({
-        ...p,
-        audioUrl: url,
-        title: p.title.trim() ? p.title : file.name.replace(/\.[^.]+$/, ''),
-      }))
-      setAudioUploadStatus('complete')
+      const fileTitle = (file.name || '').replace(/\.[^.]+$/, '').trim()
+      const title = form.title.trim() || fileTitle ||
+        `Audio ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+      console.log('[MediaWing] upload OK — auto-saving, title:', title)
+      setAudioUploadStatus('saving')
+      const id = await onCreateMediaAsset({
+        title,
+        videoUrl:   form.videoUrl || null,
+        audioUrl:   url,
+        transcript: form.transcript || '',
+        type:       'audio',
+      })
+      console.log('[MediaWing] asset saved, id:', id)
+      setForm({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
+      setAudioUploadStatus('saved')
     } catch (err) {
-      console.error('[MediaWing] audio upload failed:', err?.code, err?.message)
+      console.error('[MediaWing] audio upload/save failed:', err?.code, err?.message)
       setAudioUploadStatus('error')
       setAudioUploadErrMsg(err?.code || err?.message || 'Unknown error')
     } finally { setAudioUploading(false); e.target.value = '' }
@@ -1918,8 +1938,9 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
               color: videoUploadStatus === 'complete' ? '#10b981' : videoUploadStatus === 'error' ? '#ef4444' : '#a855f7',
               fontSize: '10px', marginBottom: '8px',
             }}>
-              {videoUploadStatus === 'uploading' ? '⟳ Uploading…'
-                : videoUploadStatus === 'complete' ? '✓ Upload complete. Ready to save.'
+              {videoUploadStatus === 'uploading' ? '⟳ Uploading to storage…'
+                : videoUploadStatus === 'saving'   ? '⟳ Saving to library…'
+                : videoUploadStatus === 'saved'    ? '✓ Saved to Media Library.'
                 : `⚠ Upload failed — ${videoUploadErrMsg || 'unknown error'}`}
             </p>
           )}
@@ -1946,8 +1967,9 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
               color: audioUploadStatus === 'complete' ? '#10b981' : audioUploadStatus === 'error' ? '#ef4444' : '#a855f7',
               fontSize: '10px', marginBottom: '8px',
             }}>
-              {audioUploadStatus === 'uploading' ? '⟳ Uploading…'
-                : audioUploadStatus === 'complete' ? '✓ Upload complete. Ready to save.'
+              {audioUploadStatus === 'uploading' ? '⟳ Uploading to storage…'
+                : audioUploadStatus === 'saving'   ? '⟳ Saving to library…'
+                : audioUploadStatus === 'saved'    ? '✓ Saved to Media Library.'
                 : `⚠ Upload failed — ${audioUploadErrMsg || 'unknown error'}`}
             </p>
           )}
