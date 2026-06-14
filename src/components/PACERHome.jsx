@@ -162,7 +162,7 @@ function CampusAtmosphere() {
   )
 }
 
-export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile, googleStatus, onReconnectGoogle }) {
+export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile, googleStatus, onReconnectGoogle, debugUid, debugEmail, debugProjectId }) {
   return (
     <div
       className="flex-1 flex flex-col items-center overflow-y-auto"
@@ -353,6 +353,30 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
             >
               ▶ Raw Voice Test
             </button>
+
+            {/* Auth/project debug strip — creator only, shows live session state */}
+            <div style={{
+              marginTop: '10px', padding: '8px 10px',
+              background: 'var(--bg-0)', border: '1px solid var(--border-0)',
+              borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '3px',
+            }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+                textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+                Session Debug
+              </p>
+              <p style={{ color: debugUid ? '#10b981' : '#ef4444', fontSize: '9px', fontFamily: 'monospace' }}>
+                uid: {debugUid ? `${debugUid.slice(0, 8)}…${debugUid.slice(-4)}` : 'NOT SIGNED IN'}
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', fontFamily: 'monospace' }}>
+                email: {debugEmail || '—'}
+              </p>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', fontFamily: 'monospace' }}>
+                project: {debugProjectId || '—'}
+              </p>
+              <p style={{ color: observationCount > 0 ? '#10b981' : '#f59e0b', fontSize: '9px', fontFamily: 'monospace' }}>
+                observations: {observationCount}
+              </p>
+            </div>
           </div>
         )}
 
