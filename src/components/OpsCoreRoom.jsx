@@ -34,97 +34,176 @@ const OPSCORE_TABS = [
 
 // ── Broadcast Panel ──────────────────────────────────────────────────────────
 
-function BroadcastPanel({ featuredBroadcast, isMobile }) {
+function BroadcastPanel({ mediaAssets, productions, isMobile }) {
   const padX = isMobile ? 'px-4' : 'px-8'
 
-  if (!featuredBroadcast) {
+  // All published assets with actual media — sorted newest first
+  const queue = useMemo(() => {
+    const media = [...mediaAssets]
+      .filter(a => a.publishedAt && (a.videoUrl || a.audioUrl))
+      .map(a => ({ ...a, _kind: 'media' }))
+    const prods = [...(productions || [])]
+      .filter(p => p.publishedAt && p.videoUrl)
+      .map(p => ({ ...p, _kind: 'production' }))
+    return [...media, ...prods].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+  }, [mediaAssets, productions])
+
+  const [selectedId, setSelectedId] = useState(null)
+  // Auto-select newest when queue changes if nothing is selected
+  const selected = queue.find(a => a.id === selectedId) ?? queue[0] ?? null
+
+  if (queue.length === 0) {
     return (
       <div className={`flex-1 overflow-y-auto ${padX} py-6`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', maxWidth: '360px' }}>
           <p style={{ fontSize: '40px', marginBottom: '16px' }}>📡</p>
-          <p style={{ color: 'var(--text-2)', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>No broadcast active.</p>
+          <p style={{ color: 'var(--text-2)', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>Awaiting Transmission</p>
           <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>
-            Publish a media asset from Theater → 🎬 Media to begin broadcasting here.
+            Select a media asset from the library to begin broadcast.
+          </p>
+          <p style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '10px', lineHeight: 1.6 }}>
+            In Theater → 🎬 Media: upload a file, set Human Gate to Approved, then click 📡 Broadcast on OpsCore.
           </p>
         </div>
       </div>
     )
   }
 
-  const { type, asset } = featuredBroadcast
-  const videoE = videoEmbed(asset.videoUrl)
-  const audioE = type === 'media' ? audioEmbed(asset.audioUrl) : null
-  const transcript = type === 'media' ? asset.transcript : null
+  const videoE = selected ? videoEmbed(selected.videoUrl) : null
+  const audioE = selected?._kind === 'media' ? audioEmbed(selected.audioUrl) : null
+  const transcript = selected?._kind === 'media' ? selected.transcript : null
+  const hasMedia = !!(videoE || audioE)
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* Title bar */}
-      <div className={`${padX} py-5`} style={{ borderBottom: '1px solid var(--border-0)' }}>
-        <div style={{ display: 'flex', align: 'flex-start', gap: '10px', justifyContent: 'space-between' }}>
-          <div>
-            <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>
-              📡 Live Broadcast
+
+      {/* ── Zone 1: Broadcast Screen ──────────────────────────────────────── */}
+      <div style={{ flexShrink: 0 }}>
+        {/* Screen header */}
+        <div className={`${padX} py-3`} style={{
+          borderBottom: '1px solid var(--border-0)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.15em',
+              textTransform: 'uppercase', fontWeight: 700, marginBottom: '3px' }}>
+              📡 On Screen
             </p>
-            <h2 style={{ color: 'var(--text-0)', fontSize: '20px', fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.01em' }}>
-              {asset.title || 'Untitled'}
+            <h2 style={{ color: 'var(--text-0)', fontSize: '18px', fontWeight: 700,
+              lineHeight: 1.25, letterSpacing: '-0.01em', overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selected?.title || 'Untitled'}
             </h2>
           </div>
-          <p style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
-            {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {selected?.publishedAt && (
+            <p style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '16px' }}>
+              {new Date(selected.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </p>
+          )}
+        </div>
+
+        {/* Player */}
+        {videoE ? (
+          <div style={{ background: '#000' }}>
+            {videoE.type === 'iframe' ? (
+              <iframe
+                src={videoE.src}
+                style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <video
+                controls
+                src={videoE.src}
+                style={{ width: '100%', display: 'block', maxHeight: '55vh', objectFit: 'contain', background: '#000' }}
+              />
+            )}
+          </div>
+        ) : audioE ? (
+          <div className={`${padX} py-4`} style={{ background: 'var(--bg-1)' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>🔊 Audio</p>
+            {audioE.type === 'iframe' ? (
+              <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
+            ) : (
+              <audio controls src={audioE.src} style={{ width: '100%', display: 'block' }} />
+            )}
+          </div>
+        ) : (
+          <div className={`${padX} py-5`} style={{ background: 'var(--bg-1)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>
+              Media file missing — open Theater → 🎬 Media to upload a file to this asset.
+            </p>
+          </div>
+        )}
+
+        {/* Transcript */}
+        {transcript && (
+          <div className={`${padX} py-4`} style={{ borderTop: '1px solid var(--border-0)', maxHeight: '160px', overflowY: 'auto' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>📄 Script</p>
+            <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{transcript}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Zone 2: Transmission Queue ────────────────────────────────────── */}
+      <div style={{ borderTop: '2px solid var(--border-1)', flexShrink: 0 }}>
+        <div className={`${padX} pt-4 pb-2`}>
+          <p style={{ ...SECTION }}>
+            Transmission Queue — {queue.length} asset{queue.length !== 1 ? 's' : ''}
           </p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {queue.map(asset => {
+            const isSel = selected?.id === asset.id
+            const isVideo = !!(asset.videoUrl || asset.type === 'video')
+            const isAudio = !isVideo && !!(asset.audioUrl || asset.type === 'audio')
+            const typeLabel = isVideo ? '🎬' : isAudio ? '🔊' : '📄'
+            return (
+              <button
+                key={asset.id}
+                onClick={() => setSelectedId(asset.id)}
+                style={{
+                  textAlign: 'left', width: '100%', border: 'none', cursor: 'pointer',
+                  background: isSel ? '#041208' : 'transparent',
+                  borderLeft: `3px solid ${isSel ? '#10b981' : 'transparent'}`,
+                  padding: '10px 20px 10px 17px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <span style={{ fontSize: '14px', flexShrink: 0 }}>{typeLabel}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{
+                      color: isSel ? '#e2e8f0' : 'var(--text-2)',
+                      fontSize: '12px', fontWeight: isSel ? 600 : 400,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {asset.title || 'Untitled'}
+                    </p>
+                    <p style={{ color: isSel ? '#6ee7b7' : 'var(--text-6)', fontSize: '10px' }}>
+                      {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+                {isSel && (
+                  <span style={{
+                    flexShrink: 0, background: '#10b98115', border: '1px solid #10b98130',
+                    borderRadius: '4px', padding: '2px 7px',
+                    color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
+                  }}>
+                    ▶ ON SCREEN
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* Video player — full width, no padding */}
-      {videoE && (
-        <div style={{ background: '#000', flexShrink: 0 }}>
-          {videoE.type === 'iframe' ? (
-            <iframe
-              src={videoE.src}
-              style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <video
-              controls
-              src={videoE.src}
-              style={{ width: '100%', display: 'block', maxHeight: '60vh', objectFit: 'contain' }}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Audio track */}
-      {audioE && (
-        <div className={`${padX} py-4`} style={{ borderTop: '1px solid var(--border-0)', background: 'var(--bg-1)', flexShrink: 0 }}>
-          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>🔊 Audio Track</p>
-          {audioE.type === 'iframe' ? (
-            <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
-          ) : (
-            <audio controls src={audioE.src} style={{ width: '100%', display: 'block' }} />
-          )}
-        </div>
-      )}
-
-      {/* Script */}
-      {transcript && (
-        <div className={`${padX} py-5`} style={{ borderTop: '1px solid var(--border-0)' }}>
-          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>📄 Script</p>
-          <p style={{ color: 'var(--text-2)', fontSize: '14px', lineHeight: 1.85, whiteSpace: 'pre-wrap', maxWidth: '680px' }}>
-            {transcript}
-          </p>
-        </div>
-      )}
-
-      {/* Nothing to play message */}
-      {!videoE && !audioE && !transcript && (
-        <div className={`${padX} py-6`}>
-          <p style={{ color: 'var(--text-4)', fontSize: '12px', fontStyle: 'italic' }}>
-            No media attached to this broadcast yet. Open Theater → 🎬 Media to add a video or audio file.
-          </p>
-        </div>
-      )}
     </div>
   )
 }
@@ -480,7 +559,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
       <RoomSubNav tabs={OPSCORE_TABS} activeTab={view} onSelect={setView} />
 
-      {view === 'broadcast' && <BroadcastPanel featuredBroadcast={featuredBroadcast} isMobile={isMobile} />}
+      {view === 'broadcast' && <BroadcastPanel mediaAssets={mediaAssets} productions={productions} isMobile={isMobile} />}
       {view === 'assets'    && <AssetsPanel mediaAssets={mediaAssets} productions={productions} isMobile={isMobile} />}
 
       {view === 'attention' && (

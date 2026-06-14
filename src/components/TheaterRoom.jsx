@@ -99,10 +99,20 @@ function VideoPlayer({ url, large }) {
   )
 }
 
+const SCENE_TYPES = [
+  { id: 'intro',          label: 'Intro',          order: 0, color: '#3b82f6' },
+  { id: 'proof',          label: 'Proof',           order: 1, color: '#10b981' },
+  { id: 'emotional_beat', label: 'Emotional Beat',  order: 2, color: '#a855f7' },
+  { id: 'product_demo',   label: 'Product Demo',    order: 3, color: '#f59e0b' },
+  { id: 'transition',     label: 'Transition',      order: 4, color: '#6b7280' },
+  { id: 'outro',          label: 'Outro',           order: 5, color: '#06b6d4' },
+]
+
 const THEATER_TABS = [
   { id: 'office',    label: '📦 Production Office' },
   { id: 'stage',     label: '🎭 Staging' },
   { id: 'media',     label: '🎬 Media' },
+  { id: 'remix',     label: '✂️ Remix Board' },
   { id: 'published', label: 'Published' },
   { id: 'archive',   label: 'Archive' },
   { id: 'about',     label: 'About' },
@@ -1462,6 +1472,13 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
         audioUrl:        asset.audioUrl        || '',
         transcript:      asset.transcript      || '',
         humanGateStatus: asset.humanGateStatus || '',
+        sceneType:       asset.sceneType       || '',
+        mood:            asset.mood            || '',
+        pacing:          asset.pacing          || '',
+        usableMoments:   asset.usableMoments   || '',
+        suggestedUse:    asset.suggestedUse    || '',
+        tags:            asset.tags            || '',
+        remixNotes:      asset.remixNotes      || '',
       })
       onToggle(asset.id)
     }
@@ -1510,6 +1527,13 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
         transcript:      edit.transcript      || '',
         humanGateStatus: edit.humanGateStatus || null,
         type:            edit.videoUrl ? 'video' : edit.audioUrl ? 'audio' : 'transcript',
+        sceneType:       edit.sceneType       || null,
+        mood:            edit.mood            || null,
+        pacing:          edit.pacing          || null,
+        usableMoments:   edit.usableMoments   || null,
+        suggestedUse:    edit.suggestedUse    || null,
+        tags:            edit.tags            || null,
+        remixNotes:      edit.remixNotes      || null,
       })
       console.log('[AssetCard] save succeeded')
     } catch (err) {
@@ -1687,6 +1711,90 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
                     {gate.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Remix Layer */}
+            <div style={{ marginBottom: '14px', paddingTop: '14px', borderTop: '1px solid #a855f715' }}>
+              <p style={{ color: '#a855f780', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '10px' }}>✂️ Remix Layer</p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                <div>
+                  <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Scene Type</p>
+                  <select
+                    value={edit.sceneType}
+                    onChange={e => setEdit(p => ({ ...p, sceneType: e.target.value }))}
+                    style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                  >
+                    <option value="">Unclassified</option>
+                    {SCENE_TYPES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Pacing</p>
+                  <select
+                    value={edit.pacing}
+                    onChange={e => setEdit(p => ({ ...p, pacing: e.target.value }))}
+                    style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                  >
+                    <option value="">Unset</option>
+                    <option value="slow">Slow</option>
+                    <option value="medium">Medium</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Mood</p>
+                <input
+                  value={edit.mood}
+                  onChange={e => setEdit(p => ({ ...p, mood: e.target.value }))}
+                  placeholder="e.g. authoritative, warm, urgent…"
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Usable Moments</p>
+                <textarea
+                  value={edit.usableMoments}
+                  onChange={e => setEdit(p => ({ ...p, usableMoments: e.target.value }))}
+                  placeholder="0:12 — key proof moment. 0:45 — quote worth clipping. 1:20 — strong close."
+                  rows={2}
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Suggested Use</p>
+                <input
+                  value={edit.suggestedUse}
+                  onChange={e => setEdit(p => ({ ...p, suggestedUse: e.target.value }))}
+                  placeholder="Lead with this for broker outreach. Follow the intro clip."
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Tags</p>
+                <input
+                  value={edit.tags}
+                  onChange={e => setEdit(p => ({ ...p, tags: e.target.value }))}
+                  placeholder="fleetflow, broker, proof, 2026…"
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Remix Notes</p>
+                <textarea
+                  value={edit.remixNotes}
+                  onChange={e => setEdit(p => ({ ...p, remixNotes: e.target.value }))}
+                  placeholder="How this clip should be cut, sequenced, or repurposed…"
+                  rows={2}
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+                />
               </div>
             </div>
 
@@ -2024,6 +2132,167 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
   )
 }
 
+// ── Remix Board ───────────────────────────────────────────────────────────────
+
+function RemixBoard({ mediaAssets, isMobile }) {
+  const px = isMobile ? 'px-4' : 'px-8'
+
+  const published = [...mediaAssets]
+    .filter(a => a.publishedAt && (a.videoUrl || a.audioUrl))
+    .sort((a, b) => {
+      const oA = SCENE_TYPES.find(s => s.id === a.sceneType)?.order ?? 99
+      const oB = SCENE_TYPES.find(s => s.id === b.sceneType)?.order ?? 99
+      if (oA !== oB) return oA - oB
+      return new Date(a.publishedAt) - new Date(b.publishedAt)
+    })
+
+  const unclassified = published.filter(a => !a.sceneType)
+
+  if (published.length === 0) {
+    return (
+      <div className={`flex-1 overflow-y-auto ${px} py-6`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '360px' }}>
+          <p style={{ fontSize: '36px', marginBottom: '12px' }}>✂️</p>
+          <p style={{ color: 'var(--text-2)', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Remix Board is empty.</p>
+          <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>
+            Publish media assets from the 🎬 Media tab, then add Remix metadata to each one to build the board.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+      <div style={{ maxWidth: '640px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '3px' }}>
+          {published.length} published asset{published.length !== 1 ? 's' : ''} in sequence.
+        </p>
+        <p style={{ color: 'var(--text-6)', fontSize: '10px', marginBottom: '24px', fontStyle: 'italic' }}>
+          Sequence is ordered by scene type, then publish date. Edit Remix fields in 🎬 Media to reposition.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {published.map((asset, i) => {
+            const sceneMeta = SCENE_TYPES.find(s => s.id === asset.sceneType)
+            const isVideo = !!(asset.videoUrl || asset.type === 'video')
+            const tagList = asset.tags ? asset.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+            const next = published[i + 1]
+            const nextScene = next ? SCENE_TYPES.find(s => s.id === next.sceneType) : null
+
+            return (
+              <div key={asset.id}>
+                <div style={{
+                  border: `1px solid ${sceneMeta ? sceneMeta.color + '30' : '#a855f720'}`,
+                  borderLeft: `3px solid ${sceneMeta ? sceneMeta.color : '#a855f760'}`,
+                  borderRadius: '0 10px 10px 0',
+                  overflow: 'hidden',
+                  background: 'var(--bg-1)',
+                }}>
+                  {/* Header */}
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-0)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px', flexWrap: 'wrap' }}>
+                        {sceneMeta ? (
+                          <span style={{
+                            background: sceneMeta.color + '12', border: `1px solid ${sceneMeta.color}30`,
+                            borderRadius: '4px', padding: '2px 8px',
+                            color: sceneMeta.color, fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                          }}>
+                            {sceneMeta.label}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-6)', fontSize: '9px', fontStyle: 'italic' }}>unclassified</span>
+                        )}
+                        {asset.pacing && (
+                          <span style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                            {asset.pacing}
+                          </span>
+                        )}
+                        {asset.mood && (
+                          <span style={{ color: 'var(--text-4)', fontSize: '10px', fontStyle: 'italic' }}>{asset.mood}</span>
+                        )}
+                        <span style={{ color: 'var(--text-6)', fontSize: '9px', marginLeft: 'auto' }}>
+                          {isVideo ? '🎬' : '🔊'}
+                        </span>
+                      </div>
+                      <p style={{ color: 'var(--text-0)', fontSize: '14px', fontWeight: 600, lineHeight: 1.3 }}>
+                        {asset.title || 'Untitled'}
+                      </p>
+                    </div>
+                    <p style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '16px' }}>
+                      {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+
+                  {/* Remix metadata */}
+                  {(asset.usableMoments || asset.suggestedUse || asset.remixNotes) && (
+                    <div style={{ padding: '12px 18px', borderBottom: tagList.length > 0 ? '1px solid var(--border-0)' : 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {asset.usableMoments && (
+                        <div>
+                          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '3px' }}>Usable Moments</p>
+                          <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{asset.usableMoments}</p>
+                        </div>
+                      )}
+                      {asset.suggestedUse && (
+                        <div>
+                          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '3px' }}>Suggested Use</p>
+                          <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.6 }}>{asset.suggestedUse}</p>
+                        </div>
+                      )}
+                      {asset.remixNotes && (
+                        <div>
+                          <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '3px' }}>Remix Notes</p>
+                          <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6, fontStyle: 'italic' }}>{asset.remixNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {tagList.length > 0 && (
+                    <div style={{ padding: '8px 18px', display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                      {tagList.map(tag => (
+                        <span key={tag} style={{
+                          background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                          borderRadius: '4px', padding: '2px 8px',
+                          color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.06em',
+                        }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Transition connector */}
+                {next && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 18px' }}>
+                    <div style={{ height: '1px', flex: 1, background: 'var(--border-0)' }} />
+                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>
+                      {nextScene ? `→ ${nextScene.label}` : '→ next'}
+                    </p>
+                    <div style={{ height: '1px', flex: 1, background: 'var(--border-0)' }} />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {unclassified.length > 0 && (
+          <div style={{ marginTop: '20px', padding: '12px 16px', background: 'var(--bg-2)', border: '1px dashed var(--border-1)', borderRadius: '8px' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '10px', lineHeight: 1.65 }}>
+              {unclassified.length} asset{unclassified.length !== 1 ? 's' : ''} without a scene type appear at the end.
+              Open each in 🎬 Media and set the Remix Layer fields to position them correctly.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── About ─────────────────────────────────────────────────────────────────────
 
 function AboutTab({ graduates, isMobile }) {
@@ -2190,6 +2459,9 @@ export default function TheaterRoom({
           uid={uid}
           isMobile={isMobile}
         />
+      )}
+      {view === 'remix' && (
+        <RemixBoard mediaAssets={mediaAssets} isMobile={isMobile} />
       )}
       {view === 'published' && (
         <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4' : 'px-8'} py-6`}>
