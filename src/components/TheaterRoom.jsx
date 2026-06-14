@@ -48,7 +48,15 @@ function AudioPlayer({ url }) {
   )
 }
 
+const MEDIA_ERR_LABELS = {
+  1: 'Playback aborted.',
+  2: 'Network error — check your connection or the file URL.',
+  3: 'Codec not supported by this browser (try H.264 MP4).',
+  4: 'Format not supported or source unavailable.',
+}
+
 function VideoPlayer({ url, large }) {
+  const [videoError, setVideoError] = useState(null)
   const embed = videoEmbed(url)
   if (!embed) return null
   if (embed.type === 'iframe') {
@@ -62,15 +70,32 @@ function VideoPlayer({ url, large }) {
     )
   }
   return (
-    <video
-      controls
-      src={embed.src}
-      style={{
-        width: '100%', display: 'block', objectFit: 'contain', background: '#000',
-        aspectRatio: large ? '16/9' : undefined,
-        maxHeight: large ? '600px' : '260px',
-      }}
-    />
+    <div style={{ position: 'relative', background: '#000' }}>
+      {videoError && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '8px',
+          background: '#0a0010', zIndex: 2, padding: '16px',
+        }}>
+          <p style={{ color: '#ef4444', fontSize: '11px', fontWeight: 700 }}>⚠ Playback Error</p>
+          <p style={{ color: '#fca5a5', fontSize: '11px', textAlign: 'center', lineHeight: 1.6 }}>
+            {MEDIA_ERR_LABELS[videoError.code] || videoError.message || 'Unknown playback error.'}
+          </p>
+          <p style={{ color: '#7f1d1d', fontSize: '10px' }}>Error code {videoError.code}</p>
+        </div>
+      )}
+      <video
+        controls
+        src={embed.src}
+        onError={e => { console.error('[VideoPlayer] error:', e.target.error); setVideoError(e.target.error) }}
+        onPlay={() => setVideoError(null)}
+        style={{
+          width: '100%', display: 'block', objectFit: 'contain', background: '#000',
+          aspectRatio: large ? '16/9' : undefined,
+          maxHeight: large ? '600px' : '260px',
+        }}
+      />
+    </div>
   )
 }
 
@@ -1423,6 +1448,8 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
   const [publishing, setPublishing] = useState(false)
   const [videoUploading, setVideoUploading] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
+  const [videoUploadError, setVideoUploadError] = useState(null)
+  const [audioUploadError, setAudioUploadError] = useState(null)
   const videoInputRef = useRef(null)
   const audioInputRef = useRef(null)
 
@@ -1444,10 +1471,14 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
     const file = e.target.files?.[0]
     if (!file || !uid) return
     setVideoUploading(true)
+    setVideoUploadError(null)
     try {
       const url = await uploadMediaVideo(file, uid)
       setEdit(p => ({ ...p, videoUrl: url }))
-    } catch (err) { console.error('[MediaWing] video upload:', err) }
+    } catch (err) {
+      console.error('[AssetCard] video upload:', err)
+      setVideoUploadError(err?.code || err?.message || 'Upload failed')
+    }
     finally { setVideoUploading(false); e.target.value = '' }
   }
 
@@ -1455,10 +1486,14 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
     const file = e.target.files?.[0]
     if (!file || !uid) return
     setAudioUploading(true)
+    setAudioUploadError(null)
     try {
       const url = await uploadMediaAudio(file, uid)
       setEdit(p => ({ ...p, audioUrl: url }))
-    } catch (err) { console.error('[MediaWing] audio upload:', err) }
+    } catch (err) {
+      console.error('[AssetCard] audio upload:', err)
+      setAudioUploadError(err?.code || err?.message || 'Upload failed')
+    }
     finally { setAudioUploading(false); e.target.value = '' }
   }
 
@@ -1577,7 +1612,7 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   value={edit.videoUrl}
-                  onChange={e => setEdit(p => ({ ...p, videoUrl: e.target.value }))}
+                  onChange={e => { setEdit(p => ({ ...p, videoUrl: e.target.value })); setVideoUploadError(null) }}
                   placeholder="YouTube, Vimeo, or .mp4 link…"
                   style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
                 />
@@ -1589,13 +1624,19 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
               </div>
             </div>
 
+            {videoUploadError && (
+              <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '3px', marginBottom: '6px' }}>
+                ⚠ Video upload failed — {videoUploadError}
+              </p>
+            )}
+
             {/* Audio URL + upload */}
             <div style={{ marginBottom: '12px' }}>
               <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px' }}>🔊 Audio URL</p>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   value={edit.audioUrl}
-                  onChange={e => setEdit(p => ({ ...p, audioUrl: e.target.value }))}
+                  onChange={e => { setEdit(p => ({ ...p, audioUrl: e.target.value })); setAudioUploadError(null) }}
                   placeholder="SoundCloud or .mp3 link…"
                   style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
                 />
@@ -1606,6 +1647,11 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
                 </button>
               </div>
             </div>
+            {audioUploadError && (
+              <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '-8px', marginBottom: '8px' }}>
+                ⚠ Audio upload failed — {audioUploadError}
+              </p>
+            )}
 
             {/* Transcript / Script */}
             <div style={{ marginBottom: '12px' }}>
@@ -1710,14 +1756,18 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
   const [audioUploading, setAudioUploading] = useState(false)
   const [videoUploadStatus, setVideoUploadStatus] = useState(null)
   const [audioUploadStatus, setAudioUploadStatus] = useState(null)
+  const [videoUploadErrMsg, setVideoUploadErrMsg] = useState(null)
+  const [audioUploadErrMsg, setAudioUploadErrMsg] = useState(null)
   const videoInputRef = useRef(null)
   const audioInputRef = useRef(null)
 
   async function handleVideoUpload(e) {
     const file = e.target.files?.[0]
     if (!file || !uid) return
+    console.log('[MediaWing] video selected —', file.name, file.type, file.size, 'bytes | uid:', uid)
     setVideoUploading(true)
     setVideoUploadStatus('uploading')
+    setVideoUploadErrMsg(null)
     try {
       const url = await uploadMediaVideo(file, uid)
       setForm(p => ({
@@ -1727,14 +1777,16 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
       }))
       setVideoUploadStatus('complete')
     } catch (err) {
-      console.error('[MediaWing] video upload:', err)
+      console.error('[MediaWing] video upload failed:', err?.code, err?.message)
       setVideoUploadStatus('error')
+      setVideoUploadErrMsg(err?.code || err?.message || 'Unknown error')
     } finally { setVideoUploading(false); e.target.value = '' }
   }
 
   async function handleAudioUpload(e) {
     const file = e.target.files?.[0]
     if (!file || !uid) return
+    console.log('[MediaWing] audio selected —', file.name, file.type, file.size, 'bytes | uid:', uid)
     setAudioUploading(true)
     setAudioUploadStatus('uploading')
     try {
@@ -1746,8 +1798,9 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
       }))
       setAudioUploadStatus('complete')
     } catch (err) {
-      console.error('[MediaWing] audio upload:', err)
+      console.error('[MediaWing] audio upload failed:', err?.code, err?.message)
       setAudioUploadStatus('error')
+      setAudioUploadErrMsg(err?.code || err?.message || 'Unknown error')
     } finally { setAudioUploading(false); e.target.value = '' }
   }
 
@@ -1867,7 +1920,7 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
             }}>
               {videoUploadStatus === 'uploading' ? '⟳ Uploading…'
                 : videoUploadStatus === 'complete' ? '✓ Upload complete. Ready to save.'
-                : '⚠ Upload failed — try again'}
+                : `⚠ Upload failed — ${videoUploadErrMsg || 'unknown error'}`}
             </p>
           )}
 
@@ -1895,7 +1948,7 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
             }}>
               {audioUploadStatus === 'uploading' ? '⟳ Uploading…'
                 : audioUploadStatus === 'complete' ? '✓ Upload complete. Ready to save.'
-                : '⚠ Upload failed — try again'}
+                : `⚠ Upload failed — ${audioUploadErrMsg || 'unknown error'}`}
             </p>
           )}
 
