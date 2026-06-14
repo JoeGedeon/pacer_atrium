@@ -1560,6 +1560,8 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
   const [createError, setCreateError] = useState(null)
   const [videoUploading, setVideoUploading] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
+  const [videoUploadStatus, setVideoUploadStatus] = useState(null)
+  const [audioUploadStatus, setAudioUploadStatus] = useState(null)
   const videoInputRef = useRef(null)
   const audioInputRef = useRef(null)
 
@@ -1567,22 +1569,38 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
     const file = e.target.files?.[0]
     if (!file || !uid) return
     setVideoUploading(true)
+    setVideoUploadStatus('uploading')
     try {
       const url = await uploadMediaVideo(file, uid)
-      setForm(p => ({ ...p, videoUrl: url }))
-    } catch (err) { console.error('[MediaWing] video upload:', err) }
-    finally { setVideoUploading(false); e.target.value = '' }
+      setForm(p => ({
+        ...p,
+        videoUrl: url,
+        title: p.title.trim() ? p.title : file.name.replace(/\.[^.]+$/, ''),
+      }))
+      setVideoUploadStatus('complete')
+    } catch (err) {
+      console.error('[MediaWing] video upload:', err)
+      setVideoUploadStatus('error')
+    } finally { setVideoUploading(false); e.target.value = '' }
   }
 
   async function handleAudioUpload(e) {
     const file = e.target.files?.[0]
     if (!file || !uid) return
     setAudioUploading(true)
+    setAudioUploadStatus('uploading')
     try {
       const url = await uploadMediaAudio(file, uid)
-      setForm(p => ({ ...p, audioUrl: url }))
-    } catch (err) { console.error('[MediaWing] audio upload:', err) }
-    finally { setAudioUploading(false); e.target.value = '' }
+      setForm(p => ({
+        ...p,
+        audioUrl: url,
+        title: p.title.trim() ? p.title : file.name.replace(/\.[^.]+$/, ''),
+      }))
+      setAudioUploadStatus('complete')
+    } catch (err) {
+      console.error('[MediaWing] audio upload:', err)
+      setAudioUploadStatus('error')
+    } finally { setAudioUploading(false); e.target.value = '' }
   }
 
   async function handleCreate() {
@@ -1601,6 +1619,8 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
       })
       console.log('[MediaWing] asset created, id:', id)
       setForm({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
+      setVideoUploadStatus(null)
+      setAudioUploadStatus(null)
     } catch (err) {
       console.error('[MediaWing] createMediaAsset failed:', err)
       setCreateError(err?.message || 'Save failed — check console for details')
@@ -1628,22 +1648,34 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
             </span>
           </div>
 
-          {/* Title */}
-          <div style={{ marginBottom: '12px' }}>
+          {/* Title — required */}
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+              <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>
+                Title <span style={{ color: '#f59e0b' }}>*</span>
+              </p>
+              {!form.title.trim() && (videoUploadStatus === 'complete' || audioUploadStatus === 'complete' || form.videoUrl || form.audioUrl) && (
+                <p style={{ color: '#f59e0b', fontSize: '9px', fontWeight: 600 }}>Required to save</p>
+              )}
+            </div>
             <input
               value={form.title}
               onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-              placeholder="Asset title…"
-              style={{ width: '100%', background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-0)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+              placeholder="Asset title (required to save)…"
+              style={{
+                width: '100%', background: 'var(--bg-1)',
+                border: `1px solid ${!form.title.trim() && (videoUploadStatus === 'complete' || audioUploadStatus === 'complete') ? '#f59e0b60' : 'var(--border-2)'}`,
+                borderRadius: '6px', padding: '8px 12px', color: 'var(--text-0)', fontSize: '13px', fontFamily: 'inherit', outline: 'none',
+              }}
               onKeyDown={e => { if (e.key === 'Enter' && form.title.trim()) handleCreate() }}
             />
           </div>
 
           {/* Video URL + upload */}
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
             <input
               value={form.videoUrl}
-              onChange={e => setForm(p => ({ ...p, videoUrl: e.target.value }))}
+              onChange={e => { setForm(p => ({ ...p, videoUrl: e.target.value })); setVideoUploadStatus(null) }}
               placeholder="🎬 Video URL (YouTube, Vimeo, .mp4)…"
               style={{ flex: 1, background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
             />
@@ -1656,12 +1688,22 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
               {videoUploading ? 'Uploading…' : '↑ Upload'}
             </button>
           </div>
+          {videoUploadStatus && (
+            <p style={{
+              color: videoUploadStatus === 'complete' ? '#10b981' : videoUploadStatus === 'error' ? '#ef4444' : '#a855f7',
+              fontSize: '10px', marginBottom: '8px',
+            }}>
+              {videoUploadStatus === 'uploading' ? '⟳ Uploading…'
+                : videoUploadStatus === 'complete' ? '✓ Upload complete. Ready to save.'
+                : '⚠ Upload failed — try again'}
+            </p>
+          )}
 
           {/* Audio URL + upload */}
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', marginTop: videoUploadStatus ? '0' : '8px' }}>
             <input
               value={form.audioUrl}
-              onChange={e => setForm(p => ({ ...p, audioUrl: e.target.value }))}
+              onChange={e => { setForm(p => ({ ...p, audioUrl: e.target.value })); setAudioUploadStatus(null) }}
               placeholder="🔊 Audio URL (SoundCloud, .mp3)…"
               style={{ flex: 1, background: 'var(--bg-1)', border: '1px solid var(--border-2)', borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
             />
@@ -1674,6 +1716,16 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
               {audioUploading ? 'Uploading…' : '↑ Upload'}
             </button>
           </div>
+          {audioUploadStatus && (
+            <p style={{
+              color: audioUploadStatus === 'complete' ? '#10b981' : audioUploadStatus === 'error' ? '#ef4444' : '#a855f7',
+              fontSize: '10px', marginBottom: '8px',
+            }}>
+              {audioUploadStatus === 'uploading' ? '⟳ Uploading…'
+                : audioUploadStatus === 'complete' ? '✓ Upload complete. Ready to save.'
+                : '⚠ Upload failed — try again'}
+            </p>
+          )}
 
           {/* Live preview — appears as soon as a valid URL is entered */}
           {(form.videoUrl || form.audioUrl) && (
@@ -1694,7 +1746,7 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <button
               onClick={() => {
-                console.log('[MediaWing] Add Asset button clicked', { title: form.title, disabled: !form.title.trim() || creating })
+                console.log('[MediaWing] Save button clicked', { title: form.title, disabled: !form.title.trim() || creating })
                 handleCreate()
               }}
               disabled={!form.title.trim() || creating}
@@ -1706,8 +1758,11 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
                 fontSize: '11px', fontWeight: 600, cursor: form.title.trim() && !creating ? 'pointer' : 'default',
               }}
             >
-              {creating ? 'Creating…' : '+ Add Asset'}
+              {creating ? 'Saving…' : 'Save Media Asset'}
             </button>
+            {!form.title.trim() && !creating && (form.videoUrl || form.audioUrl || form.transcript) && (
+              <p style={{ color: '#f59e0b', fontSize: '10px' }}>↑ Enter a title to save</p>
+            )}
             {createError && (
               <p style={{ color: '#ef4444', fontSize: '11px', lineHeight: 1.5 }}>
                 ⚠ {createError}

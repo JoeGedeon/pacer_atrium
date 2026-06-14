@@ -841,6 +841,9 @@ export default function App() {
             isMobile={isMobile}
             googleStatus={googleStatus}
             onReconnectGoogle={GOOGLE_CLIENT_ID ? handleConnectGmail : null}
+            debugUid={user?.uid}
+            debugEmail={user?.email}
+            debugProjectId={import.meta.env.VITE_FIREBASE_PROJECT_ID}
           />
         )}
 
