@@ -1072,16 +1072,14 @@ export default function App() {
         )}
       </div>
 
-      {/* ── Push-to-talk voice — home screen only ─────────────────────────── */}
-      {isHome && (
-        <PACERVoice
-          apiKey={apiKey}
-          observations={observations}
-          institutionEvents={institutionEvents}
-          emailContext={emailContextString(emailData)}
-          calendarContext={calendarContextString(calendarEvents)}
-        />
-      )}
+      {/* ── Push-to-talk voice — persistent across all rooms ──────────────── */}
+      <PACERVoice
+        apiKey={apiKey}
+        observations={observations}
+        institutionEvents={institutionEvents}
+        emailContext={emailContextString(emailData)}
+        calendarContext={calendarContextString(calendarEvents)}
+      />
 
       {/* ── Onboarding orientation — first-time non-creator visitors ─────── */}
       {profile && profile.hasSeenOnboarding === false && !isCreator(user) && (
