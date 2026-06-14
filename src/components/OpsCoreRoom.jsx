@@ -34,8 +34,9 @@ const OPSCORE_TABS = [
 
 // ── Broadcast Panel ──────────────────────────────────────────────────────────
 
-// Persists selected asset across tab navigation within the session (not page refresh)
+// Persists selected asset + view state across tab navigation within the session
 let _broadcastSelectedId = null
+let _broadcastView       = 'library'
 
 function BroadcastPanel({ mediaAssets, productions, isMobile }) {
   const padX = isMobile ? 'px-4' : 'px-8'
@@ -51,30 +52,30 @@ function BroadcastPanel({ mediaAssets, productions, isMobile }) {
   }, [mediaAssets, productions])
 
   const [selectedId, setSelectedIdRaw] = useState(_broadcastSelectedId)
-  const [expandedId, setExpandedId]    = useState(null)
+  const [panelView, setPanelViewRaw]   = useState(_broadcastView)
 
   function selectAsset(id) {
     _broadcastSelectedId = id
+    _broadcastView       = 'playing'
     setSelectedIdRaw(id)
+    setPanelViewRaw('playing')
   }
 
-  function toggleExpand(id) {
-    setExpandedId(prev => prev === id ? null : id)
+  function goToLibrary() {
+    _broadcastView = 'library'
+    setPanelViewRaw('library')
   }
 
-  // Do not auto-select — require deliberate selection so standby screen is default
   const selected = queue.find(a => a.id === selectedId) ?? null
 
-  // Empty queue state
+  // Empty queue
   if (queue.length === 0) {
     return (
       <div className={`flex-1 overflow-y-auto ${padX} py-6`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', maxWidth: '360px' }}>
           <p style={{ fontSize: '40px', marginBottom: '16px' }}>📡</p>
           <p style={{ color: 'var(--text-2)', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>Awaiting Transmission</p>
-          <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>
-            No published media assets yet.
-          </p>
+          <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>No published media assets yet.</p>
           <p style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '10px', lineHeight: 1.6 }}>
             In Theater → 🎬 Media: upload a file, approve Human Gate, then click 📡 Broadcast on OpsCore.
           </p>
@@ -83,16 +84,123 @@ function BroadcastPanel({ mediaAssets, productions, isMobile }) {
     )
   }
 
+  // ── Library View ───────────────────────────────────────────────────────────
+  if (panelView === 'library') {
+    return (
+      <div className="flex-1 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
+
+        {/* Library header */}
+        <div className={`${padX} py-4`} style={{
+          borderBottom: '1px solid var(--border-1)',
+          display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        }}>
+          <div>
+            <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, marginBottom: '2px' }}>
+              Broadcast Library
+            </p>
+            <p style={{ color: 'var(--text-6)', fontSize: '10px' }}>
+              {queue.length} asset{queue.length !== 1 ? 's' : ''}
+              {selected ? ` · ${selected.title || 'Untitled'} on air` : ''}
+            </p>
+          </div>
+        </div>
+
+        {/* Asset list */}
+        <div style={{ flex: 1 }}>
+          {queue.map(asset => {
+            const isSel     = asset.id === selectedId
+            const isVideo   = !!(asset.videoUrl || asset.type === 'video')
+            const isAudio   = !isVideo && !!(asset.audioUrl || asset.type === 'audio')
+            const typeEmoji = isVideo ? '🎬' : isAudio ? '🔊' : '📄'
+            const typeText  = isVideo ? 'Video' : isAudio ? 'Audio' : 'Transcript'
+            return (
+              <button
+                key={asset.id}
+                onClick={() => selectAsset(asset.id)}
+                style={{
+                  width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+                  borderBottom: '1px solid var(--border-0)',
+                  borderLeft: `3px solid ${isSel ? '#10b981' : 'transparent'}`,
+                  background: isSel ? '#041208' : 'transparent',
+                  padding: '13px 20px 13px 17px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  transition: 'background 0.1s',
+                }}
+              >
+                <span style={{ fontSize: '15px', flexShrink: 0 }}>{typeEmoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    color: isSel ? '#e2e8f0' : 'var(--text-1)',
+                    fontSize: '13px', fontWeight: isSel ? 600 : 400,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {asset.title || 'Untitled'}
+                  </p>
+                  <p style={{ color: isSel ? '#6ee7b7' : 'var(--text-6)', fontSize: '10px', marginTop: '2px' }}>
+                    {typeText} · {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+                {isSel ? (
+                  <span style={{
+                    flexShrink: 0, background: '#10b98115', border: '1px solid #10b98135',
+                    borderRadius: '4px', padding: '2px 8px',
+                    color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
+                  }}>
+                    ● On Air
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--text-5)', fontSize: '13px', flexShrink: 0 }}>▶</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+      </div>
+    )
+  }
+
+  // ── Playing View ───────────────────────────────────────────────────────────
   const videoE = selected ? videoEmbed(selected.videoUrl) : null
   const audioE = selected?._kind === 'media' ? audioEmbed(selected.audioUrl) : null
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Main Broadcast Screen ─────────────────────────────────────────── */}
-      <div style={{ flexShrink: 0, background: '#000' }}>
+      {/* Breadcrumb */}
+      <div className={`${padX} py-3`} style={{
+        borderBottom: '1px solid var(--border-0)',
+        display: 'flex', alignItems: 'center', gap: '6px',
+        flexWrap: 'nowrap', overflow: 'hidden',
+      }}>
+        <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0 }}>OpsCore</span>
+        <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0 }}>›</span>
+        <button
+          onClick={goToLibrary}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            color: 'var(--text-4)', fontSize: '10px', fontWeight: 500,
+            flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: '3px',
+            textDecorationColor: 'var(--text-6)',
+          }}
+        >
+          Broadcast Library
+        </button>
+        {selected && (
+          <>
+            <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0 }}>›</span>
+            <span style={{
+              color: 'var(--text-2)', fontSize: '10px', fontWeight: 600,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {selected.title || 'Untitled'}
+            </span>
+          </>
+        )}
+      </div>
 
-        {/* Player / Standby */}
+      {/* Player */}
+      <div style={{ flexShrink: 0, background: '#000' }}>
         {!selected ? (
           <div style={{
             width: '100%', aspectRatio: '16/9', maxHeight: '52vh',
@@ -100,11 +208,8 @@ function BroadcastPanel({ mediaAssets, productions, isMobile }) {
             alignItems: 'center', justifyContent: 'center', gap: '10px',
           }}>
             <p style={{ fontSize: '32px', lineHeight: 1, opacity: 0.2 }}>📡</p>
-            <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
+            <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '13px', fontWeight: 600 }}>
               Awaiting Transmission
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.16)', fontSize: '10px' }}>
-              Select a broadcast asset from the library.
             </p>
           </div>
         ) : videoE ? (
@@ -145,7 +250,7 @@ function BroadcastPanel({ mediaAssets, productions, isMobile }) {
           </div>
         )}
 
-        {/* Now Playing bar */}
+        {/* On Air bar */}
         {selected && (
           <div className={`${padX} py-3`} style={{
             background: '#06100a', borderTop: '1px solid #10b98118',
@@ -168,152 +273,27 @@ function BroadcastPanel({ mediaAssets, productions, isMobile }) {
         )}
       </div>
 
-      {/* ── Broadcast Library ─────────────────────────────────────────────── */}
-      <div style={{ borderTop: '2px solid var(--border-1)', flex: 1 }}>
-        <div className={`${padX} pt-4 pb-2`}>
-          <p style={{ ...SECTION }}>
-            Broadcast Library — {queue.length} asset{queue.length !== 1 ? 's' : ''}
-          </p>
+      {/* Script / metadata below player */}
+      {selected && (selected.transcript || selected.notes || selected.suggestedUse) && (
+        <div className={`${padX} py-4`} style={{ borderTop: '1px solid var(--border-0)' }}>
+          {(selected.transcript || selected.notes) && (
+            <div style={{ marginBottom: selected.suggestedUse ? '10px' : 0 }}>
+              <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>
+                📄 {selected._kind === 'production' ? 'Notes' : 'Script'}
+              </p>
+              <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                {(selected.transcript || selected.notes || '').slice(0, 400)}
+                {(selected.transcript || selected.notes || '').length > 400 ? '…' : ''}
+              </p>
+            </div>
+          )}
+          {selected.suggestedUse && (
+            <p style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic', lineHeight: 1.6 }}>
+              {selected.suggestedUse}
+            </p>
+          )}
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {queue.map(asset => {
-            const isSel     = selected?.id === asset.id
-            const isExp     = expandedId   === asset.id
-            const isVideo   = !!(asset.videoUrl || asset.type === 'video')
-            const isAudio   = !isVideo && !!(asset.audioUrl || asset.type === 'audio')
-            const typeEmoji = isVideo ? '🎬' : isAudio ? '🔊' : '📄'
-            const typeText  = isVideo ? 'Video' : isAudio ? 'Audio' : 'Transcript'
-
-            return (
-              <div key={asset.id}>
-
-                {/* Collapsed row */}
-                <div style={{
-                  borderBottom: '1px solid var(--border-0)',
-                  borderLeft: `3px solid ${isSel ? '#10b981' : 'transparent'}`,
-                  background: isSel ? '#041208' : 'transparent',
-                  padding: '10px 16px 10px 13px',
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                }}>
-                  <span style={{ fontSize: '14px', flexShrink: 0 }}>{typeEmoji}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      color: isSel ? '#e2e8f0' : 'var(--text-2)',
-                      fontSize: '12px', fontWeight: isSel ? 600 : 400,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {asset.title || 'Untitled'}
-                    </p>
-                    <p style={{ color: isSel ? '#6ee7b7' : 'var(--text-6)', fontSize: '10px' }}>
-                      {typeText} · {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  </div>
-
-                  {isSel ? (
-                    <span style={{
-                      flexShrink: 0, background: '#10b98115', border: '1px solid #10b98135',
-                      borderRadius: '4px', padding: '3px 8px',
-                      color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap',
-                    }}>
-                      ● On Air
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => selectAsset(asset.id)}
-                      style={{
-                        flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)',
-                        borderRadius: '5px', padding: '4px 10px',
-                        color: 'var(--text-3)', fontSize: '10px', fontWeight: 600,
-                        cursor: 'pointer', whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Select →
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => toggleExpand(asset.id)}
-                    style={{
-                      flexShrink: 0, background: 'none', border: 'none',
-                      color: 'var(--text-5)', fontSize: '10px', cursor: 'pointer',
-                      padding: '4px 6px', lineHeight: 1,
-                    }}
-                  >
-                    {isExp ? '▲' : '▼'}
-                  </button>
-                </div>
-
-                {/* Expanded details — metadata only, no player */}
-                {isExp && (
-                  <div style={{
-                    padding: '12px 16px 14px 16px',
-                    background: isSel ? '#030e07' : 'var(--bg-1)',
-                    borderBottom: '1px solid var(--border-0)',
-                    borderLeft: `3px solid ${isSel ? '#10b981' : 'var(--border-1)'}`,
-                    display: 'flex', flexDirection: 'column', gap: '10px',
-                  }}>
-                    {/* Script / Notes */}
-                    {(asset.transcript || asset.notes) && (
-                      <div>
-                        <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
-                          📄 {asset._kind === 'production' ? 'Notes' : 'Script'}
-                        </p>
-                        <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.7 }}>
-                          {(asset.transcript || asset.notes || '').slice(0, 280)}
-                          {(asset.transcript || asset.notes || '').length > 280 ? '…' : ''}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Remix metadata — if annotated */}
-                    {(asset.sceneType || asset.mood || asset.pacing) && (
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {asset.sceneType && (
-                          <span style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '4px', padding: '2px 8px', color: 'var(--text-4)', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            {asset.sceneType.replace('_', ' ')}
-                          </span>
-                        )}
-                        {asset.pacing && (
-                          <span style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '4px', padding: '2px 8px', color: 'var(--text-5)', fontSize: '9px', textTransform: 'uppercase' }}>
-                            {asset.pacing}
-                          </span>
-                        )}
-                        {asset.mood && (
-                          <span style={{ color: 'var(--text-5)', fontSize: '10px', fontStyle: 'italic' }}>{asset.mood}</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Suggested use */}
-                    {asset.suggestedUse && (
-                      <p style={{ color: 'var(--text-5)', fontSize: '10px', lineHeight: 1.6, fontStyle: 'italic' }}>
-                        {asset.suggestedUse}
-                      </p>
-                    )}
-
-                    {/* Broadcast action from expanded state */}
-                    {!isSel && (
-                      <button
-                        onClick={() => { selectAsset(asset.id); setExpandedId(null) }}
-                        style={{
-                          alignSelf: 'flex-start', background: '#041208',
-                          border: '1px solid #10b98140', borderRadius: '6px',
-                          padding: '6px 14px', color: '#10b981',
-                          fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                        }}
-                      >
-                        📡 Broadcast This
-                      </button>
-                    )}
-                  </div>
-                )}
-
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      )}
 
     </div>
   )
