@@ -548,13 +548,14 @@ export default function App() {
   function handleApiKey(keyOrBundle) {
     setShowKeyGate(false)
     if (keyOrBundle) {
-      // keyOrBundle is a keyBundle object from APIKeyGate (or raw string for legacy)
       const isBundle = typeof keyOrBundle === 'object' && keyOrBundle.encrypted
       if (isBundle) {
         localStorage.setItem('pacer_api_key_v2', JSON.stringify(keyOrBundle))
+        localStorage.removeItem('pacer_api_key')
         if (user) updateUserProfile(user.uid, { anthropicKeyBundle: keyOrBundle, anthropicApiKey: null })
       } else {
         localStorage.setItem('pacer_api_key', keyOrBundle)
+        localStorage.removeItem('pacer_api_key_v2')
       }
       setApiKey(keyOrBundle)
     }
@@ -569,6 +570,7 @@ export default function App() {
         if (user) updateUserProfile(user.uid, { anthropicKeyBundle: keyOrBundle, anthropicApiKey: null })
       } else {
         localStorage.setItem('pacer_api_key', keyOrBundle)
+        localStorage.removeItem('pacer_api_key_v2')
       }
       setApiKey(keyOrBundle)
     } else {
@@ -1070,16 +1072,14 @@ export default function App() {
         )}
       </div>
 
-      {/* ── Push-to-talk voice — home screen only ─────────────────────────── */}
-      {isHome && (
-        <PACERVoice
-          apiKey={apiKey}
-          observations={observations}
-          institutionEvents={institutionEvents}
-          emailContext={emailContextString(emailData)}
-          calendarContext={calendarContextString(calendarEvents)}
-        />
-      )}
+      {/* ── Push-to-talk voice — persistent across all rooms ──────────────── */}
+      <PACERVoice
+        apiKey={apiKey}
+        observations={observations}
+        institutionEvents={institutionEvents}
+        emailContext={emailContextString(emailData)}
+        calendarContext={calendarContextString(calendarEvents)}
+      />
 
       {/* ── Onboarding orientation — first-time non-creator visitors ─────── */}
       {profile && profile.hasSeenOnboarding === false && !isCreator(user) && (
