@@ -32,6 +32,171 @@ const OPSCORE_TABS = [
   { id: 'assets',     label: '🎬 Assets' },
 ]
 
+// ── OpsCore Environment Layer ─────────────────────────────────────────────────
+// Identity declared at the room level. Campus Rule #001.
+
+function OpsCoreEnvironment({ envState }) {
+  const isLive      = envState === 'live'
+  const isAttention = envState === 'attention'
+
+  const accent   = isLive ? '#10b981' : isAttention ? '#ef4444' : '#3b82f6'
+  const gridCol  = isLive ? '#10b98114' : isAttention ? '#ef444412' : '#1e3a5f1e'
+  const bgBase   = isLive ? '#010f07'   : isAttention ? '#0f0402'   : '#010812'
+  const sweepDur = isAttention ? '2s' : isLive ? '3.5s' : '5s'
+  const label    = isLive ? 'On Air' : isAttention ? 'Attention Required' : 'Awaiting Signal'
+  const dotDur   = isAttention ? '1s' : isLive ? '1.5s' : '3s'
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+      overflow: 'hidden', background: bgBase,
+    }}>
+      <style>{`
+        @keyframes oce-sweep {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes oce-dot-pulse {
+          0%, 100% { opacity: 0.2; }
+          50%      { opacity: 0.7; }
+        }
+        @keyframes oce-glow-breathe {
+          0%, 100% { opacity: 0.5; }
+          50%      { opacity: 1; }
+        }
+        @keyframes oce-signal-flow {
+          0%   { stroke-dashoffset: 60; opacity: 0; }
+          15%  { opacity: 0.5; }
+          85%  { opacity: 0.5; }
+          100% { stroke-dashoffset: 0;  opacity: 0; }
+        }
+        @keyframes oce-alert-flare {
+          0%, 100% { opacity: 0.04; }
+          50%      { opacity: 0.13; }
+        }
+      `}</style>
+
+      {/* Command grid */}
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <pattern id="oce-grid" width="64" height="64" patternUnits="userSpaceOnUse">
+            <path d="M 64 0 L 0 0 0 64" fill="none" stroke={gridCol} strokeWidth="0.6" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#oce-grid)" />
+      </svg>
+
+      {/* Radar — anchored bottom-right */}
+      <div style={{ position: 'absolute', right: '-100px', bottom: '-100px', width: '380px', height: '380px' }}>
+        {[0, 40, 80, 130].map((inset, i) => (
+          <div key={i} style={{
+            position: 'absolute', inset,
+            borderRadius: '50%',
+            border: `1px solid ${accent}${['18','12','0d','08'][i]}`,
+          }} />
+        ))}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          animation: `oce-sweep ${sweepDur} linear infinite`,
+        }}>
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            width: '50%', height: '1px', transformOrigin: '0 0',
+            background: `linear-gradient(to right, ${accent}70, ${accent}10, transparent)`,
+          }} />
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            width: '50%', height: '0', transformOrigin: '0 0',
+            boxShadow: `0 0 18px 6px ${accent}18`,
+          }} />
+        </div>
+      </div>
+
+      {/* Telemetry dots */}
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        {[
+          { cx: '12%', cy: '22%', delay: '0s'   },
+          { cx: '68%', cy: '14%', delay: '0.6s' },
+          { cx: '38%', cy: '55%', delay: '1.2s' },
+          { cx: '82%', cy: '38%', delay: '0.3s' },
+          { cx: '20%', cy: '72%', delay: '1.8s' },
+          { cx: '55%', cy: '80%', delay: '0.9s' },
+        ].map((d, i) => (
+          <circle key={i} cx={d.cx} cy={d.cy} r="1.5" fill={accent}
+            style={{ animation: `oce-dot-pulse 2.8s ${d.delay} ease-in-out infinite` }} />
+        ))}
+      </svg>
+
+      {/* Live: signal transmission lines */}
+      {isLive && (
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+          xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          {[
+            { x1: '8%',  y1: '28%', x2: '35%', y2: '12%', delay: '0s',   dur: '2.4s' },
+            { x1: '55%', y1: '18%', x2: '85%', y2: '32%', delay: '0.8s', dur: '2.2s' },
+            { x1: '22%', y1: '62%', x2: '50%', y2: '48%', delay: '1.4s', dur: '2.6s' },
+            { x1: '65%', y1: '55%', x2: '90%', y2: '68%', delay: '0.4s', dur: '2.0s' },
+          ].map((l, i) => (
+            <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+              stroke={accent} strokeWidth="0.8" strokeDasharray="5 5"
+              style={{ animation: `oce-signal-flow ${l.dur} ${l.delay} linear infinite` }} />
+          ))}
+        </svg>
+      )}
+
+      {/* Attention: top warning glow */}
+      {isAttention && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+          background: `radial-gradient(ellipse at top, ${accent}14 0%, transparent 70%)`,
+          animation: 'oce-alert-flare 1.8s ease-in-out infinite',
+        }} />
+      )}
+
+      {/* Top edge accent line */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
+        background: `linear-gradient(to right, transparent 0%, ${accent}50 40%, ${accent}50 60%, transparent 100%)`,
+        opacity: 0.5,
+      }} />
+
+      {/* Corner brackets */}
+      <svg style={{ position: 'absolute', top: '12px', left: '16px', width: '16px', height: '16px' }} aria-hidden="true">
+        <path d="M 0 12 L 0 0 L 12 0" fill="none" stroke={accent} strokeWidth="1" opacity="0.3" />
+      </svg>
+      <svg style={{ position: 'absolute', top: '12px', right: '16px', width: '16px', height: '16px' }} aria-hidden="true">
+        <path d="M 0 0 L 12 0 L 12 12" fill="none" stroke={accent} strokeWidth="1" opacity="0.3" />
+      </svg>
+      <svg style={{ position: 'absolute', bottom: '12px', right: '16px', width: '16px', height: '16px' }} aria-hidden="true">
+        <path d="M 0 12 L 12 12 L 12 0" fill="none" stroke={accent} strokeWidth="1" opacity="0.3" />
+      </svg>
+      <svg style={{ position: 'absolute', bottom: '12px', left: '16px', width: '16px', height: '16px' }} aria-hidden="true">
+        <path d="M 12 0 L 0 0 L 0 12" fill="none" stroke={accent} strokeWidth="1" opacity="0.3" />
+      </svg>
+
+      {/* Status label — bottom center */}
+      <div style={{
+        position: 'absolute', bottom: '14px', left: 0, right: 0,
+        display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+      }}>
+        <span style={{
+          width: '4px', height: '4px', borderRadius: '50%', background: accent,
+          display: 'inline-block',
+          animation: `oce-glow-breathe ${dotDur} ease-in-out infinite`,
+        }} />
+        <span style={{
+          color: accent, fontSize: '8px', fontWeight: 700,
+          letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.5,
+        }}>
+          {label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 // ── Broadcast Panel ──────────────────────────────────────────────────────────
 
 function BroadcastPanel({ featuredBroadcast, isMobile }) {
@@ -370,6 +535,9 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
     return null
   }, [mediaAssets, productions])
 
+  // Derives from existing computed state — no new data needed
+  const envState = featuredBroadcast ? 'live' : lead.strength === 'High' ? 'attention' : 'standby'
+
   const strengthColor = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
   function handleBrief() {
@@ -416,7 +584,10 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ position: 'relative' }}>
+      <OpsCoreEnvironment envState={envState} />
+
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ position: 'relative', zIndex: 10 }}>
 
       {/* Header */}
       <div className={`shrink-0 ${px} pt-5 pb-4`} style={{ borderBottom: '1px solid var(--border-1)' }}>
@@ -807,6 +978,8 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
       </div>
       )}
+
+      </div>
     </div>
   )
 }
