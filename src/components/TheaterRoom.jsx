@@ -1266,6 +1266,103 @@ function StagingWing({ observations, productions, apiKey, onConnectClaude, onSav
   )
 }
 
+// ── Screening Room — Featured Broadcast + standby ─────────────────────────────
+
+function StandbyCard() {
+  return (
+    <div style={{
+      marginBottom: '28px', background: 'var(--bg-1)',
+      border: '1px solid #a855f718', borderLeft: '3px solid #a855f730',
+      borderRadius: '0 10px 10px 0', padding: '36px 20px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a855f740' }} />
+        <p style={{ color: '#a855f750', fontSize: '9px', fontWeight: 700,
+          letterSpacing: '0.15em', textTransform: 'uppercase' }}>Standby</p>
+      </div>
+      <p style={{ color: 'var(--text-5)', fontSize: '13px', textAlign: 'center',
+        fontStyle: 'italic', lineHeight: 1.7 }}>
+        No broadcast scheduled.
+      </p>
+      <p style={{ color: 'var(--text-6)', fontSize: '11px', textAlign: 'center',
+        lineHeight: 1.65, maxWidth: '320px' }}>
+        The transmission begins when the first media asset is approved and published from this Theater.
+      </p>
+    </div>
+  )
+}
+
+function FeaturedBroadcast({ mediaAssets, productions }) {
+  const featuredAsset = mediaAssets
+    .filter(a => a.publishedAt && a.videoUrl)
+    .sort((a, b) => (b.publishedAt > a.publishedAt ? 1 : -1))[0] || null
+
+  const featuredProd = !featuredAsset
+    ? (productions || [])
+        .filter(p => p.publishedAt && p.videoUrl)
+        .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))[0] || null
+    : null
+
+  if (!featuredAsset && !featuredProd) return <StandbyCard />
+
+  const item = featuredAsset || featuredProd
+  const isAsset = !!featuredAsset
+  const pubDate = item.publishedAt ? new Date(item.publishedAt) : null
+  const bodyText = isAsset ? item.transcript : item.notes
+
+  return (
+    <div style={{
+      marginBottom: '28px', border: '1px solid #a855f730',
+      borderLeft: '3px solid #a855f7', borderRadius: '0 10px 10px 0',
+      overflow: 'hidden', background: '#05021a',
+    }}>
+      <div style={{
+        padding: '10px 16px', background: '#08041e',
+        borderBottom: '1px solid #a855f720',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%',
+            background: '#a855f7', boxShadow: '0 0 8px #a855f7' }} />
+          <p style={{ color: '#a855f7', fontSize: '9px', fontWeight: 700,
+            letterSpacing: '0.15em', textTransform: 'uppercase' }}>Featured Broadcast</p>
+        </div>
+        {pubDate && (
+          <p style={{ color: 'var(--text-6)', fontSize: '9px' }}>
+            {pubDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
+        )}
+      </div>
+
+      <div style={{ background: '#000' }}>
+        <VideoPlayer url={item.videoUrl} />
+      </div>
+
+      <div style={{ padding: '16px 18px' }}>
+        <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 700,
+          marginBottom: '8px', lineHeight: 1.3 }}>
+          {item.title || 'Untitled Broadcast'}
+        </p>
+        {bodyText && (
+          <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7, marginBottom: '8px' }}>
+            {bodyText.length > 200 ? bodyText.slice(0, 200) + '…' : bodyText}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
+            textTransform: 'uppercase', fontWeight: 600 }}>
+            {isAsset ? 'Theater Media' : 'Theater Production'}
+          </span>
+          {!isAsset && item.deliveryDestination && (
+            <span style={{ color: 'var(--text-6)', fontSize: '9px' }}>{item.deliveryDestination}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Media Wing ────────────────────────────────────────────────────────────────
 
 function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobile }) {
@@ -1553,7 +1650,7 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
   )
 }
 
-function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, uid, isMobile }) {
+function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, uid, isMobile }) {
   const [expandedId, setExpandedId] = useState(null)
   const [form, setForm] = useState({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
   const [creating, setCreating] = useState(false)
@@ -1633,19 +1730,43 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
     <div className={`flex-1 overflow-y-auto ${px} py-6`}>
       <div style={{ maxWidth: '640px' }}>
 
-        {/* New asset form */}
+        {/* Featured Broadcast — always first */}
+        <FeaturedBroadcast mediaAssets={mediaAssets} productions={productions || []} />
+
+        {/* Media Library */}
+        {mediaAssets.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
+              Media Library — {mediaAssets.length} asset{mediaAssets.length !== 1 ? 's' : ''}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {mediaAssets.map(asset => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  onUpdate={onUpdateMediaAsset}
+                  onPublish={onPublishMediaAsset}
+                  expanded={expandedId === asset.id}
+                  onToggle={setExpandedId}
+                  uid={uid}
+                  isMobile={isMobile}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add to Library — upload form at bottom */}
         <div style={{
           background: 'var(--bg-2)', border: '1px solid #a855f720',
           borderLeft: '3px solid #a855f7', borderRadius: '0 10px 10px 0',
           padding: '16px 18px', marginBottom: '24px',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <p style={{ color: '#a855f7', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
-              New Media Asset
+              Add to Library
             </p>
-            <span style={{ color: '#a855f740', fontSize: '9px', letterSpacing: '0.08em' }}>
-              MediaWing diagnostics active · 2026-06-13-v4
-            </span>
           </div>
 
           {/* Title — required */}
@@ -1771,35 +1892,6 @@ function MediaWing({ mediaAssets, onCreateMediaAsset, onUpdateMediaAsset, onPubl
           </div>
         </div>
 
-        {/* Assets list */}
-        {mediaAssets.length === 0 ? (
-          <div style={{ border: '1px dashed var(--border-0)', borderRadius: '10px', padding: '24px', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>No media assets yet.</p>
-            <p style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '4px' }}>
-              Add a title above to create your first asset. Upload a video, audio file, or paste a URL.
-            </p>
-          </div>
-        ) : (
-          <>
-            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
-              Media Library — {mediaAssets.length} asset{mediaAssets.length !== 1 ? 's' : ''}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {mediaAssets.map(asset => (
-                <AssetCard
-                  key={asset.id}
-                  asset={asset}
-                  onUpdate={onUpdateMediaAsset}
-                  onPublish={onPublishMediaAsset}
-                  expanded={expandedId === asset.id}
-                  onToggle={setExpandedId}
-                  uid={uid}
-                  isMobile={isMobile}
-                />
-              ))}
-            </div>
-          </>
-        )}
 
       </div>
     </div>
@@ -1953,6 +2045,7 @@ export default function TheaterRoom({
       {view === 'media' && (
         <MediaWing
           mediaAssets={mediaAssets}
+          productions={productions}
           onCreateMediaAsset={onCreateMediaAsset}
           onUpdateMediaAsset={onUpdateMediaAsset}
           onPublishMediaAsset={onPublishMediaAsset}
