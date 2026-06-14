@@ -161,18 +161,20 @@ function AssetsPanel({ mediaAssets, productions, isMobile }) {
       <div style={{ maxWidth: '700px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
         {publishedMedia.map(asset => {
+          const isVideo = !!(asset.videoUrl || asset.type === 'video')
+          const isAudio = !isVideo && !!(asset.audioUrl || asset.type === 'audio')
           const videoE = videoEmbed(asset.videoUrl)
-          const audioE = audioEmbed(asset.audioUrl)
+          const audioE = isAudio ? audioEmbed(asset.audioUrl) : null
           return (
             <div key={asset.id} style={{ border: '1px solid #10b98125', borderLeft: '3px solid #10b981', borderRadius: '0 10px 10px 0', overflow: 'hidden', background: '#041208' }}>
               <div style={{ padding: '14px 18px', borderBottom: (videoE || audioE) ? '1px solid #10b98112' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                 <div>
                   <p style={{ color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                    {asset.videoUrl ? '🎬 Media Asset' : '🔊 Audio Asset'}
+                    {isVideo ? '🎬 Media Asset' : isAudio ? '🔊 Audio Asset' : '📄 Transcript'}
                   </p>
-                  <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 600, lineHeight: 1.3 }}>{asset.title}</p>
+                  <p style={{ color: '#f0fdf4', fontSize: '15px', fontWeight: 600, lineHeight: 1.3 }}>{asset.title}</p>
                 </div>
-                <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
+                <span style={{ color: '#6ee7b7', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
                   {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
@@ -213,9 +215,9 @@ function AssetsPanel({ mediaAssets, productions, isMobile }) {
               <div style={{ padding: '14px 18px', borderBottom: '1px solid #10b98112', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                 <div>
                   <p style={{ color: '#10b981', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>📡 Theater Production</p>
-                  <p style={{ color: 'var(--text-0)', fontSize: '15px', fontWeight: 600, lineHeight: 1.3 }}>{prod.title || 'Untitled Production'}</p>
+                  <p style={{ color: '#f0fdf4', fontSize: '15px', fontWeight: 600, lineHeight: 1.3 }}>{prod.title || 'Untitled Production'}</p>
                 </div>
-                <span style={{ color: 'var(--text-6)', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
+                <span style={{ color: '#6ee7b7', fontSize: '10px', flexShrink: 0, paddingTop: '2px' }}>
                   {new Date(prod.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
