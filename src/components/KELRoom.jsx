@@ -696,13 +696,17 @@ function EvidenceLedger({ commands, isMobile }) {
   commands.forEach(cmd => {
     const tag = cmd.patternTag
     if (!tag) return
-    if (!patternMap[tag]) patternMap[tag] = { tag, total: 0, completed: 0, failed: 0, archived: 0, lastTitle: null, lastOutcome: null, lastVerdict: null }
+    if (!patternMap[tag]) patternMap[tag] = { tag, total: 0, completed: 0, failed: 0, archived: 0, lastTitle: null, lastOutcome: null, lastVerdict: null, criteriaTotal: 0, criteriaAchieved: 0 }
     patternMap[tag].total++
     if (cmd.status === 'completed') {
       patternMap[tag].completed++
       patternMap[tag].lastOutcome = cmd.verdict ? `Completed · ${cmd.verdict}` : 'Completed'
       patternMap[tag].lastTitle   = cmd.title
       patternMap[tag].lastVerdict = cmd.verdict || null
+      if (cmd.criteriaTotal > 0) {
+        patternMap[tag].criteriaTotal    += cmd.criteriaTotal
+        patternMap[tag].criteriaAchieved += (cmd.criteriaAchieved || 0)
+      }
     } else if (cmd.status === 'failed') {
       patternMap[tag].failed++
       if (!patternMap[tag].lastTitle) {
@@ -721,6 +725,16 @@ function EvidenceLedger({ commands, isMobile }) {
     .sort((a, b) => (b.completed / b.total) - (a.completed / a.total))[0]?.tag || null
   const highestFailure = [...patterns].filter(p => p.failed > 0)
     .sort((a, b) => b.failed - a.failed)[0]?.tag || null
+
+  const totalCriteriaAssigned = patterns.reduce((s, p) => s + p.criteriaTotal, 0)
+  const totalCriteriaAchieved = patterns.reduce((s, p) => s + p.criteriaAchieved, 0)
+  const criteriaSuccessRate   = totalCriteriaAssigned > 0
+    ? Math.round((totalCriteriaAchieved / totalCriteriaAssigned) * 100) : null
+
+  const mostReliable   = [...patterns].filter(p => p.criteriaTotal > 0)
+    .sort((a, b) => (b.criteriaAchieved / b.criteriaTotal) - (a.criteriaAchieved / a.criteriaTotal))[0]?.tag || null
+  const mostUnresolved = [...patterns].filter(p => p.criteriaTotal > p.criteriaAchieved)
+    .sort((a, b) => (b.criteriaTotal - b.criteriaAchieved) - (a.criteriaTotal - a.criteriaAchieved))[0]?.tag || null
 
   const padX = isMobile ? 'px-4' : 'px-8'
 
@@ -764,6 +778,28 @@ function EvidenceLedger({ commands, isMobile }) {
               </p>
             </div>
           </div>
+
+          {criteriaSuccessRate !== null && (
+            <div style={{ paddingTop: '14px', borderTop: '1px solid var(--border-0)', marginTop: '2px' }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>Criteria Performance</p>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <div>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Assigned</p>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-2)' }}>{totalCriteriaAssigned}</p>
+                </div>
+                <div>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Achieved</p>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#10b981' }}>{totalCriteriaAchieved}</p>
+                </div>
+                <div>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Rate</p>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: criteriaSuccessRate >= 80 ? '#10b981' : '#f59e0b' }}>{criteriaSuccessRate}%</p>
+                </div>
+              </div>
+              {mostReliable   && <p style={{ color: 'var(--text-5)', fontSize: '10px', marginBottom: '3px' }}>Most Reliable: <span style={{ color: '#10b981', fontWeight: 600 }}>{mostReliable}</span></p>}
+              {mostUnresolved && <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>Most Unresolved: <span style={{ color: '#f59e0b', fontWeight: 600 }}>{mostUnresolved}</span></p>}
+            </div>
+          )}
 
           {(mostActive || highestSuccess || highestFailure) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', paddingTop: '12px', borderTop: '1px solid var(--border-0)', marginTop: '12px' }}>
@@ -813,11 +849,15 @@ function EvidenceLedger({ commands, isMobile }) {
                       }}>{successRate}% success</span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: p.lastTitle ? '8px' : 0 }}>
+                  <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: (p.lastTitle || p.criteriaTotal > 0) ? '8px' : 0 }}>
                     <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{p.total} command{p.total !== 1 ? 's' : ''}</span>
                     {p.completed > 0 && <span style={{ color: '#10b981', fontSize: '10px' }}>✓ {p.completed} completed</span>}
                     {p.failed    > 0 && <span style={{ color: '#ef4444', fontSize: '10px' }}>✕ {p.failed} failed</span>}
                     {p.archived  > 0 && <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{p.archived} archived</span>}
+                    {p.criteriaTotal > 0 && (() => {
+                      const cr = p.criteriaAchieved === p.criteriaTotal
+                      return <span style={{ color: cr ? '#10b981' : '#f59e0b', fontSize: '10px', fontWeight: 600 }}>◆ {p.criteriaAchieved}/{p.criteriaTotal} criteria</span>
+                    })()}
                   </div>
                   {p.lastTitle && (
                     <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.04em', marginTop: '6px' }}>

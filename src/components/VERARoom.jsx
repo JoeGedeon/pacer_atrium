@@ -26,16 +26,38 @@ const VERA_TABS = [
   { id: 'observations',  label: 'Observations' },
 ]
 
-export default function VERARoom({ observations = [], museWorks = [], apiKey, onConnectClaude, isMobile, voiceMode }) {
-  const [tab,           setTab]           = useState('patterns')
-  const [patterns,      setPatterns]      = useState(null)
-  const [analyzing,     setAnalyzing]     = useState(false)
-  const [analysisError, setAnalysisError] = useState(null)
-  const [veraSpeaking,  setVeraSpeaking]  = useState(false)
+export default function VERARoom({ observations = [], museWorks = [], commands = [], apiKey, onConnectClaude, isMobile, voiceMode }) {
+  const [tab,                   setTab]                   = useState('patterns')
+  const [patterns,              setPatterns]              = useState(null)
+  const [analyzing,             setAnalyzing]             = useState(false)
+  const [analysisError,         setAnalysisError]         = useState(null)
+  const [veraSpeaking,          setVeraSpeaking]          = useState(false)
+  const [selectedConstellation, setSelectedConstellation] = useState(null)
   const hasAnalyzed = useRef(false)
 
   const { byConstellation, byTheme, remaining } = clusterObservations(observations)
   const obsConstellations = Object.keys(byConstellation)
+
+  function computeProfile(name) {
+    const obs      = (byConstellation[name] || []).length
+    const cmds     = commands.filter(c => c.patternTag === name)
+    const active   = cmds.filter(c => ['drafted','analyzing','planned','approved','in_progress'].includes(c.status)).length
+    const pending  = cmds.filter(c => c.status === 'pending_approval').length
+    const completed = cmds.filter(c => c.status === 'completed')
+    const failed   = cmds.filter(c => c.status === 'failed').length
+    const successes = completed.filter(c => c.verdict === 'Success').length
+    const critTotal    = completed.reduce((s, c) => s + (c.criteriaTotal    || 0), 0)
+    const critAchieved = completed.reduce((s, c) => s + (c.criteriaAchieved || 0), 0)
+    const successRate  = completed.length > 0 ? Math.round((successes / completed.length) * 100) : null
+    const criteriaRate = critTotal > 0 ? Math.round((critAchieved / critTotal) * 100) : null
+    let confidence = 'no data'
+    if (completed.length > 0) {
+      if (successes > 0 && (criteriaRate === null || criteriaRate === 100)) confidence = 'rising'
+      else if (successes > 0) confidence = 'stable'
+      else confidence = 'falling'
+    }
+    return { name, obs, total: cmds.length, active, pending, completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate, confidence }
+  }
 
   useEffect(() => {
     if (!apiKey || observations.length < 3 || hasAnalyzed.current) return
@@ -178,17 +200,90 @@ export default function VERARoom({ observations = [], museWorks = [], apiKey, on
 
             {obsConstellations.length > 0 && (
               <>
-                {obsConstellations.map(name => (
-                  <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px',
-                    marginBottom: '12px' }}>
-                    <span style={{ color: '#a07830', fontSize: '11px' }}>◈</span>
-                    <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500 }}>{name}</p>
-                    <p style={{ color: 'var(--text-5)', fontSize: '9px' }}>
-                      {byConstellation[name].length} obs
-                    </p>
-                  </div>
-                ))}
-                <div style={{ borderTop: '1px solid var(--border-0)', margin: '14px 0' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '18px' }}>
+                  {obsConstellations.map(name => {
+                    const open = selectedConstellation === name
+                    const profile = open ? computeProfile(name) : null
+                    const confColor = { rising: '#10b981', stable: '#06b6d4', falling: '#ef4444', 'no data': 'var(--text-6)' }
+                    return (
+                      <div key={name} style={{
+                        background: open ? 'var(--bg-2)' : 'var(--bg-1)',
+                        border: `1px solid ${open ? '#a0783040' : 'var(--border-0)'}`,
+                        borderLeft: `3px solid ${open ? '#a07830' : 'transparent'}`,
+                        borderRadius: '0 8px 8px 0',
+                        overflow: 'hidden',
+                      }}>
+                        <button
+                          onClick={() => setSelectedConstellation(open ? null : name)}
+                          style={{
+                            width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                            cursor: 'pointer', padding: '10px 14px',
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                          }}>
+                          <span style={{ color: '#a07830', fontSize: '11px', flexShrink: 0 }}>◈</span>
+                          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, flex: 1 }}>{name}</p>
+                          <p style={{ color: 'var(--text-5)', fontSize: '9px', flexShrink: 0 }}>
+                            {byConstellation[name].length} obs
+                          </p>
+                          <span style={{ color: 'var(--text-6)', fontSize: '9px', flexShrink: 0 }}>{open ? '▴' : '▾'}</span>
+                        </button>
+
+                        {open && profile && (
+                          <div style={{ padding: '0 14px 14px 37px', borderTop: '1px solid var(--border-0)' }}>
+                            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, margin: '10px 0 10px' }}>
+                              Constellation Profile
+                            </p>
+                            <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                              {[
+                                { label: 'Observations', value: profile.obs,       color: 'var(--text-2)' },
+                                { label: 'Commands',     value: profile.total,     color: 'var(--text-2)' },
+                                { label: 'Completed',    value: profile.completed, color: '#10b981' },
+                                { label: 'Active',       value: profile.active,    color: '#3b82f6' },
+                                { label: 'Failed',       value: profile.failed,    color: '#ef4444' },
+                              ].filter(s => s.value > 0 || s.label === 'Observations').map(s => (
+                                <div key={s.label}>
+                                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{s.label}</p>
+                                  <p style={{ color: s.color, fontSize: '15px', fontWeight: 700, lineHeight: 1 }}>{s.value}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                              {profile.successRate !== null && (
+                                <div>
+                                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Success Rate</p>
+                                  <p style={{ color: profile.successRate >= 80 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: 700 }}>{profile.successRate}%</p>
+                                </div>
+                              )}
+                              {profile.criteriaRate !== null && (
+                                <div>
+                                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Criteria</p>
+                                  <p style={{ color: profile.criteriaRate === 100 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: 700 }}>{profile.critAchieved}/{profile.critTotal}</p>
+                                </div>
+                              )}
+                              <div>
+                                <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Confidence</p>
+                                <p style={{ color: confColor[profile.confidence], fontSize: '11px', fontWeight: 700 }}>
+                                  {profile.confidence === 'rising'   && '↑ '}
+                                  {profile.confidence === 'stable'   && '→ '}
+                                  {profile.confidence === 'falling'  && '↓ '}
+                                  {profile.confidence}
+                                </p>
+                              </div>
+                            </div>
+
+                            {profile.total === 0 && (
+                              <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                                No commands tagged to this constellation yet.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ borderTop: '1px solid var(--border-0)', margin: '4px 0 14px' }} />
               </>
             )}
 
