@@ -1160,13 +1160,18 @@ export default function KELRoom({
       .filter(c => c.status === 'completed' && ['Success', 'Partial Success'].includes(c.verdict) && c.patternTag)
       .map(c => c.patternTag)
   )
+  // approvedThreadObsIds: legacy fallback for observations approved before resolutionStatus migration.
   const approvedThreadObsIds = new Set(
     threads
       .filter(t => t.decision === 'approved')
       .flatMap(t => t.observationIds || [])
   )
   const unresolvedObs = validObs.filter(o =>
+    // Primary: resolutionStatus field on the document (single source of truth)
+    (!o.resolutionStatus || o.resolutionStatus === 'open') &&
+    // Legacy fallback: approved thread membership (pre-migration observations)
     !(o.id && approvedThreadObsIds.has(o.id)) &&
+    // Constellation fallback: routed to a completed constellation
     !(o.destination && resolvedConstellations.has(o.constellation))
   )
 

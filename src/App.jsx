@@ -44,6 +44,7 @@ import {
   createCommand, updateCommand, submitCommandForApproval,
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
   createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
+  batchUpdateObservations,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -790,7 +791,7 @@ export default function App() {
     if (!user) return
     const { observationIds, ...kelData } = decisionData
     await createKELDecision(user.uid, kelData)
-    await createThread(user.uid, {
+    const threadId = await createThread(user.uid, {
       observationIds: observationIds || [],
       recommendation: decisionData.recommendation,
       reasoning:      decisionData.reasoning      || null,
@@ -799,6 +800,14 @@ export default function App() {
       cited:          decisionData.cited          || [],
       decision:       decisionData.decision,
     })
+    // Approved decision → claim the referenced observations so K.E.L. won't re-recommend them.
+    if (decisionData.decision === 'approved' && observationIds?.length > 0) {
+      await batchUpdateObservations(user.uid,
+        observationIds
+          .filter(Boolean)
+          .map(id => ({ id, data: { resolutionStatus: 'claimed', claimedByThreadId: threadId } }))
+      ).catch(e => console.warn('[PACER] claimObservations batch failed:', e?.message))
+    }
   }
 
   async function requestBuilderReview() {
@@ -862,6 +871,23 @@ export default function App() {
       e.eventType === 'command_approved' && e.relatedEntityId === id
     )
     await completeCommand(user.uid, id, title, { ...proof, causedByEventId: approvedEvent?.id || null })
+    // Success verdict → resolve observations that were claimed against this command's constellation.
+    const isSuccess = ['Success', 'Partial Success'].includes(proof.verdict)
+    if (isSuccess) {
+      const cmd = commands.find(c => c.id === id)
+      const toResolve = observations.filter(o =>
+        o.resolutionStatus === 'claimed' &&
+        cmd?.patternTag && o.constellation === cmd.patternTag
+      )
+      if (toResolve.length > 0) {
+        batchUpdateObservations(user.uid,
+          toResolve.map(o => ({
+            id: o.id,
+            data: { resolutionStatus: 'resolved', resolvedByCommandId: id },
+          }))
+        ).catch(e => console.warn('[PACER] resolveObservations batch failed:', e?.message))
+      }
+    }
   }
 
   async function failCommandRecord(id, title, reason) {

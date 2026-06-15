@@ -42,14 +42,17 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
   const textObs = observations.filter(o => o.text && typeof o.text === 'string' && o.status !== 'seed')
 
   // K.E.L. closure rule — applied BEFORE count, compression, and prompt construction.
-  // An observation is closed if: its id is in an approved thread, OR it is routed to a resolved constellation.
+  // Primary: resolutionStatus field on the observation document (single source of truth).
+  // Legacy fallbacks cover observations approved before the resolutionStatus migration.
   const kelVisibleObs = textObs.filter(o =>
+    (!o.resolutionStatus || o.resolutionStatus === 'open') &&
     !(o.id && approvedThreadObsIds.has(o.id)) &&
     !(o.destination && resolvedConstellations.has(o.constellation))
   )
 
   // Historical obs go to background context only — not open work.
   const historicalObs = textObs.filter(o =>
+    (o.resolutionStatus && o.resolutionStatus !== 'open') ||
     (o.id && approvedThreadObsIds.has(o.id)) ||
     (o.destination && resolvedConstellations.has(o.constellation))
   )
