@@ -128,7 +128,7 @@ function NewCommandForm({ onSubmit, onCancel, seedData }) {
     title: '', intent: '', priority: 'standard', riskLevel: 'medium',
     targetSystem: 'pacer_atrium', assignedAgent: 'pacer',
     supportingAgents: '', executionMode: 'review', expectedOutput: '',
-    patternTag: '',
+    successCriteriaRaw: '', patternTag: '',
     ...(seedData || {}),
   })
 
@@ -141,6 +141,9 @@ function NewCommandForm({ onSubmit, onCancel, seedData }) {
       ...form,
       supportingAgents: form.supportingAgents
         ? form.supportingAgents.split(',').map(s => s.trim()).filter(Boolean)
+        : [],
+      successCriteria: form.successCriteriaRaw
+        ? form.successCriteriaRaw.split('\n').map(s => s.trim()).filter(Boolean)
         : [],
     })
   }
@@ -211,6 +214,11 @@ function NewCommandForm({ onSubmit, onCancel, seedData }) {
         placeholder="What does success look like? What should be delivered?"
         rows={3} style={{ ...INPUT_S, resize: 'vertical' }} />
 
+      <label style={LABEL_S}>Success Criteria (one per line — used to score the Evidence Verdict)</label>
+      <textarea value={form.successCriteriaRaw} onChange={e => set('successCriteriaRaw', e.target.value)}
+        placeholder={"System loads successfully after change\nNo authentication regressions\nAll existing workflows preserved"}
+        rows={4} style={{ ...INPUT_S, resize: 'vertical' }} />
+
       <label style={LABEL_S}>Constellation Pattern (optional)</label>
       <select value={form.patternTag} onChange={e => set('patternTag', e.target.value)} style={{ ...SELECT_S, marginBottom: '20px' }}>
         <option value="">— No Pattern —</option>
@@ -237,6 +245,9 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
   const [result,          setResult]          = useState(cmd.result || '')
   const [verdict,         setVerdict]         = useState(cmd.verdict || null)
   const [failReason,      setFailReason]      = useState('')
+  const criteria = cmd.successCriteria || []
+  const [criteriaChecked, setCriteriaChecked] = useState(() => criteria.map(() => false))
+  const achievedCount = criteriaChecked.filter(Boolean).length
   const [newStepLabel,    setNewStepLabel]    = useState('')
   const [newStepAgent,    setNewStepAgent]    = useState('pacer')
   const [showAddStep,     setShowAddStep]     = useState(false)
@@ -415,6 +426,31 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
         </div>
       )}
 
+      {/* Success Criteria (static view — completed or not in_progress) */}
+      {criteria.length > 0 && cmd.status !== 'in_progress' && (
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <p style={LABEL_S}>Success Criteria</p>
+            {cmd.criteriaTotal > 0 && (
+              <span style={{
+                background: cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b98120' : '#f59e0b18',
+                border: `1px solid ${cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b98130' : '#f59e0b30'}`,
+                color: cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b981' : '#f59e0b',
+                fontSize: '10px', fontWeight: 700, borderRadius: '5px', padding: '2px 8px',
+              }}>{cmd.criteriaAchieved}/{cmd.criteriaTotal} met</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {criteria.map((c, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ color: 'var(--text-6)', fontSize: '11px', marginTop: '1px', flexShrink: 0 }}>·</span>
+                <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>{c}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── State-dependent action sections ── */}
 
       {/* Drafted: submit for gate */}
@@ -496,6 +532,45 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
             placeholder="What was the outcome?"
             rows={2} style={{ ...INPUT_S, resize: 'vertical', marginBottom: '16px' }} />
 
+          {/* Success Criteria checklist */}
+          {criteria.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <label style={{ ...LABEL_S, marginBottom: 0 }}>Success Criteria</label>
+                <span style={{
+                  background: achievedCount === criteria.length ? '#10b98120' : 'var(--bg-1)',
+                  border: `1px solid ${achievedCount === criteria.length ? '#10b98130' : 'var(--border-1)'}`,
+                  color: achievedCount === criteria.length ? '#10b981' : 'var(--text-5)',
+                  fontSize: '10px', fontWeight: 700, borderRadius: '5px', padding: '2px 8px',
+                }}>{achievedCount}/{criteria.length}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {criteria.map((c, i) => (
+                  <button key={i}
+                    onClick={() => setCriteriaChecked(prev => prev.map((v, j) => j === i ? !v : v))}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '10px',
+                      background: criteriaChecked[i] ? '#10b98110' : 'var(--bg-1)',
+                      border: `1px solid ${criteriaChecked[i] ? '#10b98130' : 'var(--border-0)'}`,
+                      borderRadius: '6px', padding: '8px 12px',
+                      cursor: 'pointer', textAlign: 'left', width: '100%',
+                    }}>
+                    <span style={{
+                      width: '14px', height: '14px', flexShrink: 0,
+                      border: `1.5px solid ${criteriaChecked[i] ? '#10b981' : 'var(--border-2)'}`,
+                      borderRadius: '3px', marginTop: '1px',
+                      background: criteriaChecked[i] ? '#10b981' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {criteriaChecked[i] && <span style={{ color: '#000', fontSize: '9px', fontWeight: 900 }}>✓</span>}
+                    </span>
+                    <span style={{ color: criteriaChecked[i] ? 'var(--text-2)' : 'var(--text-4)', fontSize: '11px', lineHeight: 1.6 }}>{c}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Evidence Verdict */}
           <label style={LABEL_S}>Evidence Verdict</label>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', marginBottom: '14px' }}>
@@ -528,7 +603,11 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
           <button
             onClick={() => verdict === 'Failed'
               ? onFail(cmd.id, cmd.title, failReason)
-              : onComplete(cmd.id, cmd.title, { completionProof, result, verdict })
+              : onComplete(cmd.id, cmd.title, {
+                  completionProof, result, verdict,
+                  criteriaAchieved: criteria.length > 0 ? achievedCount : null,
+                  criteriaTotal:    criteria.length > 0 ? criteria.length : null,
+                })
             }
             disabled={!verdict || (verdict === 'Failed' && !failReason.trim())}
             style={{
@@ -560,9 +639,17 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
           {cmd.verdict && (() => {
             const vc = { Success: '#10b981', 'Partial Success': '#06b6d4', Failed: '#ef4444', Inconclusive: '#f59e0b' }[cmd.verdict] || '#6b7280'
             return (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px', background: vc + '15', border: `1px solid ${vc}30`, borderRadius: '6px', padding: '4px 10px' }}>
-                <span style={{ color: vc, fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Verdict</span>
-                <span style={{ color: vc, fontSize: '11px', fontWeight: 700 }}>{cmd.verdict}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: vc + '15', border: `1px solid ${vc}30`, borderRadius: '6px', padding: '4px 10px' }}>
+                  <span style={{ color: vc, fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Verdict</span>
+                  <span style={{ color: vc, fontSize: '11px', fontWeight: 700 }}>{cmd.verdict}</span>
+                </div>
+                {cmd.criteriaTotal > 0 && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b98115' : '#f59e0b15', border: `1px solid ${cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b98130' : '#f59e0b30'}`, borderRadius: '6px', padding: '4px 10px' }}>
+                    <span style={{ color: cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b981' : '#f59e0b', fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Criteria</span>
+                    <span style={{ color: cmd.criteriaAchieved === cmd.criteriaTotal ? '#10b981' : '#f59e0b', fontSize: '11px', fontWeight: 700 }}>{cmd.criteriaAchieved}/{cmd.criteriaTotal}</span>
+                  </div>
+                )}
               </div>
             )
           })()}
