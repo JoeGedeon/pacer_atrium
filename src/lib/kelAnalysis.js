@@ -43,8 +43,9 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     .join('\n\n')
 
   // Build prior decision context so KEL does not repeat approved work
-  const approvedThreads = threads.filter(t => t.decision === 'approved')
-  const activeCommands  = commands.filter(c => !['archived', 'denied'].includes(c.status))
+  const approvedThreads  = threads.filter(t => t.decision === 'approved')
+  const activeCommands   = commands.filter(c => ['drafted','analyzing','planned','pending_approval','approved','in_progress'].includes(c.status))
+  const closedCommands   = commands.filter(c => ['completed','failed'].includes(c.status))
 
   let priorContext = ''
   if (approvedThreads.length > 0) {
@@ -53,8 +54,13 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     }`
   }
   if (activeCommands.length > 0) {
-    priorContext += `\n\nActive commands already in the system:\n${
+    priorContext += `\n\nActive commands currently in flight:\n${
       activeCommands.map((c, i) => `${i + 1}. [${c.status}] ${c.title}${c.intent ? ': ' + c.intent.slice(0, 120) : ''}`).join('\n')
+    }`
+  }
+  if (closedCommands.length > 0) {
+    priorContext += `\n\nClosed commands — these are COMPLETE, do not generate evidence review recommendations for these:\n${
+      closedCommands.map((c, i) => `${i + 1}. [${c.status}] ${c.title}${c.result ? ' — ' + c.result.slice(0, 80) : ''}`).join('\n')
     }`
   }
 

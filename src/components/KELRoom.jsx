@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { requestKELRecommendation } from '../lib/kelAnalysis'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import RoomSubNav from './RoomSubNav'
@@ -233,10 +233,10 @@ function NewCommandForm({ onSubmit, onCancel, seedData }) {
 function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComplete, onFail, onArchive, onUpdate }) {
   const [denyRationale,   setDenyRationale]   = useState('')
   const [showDeny,        setShowDeny]        = useState(false)
-  const [failReason,      setFailReason]      = useState('')
-  const [showFail,        setShowFail]        = useState(false)
   const [completionProof, setCompletionProof] = useState(cmd.completionProof || '')
   const [result,          setResult]          = useState(cmd.result || '')
+  const [verdict,         setVerdict]         = useState(cmd.verdict || null)
+  const [failReason,      setFailReason]      = useState('')
   const [newStepLabel,    setNewStepLabel]    = useState('')
   const [newStepAgent,    setNewStepAgent]    = useState('pacer')
   const [showAddStep,     setShowAddStep]     = useState(false)
@@ -495,33 +495,53 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
           <textarea value={result} onChange={e => setResult(e.target.value)}
             placeholder="What was the outcome?"
             rows={2} style={{ ...INPUT_S, resize: 'vertical', marginBottom: '16px' }} />
-          {showFail ? (
-            <div>
-              <textarea value={failReason} onChange={e => setFailReason(e.target.value)}
-                placeholder="Why did this command fail?"
-                rows={2} style={{ ...INPUT_S, resize: 'vertical', borderColor: '#ef444440' }} />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => { onFail(cmd.id, cmd.title, failReason); setShowFail(false) }}
-                  style={{
-                    background: '#140808', border: '1px solid #3a1010', color: '#ef4444',
-                    fontSize: '11px', fontWeight: 600, padding: '7px 14px', borderRadius: '6px', cursor: 'pointer',
-                  }}>Confirm Failure</button>
-                <button onClick={() => setShowFail(false)} style={{ ...BTN_GHOST, fontSize: '11px', padding: '7px 12px' }}>Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => onComplete(cmd.id, cmd.title, { completionProof, result })} style={{
-                background: '#041208', border: '1px solid #0a3018',
-                color: '#10b981', fontSize: '12px', fontWeight: 700,
-                padding: '8px 18px', borderRadius: '6px', cursor: 'pointer',
-              }}>✓ Mark Complete</button>
-              <button onClick={() => setShowFail(true)} style={{
-                background: '#140808', border: '1px solid #3a1010', color: '#ef4444',
-                fontSize: '11px', padding: '7px 14px', borderRadius: '6px', cursor: 'pointer',
-              }}>Mark Failed</button>
-            </div>
+
+          {/* Evidence Verdict */}
+          <label style={LABEL_S}>Evidence Verdict</label>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', marginBottom: '14px' }}>
+            {[
+              { id: 'Success',         color: '#10b981', icon: '✓' },
+              { id: 'Partial Success', color: '#06b6d4', icon: '◑' },
+              { id: 'Failed',          color: '#ef4444', icon: '✕' },
+              { id: 'Inconclusive',    color: '#f59e0b', icon: '?' },
+            ].map(v => (
+              <button key={v.id}
+                onClick={() => setVerdict(verdict === v.id ? null : v.id)}
+                style={{
+                  background: verdict === v.id ? v.color + '20' : 'var(--bg-1)',
+                  border: `1px solid ${verdict === v.id ? v.color : 'var(--border-1)'}`,
+                  color: verdict === v.id ? v.color : 'var(--text-5)',
+                  fontSize: '11px', fontWeight: verdict === v.id ? 700 : 500,
+                  padding: '6px 13px', borderRadius: '6px', cursor: 'pointer',
+                }}
+              >{v.icon} {v.id}</button>
+            ))}
+          </div>
+
+          {/* Fail reason — only when Failed verdict selected */}
+          {verdict === 'Failed' && (
+            <textarea value={failReason} onChange={e => setFailReason(e.target.value)}
+              placeholder="Why did this command fail? (required)"
+              rows={2} style={{ ...INPUT_S, resize: 'vertical', borderColor: '#ef444440', marginBottom: '14px' }} />
           )}
+
+          <button
+            onClick={() => verdict === 'Failed'
+              ? onFail(cmd.id, cmd.title, failReason)
+              : onComplete(cmd.id, cmd.title, { completionProof, result, verdict })
+            }
+            disabled={!verdict || (verdict === 'Failed' && !failReason.trim())}
+            style={{
+              background: !verdict ? 'var(--bg-1)' : verdict === 'Failed' ? '#140808' : '#041208',
+              border: `1px solid ${!verdict ? 'var(--border-1)' : verdict === 'Failed' ? '#3a1010' : '#0a3018'}`,
+              color: !verdict ? 'var(--text-6)' : verdict === 'Failed' ? '#ef4444' : '#10b981',
+              fontSize: '12px', fontWeight: 700,
+              padding: '8px 18px', borderRadius: '6px',
+              cursor: !verdict || (verdict === 'Failed' && !failReason.trim()) ? 'default' : 'pointer',
+            }}
+          >
+            {verdict ? `Submit Verdict: ${verdict}` : 'Select a verdict to submit'}
+          </button>
         </div>
       )}
 
@@ -537,6 +557,15 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
           <p style={{ color: cmd.status === 'completed' ? '#10b981' : '#ef4444', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 800, marginBottom: '12px' }}>
             {cmd.status === 'completed' ? '✓ Completed' : '✕ Failed'}
           </p>
+          {cmd.verdict && (() => {
+            const vc = { Success: '#10b981', 'Partial Success': '#06b6d4', Failed: '#ef4444', Inconclusive: '#f59e0b' }[cmd.verdict] || '#6b7280'
+            return (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px', background: vc + '15', border: `1px solid ${vc}30`, borderRadius: '6px', padding: '4px 10px' }}>
+                <span style={{ color: vc, fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Verdict</span>
+                <span style={{ color: vc, fontSize: '11px', fontWeight: 700 }}>{cmd.verdict}</span>
+              </div>
+            )
+          })()}
           {cmd.completionProof && <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.7, marginBottom: '5px' }}><strong style={{ color: 'var(--text-5)' }}>Proof:</strong> {cmd.completionProof}</p>}
           {cmd.result && <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.7, marginBottom: '5px' }}><strong style={{ color: 'var(--text-5)' }}>Result:</strong> {cmd.result}</p>}
           {cmd.failureReason && <p style={{ color: '#ef444480', fontSize: '11px', lineHeight: 1.7, marginBottom: '5px' }}><strong style={{ color: '#ef4444' }}>Failure:</strong> {cmd.failureReason}</p>}
@@ -580,15 +609,20 @@ function EvidenceLedger({ commands, isMobile }) {
   commands.forEach(cmd => {
     const tag = cmd.patternTag
     if (!tag) return
-    if (!patternMap[tag]) patternMap[tag] = { tag, total: 0, completed: 0, failed: 0, archived: 0, lastTitle: null, lastOutcome: null }
+    if (!patternMap[tag]) patternMap[tag] = { tag, total: 0, completed: 0, failed: 0, archived: 0, lastTitle: null, lastOutcome: null, lastVerdict: null }
     patternMap[tag].total++
     if (cmd.status === 'completed') {
       patternMap[tag].completed++
-      patternMap[tag].lastOutcome = 'Completed'
-      patternMap[tag].lastTitle = cmd.title
+      patternMap[tag].lastOutcome = cmd.verdict ? `Completed · ${cmd.verdict}` : 'Completed'
+      patternMap[tag].lastTitle   = cmd.title
+      patternMap[tag].lastVerdict = cmd.verdict || null
     } else if (cmd.status === 'failed') {
       patternMap[tag].failed++
-      if (!patternMap[tag].lastTitle) { patternMap[tag].lastOutcome = 'Failed'; patternMap[tag].lastTitle = cmd.title }
+      if (!patternMap[tag].lastTitle) {
+        patternMap[tag].lastOutcome = 'Failed'
+        patternMap[tag].lastTitle   = cmd.title
+        patternMap[tag].lastVerdict = null
+      }
     } else if (cmd.status === 'archived') {
       patternMap[tag].archived++
     }
@@ -699,8 +733,14 @@ function EvidenceLedger({ commands, isMobile }) {
                     {p.archived  > 0 && <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{p.archived} archived</span>}
                   </div>
                   {p.lastTitle && (
-                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.04em' }}>
-                      Most Recent: <span style={{ color: 'var(--text-4)' }}>{p.lastTitle}</span> — {p.lastOutcome}
+                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.04em', marginTop: '6px' }}>
+                      Most Recent: <span style={{ color: 'var(--text-4)' }}>{p.lastTitle}</span>
+                      {' — '}
+                      <span style={{ color: p.lastVerdict
+                        ? ({ Success: '#10b981', 'Partial Success': '#06b6d4', Failed: '#ef4444', Inconclusive: '#f59e0b' }[p.lastVerdict] || 'var(--text-5)')
+                        : 'var(--text-5)' }}>
+                        {p.lastOutcome}
+                      </span>
                     </p>
                   )}
                 </div>
@@ -924,6 +964,46 @@ export default function KELRoom({
   const [kelSpeaking,    setKelSpeaking]    = useState(false)
   const [obsIdsAtRequest, setObsIdsAtRequest] = useState([])
 
+  // Guard: track command ids submitted for completion but not yet confirmed by Firestore.
+  // Blocks handleRequest from reading stale status before onSnapshot cycles back.
+  const pendingClosuresRef                      = useRef(new Set())
+  const [hasPendingClosures, setHasPendingClosures] = useState(false)
+
+  useEffect(() => {
+    if (!hasPendingClosures || pendingClosuresRef.current.size === 0) return
+    const confirmed = commands.filter(
+      c => pendingClosuresRef.current.has(c.id) && ['completed', 'failed'].includes(c.status)
+    )
+    if (confirmed.length > 0) {
+      confirmed.forEach(c => pendingClosuresRef.current.delete(c.id))
+      setHasPendingClosures(pendingClosuresRef.current.size > 0)
+    }
+  }, [commands, hasPendingClosures])
+
+  async function handleCompleteCommand(id, title, proof) {
+    pendingClosuresRef.current.add(id)
+    setHasPendingClosures(true)
+    try {
+      await onCompleteCommand(id, title, proof)
+    } catch (e) {
+      pendingClosuresRef.current.delete(id)
+      setHasPendingClosures(pendingClosuresRef.current.size > 0)
+      throw e
+    }
+  }
+
+  async function handleFailCommand(id, title, reason) {
+    pendingClosuresRef.current.add(id)
+    setHasPendingClosures(true)
+    try {
+      await onFailCommand(id, title, reason)
+    } catch (e) {
+      pendingClosuresRef.current.delete(id)
+      setHasPendingClosures(pendingClosuresRef.current.size > 0)
+      throw e
+    }
+  }
+
   const pendingReviews  = kelReviews.filter(r => r.status === 'pending')
   const commandsPending = commands.filter(c => c.status === 'pending_approval').length
 
@@ -938,7 +1018,7 @@ export default function KELRoom({
   const canRead  = !!apiKey && validObs.length >= 2
 
   async function handleRequest() {
-    if (!canRead || reading) return
+    if (!canRead || reading || hasPendingClosures) return
     setReading(true)
     setKelError(null)
     setRec(null)
@@ -992,8 +1072,8 @@ export default function KELRoom({
           onSubmitForGate={onSubmitForGate}
           onApproveCommand={onApproveCommand}
           onDenyCommand={onDenyCommand}
-          onCompleteCommand={onCompleteCommand}
-          onFailCommand={onFailCommand}
+          onCompleteCommand={handleCompleteCommand}
+          onFailCommand={handleFailCommand}
           onArchiveCommand={onArchiveCommand}
           onUpdateCommand={onUpdateCommand}
         />
@@ -1027,6 +1107,15 @@ export default function KELRoom({
             </p>
           )}
 
+          {hasPendingClosures && (
+            <div className="flex items-center gap-3" style={{ paddingTop: '8px', marginBottom: '12px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b', animation: 'pulse-fade 1.5s infinite' }} />
+              <p style={{ color: 'var(--text-4)', fontSize: '12px', fontStyle: 'italic' }}>
+                Waiting for Firestore to confirm command closure…
+              </p>
+            </div>
+          )}
+
           {canRead && !rec && !reading && !kelError && (
             <div style={{ maxWidth: '520px' }}>
               <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
@@ -1036,7 +1125,13 @@ export default function KELRoom({
                 K.E.L. will read the observations and return one recommendation with reasoning.
                 The decision belongs to you — K.E.L. records nothing.
               </p>
-              <button onClick={handleRequest} style={{ ...BTN_PRIMARY, fontSize: '13px', padding: '10px 20px' }}>
+              <button onClick={handleRequest}
+                disabled={hasPendingClosures}
+                style={{
+                  ...BTN_PRIMARY, fontSize: '13px', padding: '10px 20px',
+                  opacity: hasPendingClosures ? 0.4 : 1,
+                  cursor: hasPendingClosures ? 'default' : 'pointer',
+                }}>
                 Request Recommendation
               </button>
             </div>
