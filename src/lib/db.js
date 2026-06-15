@@ -1,7 +1,7 @@
 import {
   collection, addDoc, updateDoc, doc, getDoc, setDoc,
   onSnapshot, query, orderBy,
-  serverTimestamp, Timestamp, increment,
+  serverTimestamp, Timestamp, increment, writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -111,6 +111,17 @@ export async function createObservation(uid, data) {
 export async function updateObservation(uid, id, patch) {
   const { id: _, analyzing: __, timestamp: ___, ...safe } = patch
   await updateDoc(doc(db, 'users', uid, 'observations', id), safe)
+}
+
+// Batch-update multiple observations in a single Firestore commit.
+// updates: [{ id, data }, ...]
+export async function batchUpdateObservations(uid, updates) {
+  if (!updates.length) return
+  const batch = writeBatch(db)
+  for (const { id, data } of updates) {
+    batch.update(doc(db, 'users', uid, 'observations', id), data)
+  }
+  await batch.commit()
 }
 
 // ── Muse Works ────────────────────────────────────────────────────────────────
@@ -570,6 +581,11 @@ export async function createStudioArtifact(uid, data) {
     generatedAt:          serverTimestamp(),
   })
   return ref.id
+}
+
+export async function updateStudioArtifact(uid, id, data) {
+  const ref = doc(db, 'users', uid, 'studio_artifacts', id)
+  await updateDoc(ref, data)
 }
 
 export function listenStudioArtifacts(uid, callback) {

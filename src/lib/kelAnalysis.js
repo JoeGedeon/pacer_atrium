@@ -29,37 +29,60 @@ Return valid JSON only — no markdown, no explanation outside the JSON:
   "cited": ["brief excerpt from observation 1", "brief excerpt from observation 2"]
 }`
 
-export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [], localApprovedRecs = [] } = {}) {
+export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [], localApprovedRecs = [], approvedThreadObsIds = new Set() } = {}) {
   if (!apiKey || observations.length < 2) return null
 
-  // Constellations that have at least one completed+successful command are resolved.
-  // Observations routed to a resolved constellation are historical evidence, not open work.
+  // Resolved constellations: patterns with a completed+successful command.
   const resolvedConstellations = new Set(
     commands
       .filter(c => c.status === 'completed' && ['Success', 'Partial Success'].includes(c.verdict) && c.patternTag)
       .map(c => c.patternTag)
   )
 
-  const textObs     = observations.filter(o => o.text && typeof o.text === 'string' && o.status !== 'seed')
-  const activeObs   = textObs.filter(o => !(o.destination && resolvedConstellations.has(o.constellation)))
-  const historicalObs = textObs.filter(o => o.destination && resolvedConstellations.has(o.constellation))
+  const textObs = observations.filter(o => o.text && typeof o.text === 'string' && o.status !== 'seed')
 
-  if (activeObs.length < 2 && textObs.length < 2) return null
+  // K.E.L. closure rule — applied BEFORE count, compression, and prompt construction.
+  // Primary: resolutionStatus field on the observation document (single source of truth).
+  // Legacy fallbacks cover observations approved before the resolutionStatus migration.
+  const kelVisibleObs = textObs.filter(o =>
+    (!o.resolutionStatus || o.resolutionStatus === 'open') &&
+    !(o.id && approvedThreadObsIds.has(o.id)) &&
+    !(o.destination && resolvedConstellations.has(o.constellation))
+  )
 
-  // Use active observations as the primary feed; fall back to all text obs if active < 2
-  const feedObs = activeObs.length >= 2 ? activeObs : textObs
+  // Historical obs go to background context only — not open work.
+  const historicalObs = textObs.filter(o =>
+    (o.resolutionStatus && o.resolutionStatus !== 'open') ||
+    (o.id && approvedThreadObsIds.has(o.id)) ||
+    (o.destination && resolvedConstellations.has(o.constellation))
+  )
 
-  // Compress observations: group by constellation so K.E.L. sees patterns, not repeated raw text.
-  // Untagged observations appear individually. Tagged ones collapse to one entry per constellation.
+  if (kelVisibleObs.length < 2 && textObs.length < 2) return null
+
+  const feedObs = kelVisibleObs.length >= 2 ? kelVisibleObs : textObs
+
+  // Separate tagged and untagged from the visible feed.
+  const taggedObs = feedObs.filter(o => o.constellation)
+
+  // Deduplicate untagged observations before count, before prompt.
+  // Normalize: lowercase, strip punctuation, collapse whitespace, first 160 chars.
+  const seenKeys = new Set()
+  const dedupedUntagged = []
+  for (const o of feedObs.filter(o => !o.constellation)) {
+    const key = o.text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 160)
+    if (!seenKeys.has(key)) { seenKeys.add(key); dedupedUntagged.push(o) }
+  }
+
+  // Compress: group tagged observations by constellation, send untagged individually.
   const constellationGroups = {}
-  const untaggedObs = []
-  for (const o of feedObs.slice(0, 30)) {
-    if (o.constellation) {
-      if (!constellationGroups[o.constellation]) constellationGroups[o.constellation] = []
-      constellationGroups[o.constellation].push(o)
-    } else {
-      untaggedObs.push(o)
-    }
+  for (const o of taggedObs.slice(0, 25)) {
+    if (!constellationGroups[o.constellation]) constellationGroups[o.constellation] = []
+    constellationGroups[o.constellation].push(o)
   }
 
   const constellationLines = Object.entries(constellationGroups).map(([name, obs]) => {
@@ -70,7 +93,7 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     return `◈ ${name} (${obs.length} obs${routeTag})\n  "${excerpt}${obs[0].text.length > 120 ? '…' : ''}"${extra}`
   })
 
-  const untaggedLines = untaggedObs.slice(0, 10).map((o, i) => {
+  const untaggedLines = dedupedUntagged.slice(0, 8).map((o, i) => {
     const parts = [`${i + 1}. [${o.type}] ${o.text.slice(0, 150)}${o.text.length > 150 ? '…' : ''}`]
     if (o.destination) parts.push(`  routed to: ${o.destination}`)
     return parts.join('\n')
@@ -78,7 +101,7 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
 
   const context = [
     constellationLines.length > 0 ? `Named constellations:\n${constellationLines.join('\n\n')}` : '',
-    untaggedLines.length > 0 ? `Untagged observations:\n${untaggedLines.join('\n\n')}` : '',
+    untaggedLines.length > 0     ? `Untagged observations:\n${untaggedLines.join('\n\n')}` : '',
   ].filter(Boolean).join('\n\n')
 
   const activeCommands = commands.filter(c => ['drafted','analyzing','planned','pending_approval','approved','in_progress'].includes(c.status))
@@ -106,10 +129,10 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     }`
   }
 
-  // Historical resolved observations — for context only, not open work
+  // Historical observations — background context only, not open work
   if (historicalObs.length > 0) {
-    priorContext += `\n\nResolved observations (already routed and completed — context only, not open work):\n${
-      historicalObs.slice(0, 10).map((o, i) => `${i + 1}. ${o.text.slice(0, 80)}`).join('\n')
+    priorContext += `\n\nAlready acted on (approved decision exists — do NOT use as basis for new recommendation):\n${
+      historicalObs.slice(0, 12).map((o, i) => `${i + 1}. ${o.text.slice(0, 80)}`).join('\n')
     }`
   }
 
@@ -133,11 +156,12 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     }`
   }
 
+  const activeCount = taggedObs.length + dedupedUntagged.length
   const data = await callClaude({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 600,
     system: SYSTEM,
-    messages: [{ role: 'user', content: `Active observations (${feedObs.length} unresolved):\n\n${context}${priorContext}` }],
+    messages: [{ role: 'user', content: `New unresolved observations (${activeCount} not yet acted on):\n\n${context}${priorContext}` }],
   }, apiKey)
 
   const raw = data.content?.[0]?.text || ''
@@ -150,4 +174,3 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
   if (!result.recommendation || !result.domain) throw new Error('Incomplete response')
   return result
 }
-
