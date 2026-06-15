@@ -228,7 +228,7 @@ export async function updateKELReview(uid, id, patch) {
 function eventColl(uid) { return collection(db, 'users', uid, 'institution_events') }
 
 export async function createInstitutionEvent(uid, data) {
-  await addDoc(eventColl(uid), {
+  const ref = await addDoc(eventColl(uid), {
     eventType:       data.eventType,
     title:           data.title,
     description:     data.description     || null,
@@ -236,6 +236,7 @@ export async function createInstitutionEvent(uid, data) {
     relatedEntityId: data.relatedEntityId || null,
     createdAt:       serverTimestamp(),
   })
+  return ref.id
 }
 
 export function listenInstitutionEvents(uid, callback) {
@@ -543,5 +544,148 @@ export function listenDoctrineCases(uid, callback) {
       }))
     },
     err => { console.error('[listenDoctrineCases] snapshot error:', err) },
+  )
+}
+
+// ── Atrium Commands — PACER command chain ─────────────────────────────────────
+// Collection: users/{uid}/atrium_commands
+// Lifecycle: drafted → pending_approval → (approved→in_progress | denied) → (completed | failed) → archived
+
+function commandColl(uid) { return collection(db, 'users', uid, 'atrium_commands') }
+
+export async function createCommand(uid, data) {
+  const ref = await addDoc(commandColl(uid), {
+    title:            data.title,
+    intent:           data.intent            || '',
+    requestedBy:      data.requestedBy       || 'human',
+    priority:         data.priority          || 'standard',
+    status:           'drafted',
+    assignedAgent:    data.assignedAgent     || 'pacer',
+    supportingAgents: data.supportingAgents  || [],
+    riskLevel:        data.riskLevel         || 'low',
+    approvalRequired: true,
+    approvalStatus:   'not_required',
+    executionMode:    data.executionMode     || 'review',
+    targetSystem:     data.targetSystem      || 'pacer_atrium',
+    requiredTools:    data.requiredTools     || [],
+    expectedOutput:   data.expectedOutput    || '',
+    completionProof:  null,
+    steps:            data.steps             || [],
+    analysis:         '',
+    result:           null,
+    failureReason:    null,
+    linkedThreads:    [],
+    linkedFiles:      [],
+    archivistLogId:   null,
+    createdAt:        serverTimestamp(),
+    updatedAt:        serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_created',
+    title:           `Command created: ${data.title}`,
+    description:     `Priority: ${data.priority || 'standard'} · Risk: ${data.riskLevel || 'low'} · Mode: ${data.executionMode || 'review'}`,
+    relatedEntityId: ref.id,
+  })
+  return ref.id
+}
+
+export async function updateCommand(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function submitCommandForApproval(uid, id) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:          'pending_approval',
+    approvalStatus:  'pending',
+    updatedAt:       serverTimestamp(),
+  })
+}
+
+export async function approveCommand(uid, id, commandTitle) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:         'in_progress',
+    approvalStatus: 'approved',
+    approvedAt:     serverTimestamp(),
+    updatedAt:      serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_approved',
+    title:           `Command approved: ${commandTitle}`,
+    description:     'Human Gate approved. K.E.L. execution authorized.',
+    relatedEntityId: id,
+  })
+}
+
+export async function denyCommand(uid, id, commandTitle, rationale) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:         'denied',
+    approvalStatus: 'denied',
+    failureReason:  rationale,
+    updatedAt:      serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_denied',
+    title:           `Command denied: ${commandTitle}`,
+    description:     rationale,
+    relatedEntityId: id,
+  })
+}
+
+export async function completeCommand(uid, id, commandTitle, { completionProof, result }) {
+  const eventId = await createInstitutionEvent(uid, {
+    eventType:       'command_completed',
+    title:           `Command completed: ${commandTitle}`,
+    description:     result || completionProof || 'Command completed.',
+    relatedEntityId: id,
+  })
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:          'completed',
+    completionProof: completionProof || null,
+    result:          result          || null,
+    archivistLogId:  eventId,
+    updatedAt:       serverTimestamp(),
+  })
+}
+
+export async function failCommand(uid, id, commandTitle, failureReason) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:        'failed',
+    failureReason: failureReason || null,
+    updatedAt:     serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_failed',
+    title:           `Command failed: ${commandTitle}`,
+    description:     failureReason || 'Command failed without recorded reason.',
+    relatedEntityId: id,
+  })
+}
+
+export async function archiveCommand(uid, id) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:    'archived',
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function listenCommands(uid, callback) {
+  const q = query(commandColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id:         d.id,
+          createdAt:  data.createdAt?.toDate?.()  ?? new Date(),
+          updatedAt:  data.updatedAt?.toDate?.()  ?? new Date(),
+          approvedAt: data.approvedAt?.toDate?.() ?? null,
+        }
+      }))
+    },
+    err => { console.error('[listenCommands] snapshot error:', err) },
   )
 }
