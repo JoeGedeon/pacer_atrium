@@ -900,6 +900,12 @@ function CommandsWorkbench({
   function backToList() { setSelectedCmd(null); setSeedForm(null); setCmdView('list') }
 
   async function handleCreate(data) {
+    const normalTitle = data.title.trim().toLowerCase()
+    const duplicate = commands.find(c =>
+      c.title.trim().toLowerCase() === normalTitle &&
+      ['drafted', 'analyzing', 'planned', 'pending_approval', 'approved', 'in_progress'].includes(c.status)
+    )
+    if (duplicate) { openDetail(duplicate); return }
     await onCreateCommand(data)
     backToList()
   }
@@ -1093,8 +1099,12 @@ export default function KELRoom({
 
   // Guard: track command ids submitted for completion but not yet confirmed by Firestore.
   // Blocks handleRequest from reading stale status before onSnapshot cycles back.
-  const pendingClosuresRef                      = useRef(new Set())
+  const pendingClosuresRef                          = useRef(new Set())
   const [hasPendingClosures, setHasPendingClosures] = useState(false)
+
+  // Bridge the Firestore async gap: store approved recommendation texts locally
+  // so the next handleRequest excludes them even before the threads listener fires.
+  const localApprovedRecsRef = useRef([])
 
   useEffect(() => {
     if (!hasPendingClosures || pendingClosuresRef.current.size === 0) return
@@ -1141,8 +1151,18 @@ export default function KELRoom({
     { id: 'reviews',   label: `📋 Reviews${pendingReviews.length > 0 ? ` · ${pendingReviews.length}` : ''}` },
   ]
 
-  const validObs = observations.filter(o => o.text && typeof o.text === 'string')
-  const canRead  = !!apiKey && validObs.length >= 2
+  const validObs = observations.filter(o => o.text && typeof o.text === 'string' && o.status !== 'seed')
+
+  // Resolved: routed AND constellation has a completed+successful command.
+  // These are historical evidence — not open work — and should not drive counts or K.E.L. feed.
+  const resolvedConstellations = new Set(
+    commands
+      .filter(c => c.status === 'completed' && ['Success', 'Partial Success'].includes(c.verdict) && c.patternTag)
+      .map(c => c.patternTag)
+  )
+  const unresolvedObs = validObs.filter(o => !(o.destination && resolvedConstellations.has(o.constellation)))
+
+  const canRead = !!apiKey && validObs.length >= 2
 
   async function handleRequest() {
     if (!canRead || reading || hasPendingClosures) return
@@ -1152,7 +1172,10 @@ export default function KELRoom({
     setDecided(null)
     setObsIdsAtRequest(validObs.map(o => o.id).filter(Boolean))
     try {
-      const result = await requestKELRecommendation(validObs, apiKey, { threads, commands })
+      const result = await requestKELRecommendation(
+        validObs, apiKey,
+        { threads, commands, localApprovedRecs: localApprovedRecsRef.current }
+      )
       setRec(result)
     } catch (e) {
       console.error('[KEL]', e)
@@ -1165,6 +1188,9 @@ export default function KELRoom({
   function handleDecision(decision) {
     if (!rec || decided) return
     setDecided(decision)
+    if (decision === 'approved' && rec.recommendation) {
+      localApprovedRecsRef.current = [...localApprovedRecsRef.current, rec.recommendation]
+    }
     onDecision({ ...rec, decision, observationIds: obsIdsAtRequest })
   }
 
@@ -1256,9 +1282,14 @@ export default function KELRoom({
 
           {canRead && !rec && !reading && !kelError && (
             <div style={{ maxWidth: '520px' }}>
-              <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
-                {validObs.length} observation{validObs.length !== 1 ? 's' : ''} in memory.
-              </p>
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7 }}>
+                  {unresolvedObs.length} unresolved observation{unresolvedObs.length !== 1 ? 's' : ''}
+                  {validObs.length > unresolvedObs.length
+                    ? <span style={{ color: 'var(--text-6)', fontSize: '11px' }}> · {validObs.length - unresolvedObs.length} in ARCHIVIST</span>
+                    : null}
+                </p>
+              </div>
               <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.7, marginBottom: '24px' }}>
                 K.E.L. will read the observations and return one recommendation with reasoning.
                 The decision belongs to you — K.E.L. records nothing.
@@ -1391,7 +1422,10 @@ export default function KELRoom({
                   <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.6 }}>
                     ARCHIVIST holds the verdict. VERA will read it next time.
                   </p>
-                  <button onClick={handleRequest} style={{ marginTop: '12px', background: 'none', border: 'none', color: 'var(--text-4)', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                  <button
+                    onClick={() => { setRec(null); setDecided(null) }}
+                    style={{ marginTop: '12px', background: 'none', border: 'none', color: 'var(--text-4)', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                  >
                     Request another recommendation →
                   </button>
                 </div>
