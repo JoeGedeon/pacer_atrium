@@ -348,8 +348,12 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                       onClick={() => {
                                         const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
                                         const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
-                                        const prefill = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
-                                        onOpenStudio(prefill.trim())
+                                        const prompt = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
+                                        onOpenStudio({
+                                          prompt: prompt.trim(),
+                                          sourceConstellation: name,
+                                          sourceConstellationConfidence: profile.confidenceScore,
+                                        })
                                       }}
                                       style={{
                                         marginTop: '14px', background: 'none',

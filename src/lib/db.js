@@ -548,6 +548,36 @@ export function listenDoctrineCases(uid, callback) {
   )
 }
 
+// ── Studio Artifacts — image generation registry ──────────────────────────────
+// Collection: users/{uid}/studio_artifacts
+
+function artifactColl(uid) { return collection(db, 'users', uid, 'studio_artifacts') }
+
+export async function createStudioArtifact(uid, data) {
+  const ref = await addDoc(artifactColl(uid), {
+    url:                  data.url,
+    title:                data.title                || 'Untitled',
+    prompt:               data.prompt               || '',
+    revisedPrompt:        data.revisedPrompt        || null,
+    model:                data.model                || 'dall-e-3',
+    creator:              'Studio',
+    sourceConstellation:  data.sourceConstellation  || null,
+    sourceDoctrine:       data.sourceDoctrine       || null,
+    sourceObservation:    data.sourceObservation     || null,
+    projectTag:           data.projectTag           || null,
+    generatedAt:          serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function listenStudioArtifacts(uid, callback) {
+  const q = query(artifactColl(uid), orderBy('generatedAt', 'desc'))
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+    err  => console.error('[listenStudioArtifacts] snapshot error:', err),
+  )
+}
+
 // ── Atrium Commands — PACER command chain ─────────────────────────────────────
 // Collection: users/{uid}/atrium_commands
 // Lifecycle: drafted → pending_approval → (approved→in_progress | denied) → (completed | failed) → archived
