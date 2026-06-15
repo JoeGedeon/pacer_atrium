@@ -113,6 +113,14 @@ export default function App() {
     // v1 legacy: raw string key (migrated to encrypted on next save)
     return localStorage.getItem('pacer_api_key') || null
   })
+  const [openaiApiKey, setOpenaiApiKey]           = useState(() => {
+    try {
+      const v2 = localStorage.getItem('pacer_openai_key_v2')
+      if (v2) return JSON.parse(v2)
+    } catch {}
+    return localStorage.getItem('pacer_openai_key') || null
+  })
+  const [studioPrompt, setStudioPrompt]           = useState(null)
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
   const [kelDecisions, setKelDecisions]           = useState([])
@@ -598,6 +606,29 @@ export default function App() {
     }
   }
 
+  function handleOpenaiKeyChange(keyOrBundle) {
+    if (keyOrBundle) {
+      const isBundle = typeof keyOrBundle === 'object' && keyOrBundle.encrypted
+      if (isBundle) {
+        localStorage.setItem('pacer_openai_key_v2', JSON.stringify(keyOrBundle))
+        localStorage.removeItem('pacer_openai_key')
+      } else {
+        localStorage.setItem('pacer_openai_key', keyOrBundle)
+        localStorage.removeItem('pacer_openai_key_v2')
+      }
+      setOpenaiApiKey(keyOrBundle)
+    } else {
+      localStorage.removeItem('pacer_openai_key_v2')
+      localStorage.removeItem('pacer_openai_key')
+      setOpenaiApiKey(null)
+    }
+  }
+
+  function handleOpenStudio(prefillPrompt) {
+    setStudioPrompt(prefillPrompt)
+    setCurrentRoom('builderstudio')
+  }
+
   async function plantVoiceSeed(audioBlob) {
     if (!user) return
     if (!isCreator(user)) incrementCampusStat('observations')
@@ -988,6 +1019,7 @@ export default function App() {
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}
             voiceMode={voiceMode}
+            onOpenStudio={handleOpenStudio}
           />
         )}
         {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} uid={user?.uid} isMobile={isMobile} />}
@@ -1071,6 +1103,9 @@ export default function App() {
             onNavigate={setCurrentRoom}
             onForge={forgeArtifact}
             apiKey={apiKey}
+            openaiApiKey={openaiApiKey}
+            initialPrompt={studioPrompt}
+            onPromptConsumed={() => setStudioPrompt(null)}
             onRecordOutcome={recordOutcome}
           />
         )}
@@ -1105,6 +1140,8 @@ export default function App() {
             onThemeChange={setTheme}
             apiKey={apiKey}
             onApiKeyChange={handleApiKeyChange}
+            openaiApiKey={openaiApiKey}
+            onOpenaiKeyChange={handleOpenaiKeyChange}
             onSignOut={signOut}
             isMobile={isMobile}
             arrivalMode={profile?.arrivalMode || 'silent'}

@@ -1,8 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import RoomSubNav from './RoomSubNav'
+import { generateImage } from '../lib/openaiImageGeneration'
+
+const CREATION_TOOLS = [
+  { id: 'generate-image',    icon: '✦', label: 'Generate Image',       status: 'active' },
+  { id: 'edit-image',        icon: '✎', label: 'Edit Image',           status: 'soon' },
+  { id: 'create-character',  icon: '◈', label: 'Create Character',     status: 'soon' },
+  { id: 'create-environment',icon: '⬡', label: 'Create Environment',   status: 'soon' },
+  { id: 'create-storyboard', icon: '▦', label: 'Create Storyboard',    status: 'soon' },
+  { id: 'create-poster',     icon: '□', label: 'Create Poster',        status: 'soon' },
+  { id: 'create-concept',    icon: '◇', label: 'Create Concept Sheet', status: 'soon' },
+]
 
 const BUILDER_TABS = [
+  { id: 'create',    label: 'Create' },
   { id: 'decisions', label: 'Decisions' },
   { id: 'outcomes',  label: 'Outcomes' },
 ]
@@ -464,11 +476,41 @@ function ThreadCard({ thread, onForge, hasApiKey, onRecordOutcome }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, onRecordOutcome }) {
-  const [tab, setTab] = useState('decisions')
+export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, openaiApiKey, initialPrompt, onPromptConsumed, onRecordOutcome }) {
+  const [tab,        setTab]        = useState('create')
+  const [activeTool, setActiveTool] = useState('generate-image')
+  const [prompt,     setPrompt]     = useState(initialPrompt || '')
+  const [generating, setGenerating] = useState(false)
+  const [genError,   setGenError]   = useState(null)
+  const [canvas,     setCanvas]     = useState(null)
+  const [history,    setHistory]    = useState([])
   const px = isMobile ? 'px-6' : 'px-10'
-  const approvedThreads = threads.filter(t => t.decision === 'approved')
+  const approvedThreads  = threads.filter(t => t.decision === 'approved')
   const completedThreads = approvedThreads.filter(t => t.outcomeSignal)
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setPrompt(initialPrompt)
+      setTab('create')
+      onPromptConsumed?.()
+    }
+  }, [initialPrompt]) // eslint-disable-line
+
+  async function handleGenerate() {
+    if (!prompt.trim() || !openaiApiKey || generating) return
+    setGenerating(true)
+    setGenError(null)
+    try {
+      const result = await generateImage(prompt.trim(), openaiApiKey)
+      const item = { ...result, promptUsed: prompt.trim(), id: Date.now() }
+      setCanvas(item)
+      setHistory(prev => [item, ...prev].slice(0, 10))
+    } catch (err) {
+      setGenError(err.message || 'Generation failed.')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
@@ -503,6 +545,182 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
       </div>
 
       <RoomSubNav tabs={BUILDER_TABS} activeTab={tab} onSelect={setTab} />
+
+      {tab === 'create' && (
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
+
+          {/* Creation Tools sidebar — desktop only */}
+          {!isMobile && (
+            <div style={{ width: '220px', borderRight: '1px solid var(--border-0)', display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-0)' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600 }}>Creation Tools</p>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+                {CREATION_TOOLS.map(tool => {
+                  const active = activeTool === tool.id
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => tool.status !== 'soon' && setActiveTool(tool.id)}
+                      style={{
+                        width: '100%', textAlign: 'left', fontFamily: 'inherit',
+                        background: active ? 'var(--bg-3)' : 'none',
+                        border: `1px solid ${active ? 'var(--border-1)' : 'transparent'}`,
+                        borderRadius: '6px', padding: '7px 10px',
+                        cursor: tool.status === 'soon' ? 'default' : 'pointer',
+                        marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px',
+                      }}
+                    >
+                      <span style={{ fontSize: '12px', color: active ? 'var(--text-2)' : 'var(--text-5)', lineHeight: 1 }}>{tool.icon}</span>
+                      <div>
+                        <p style={{ color: tool.status === 'soon' ? 'var(--text-6)' : active ? 'var(--text-1)' : 'var(--text-3)', fontSize: '11px', fontWeight: active ? 600 : 400, lineHeight: 1.2 }}>
+                          {tool.label}
+                        </p>
+                        {tool.status === 'soon' && (
+                          <p style={{ color: 'var(--text-6)', fontSize: '8px', marginTop: '1px' }}>soon</p>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Canvas + prompt */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+            {/* Prompt bar */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-0)', flexShrink: 0 }}>
+              {isMobile && (
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '8px' }}>
+                  {CREATION_TOOLS.map(tool => (
+                    <button
+                      key={tool.id}
+                      onClick={() => tool.status !== 'soon' && setActiveTool(tool.id)}
+                      style={{
+                        flexShrink: 0, fontFamily: 'inherit',
+                        cursor: tool.status === 'soon' ? 'default' : 'pointer',
+                        background: activeTool === tool.id ? 'var(--bg-3)' : 'var(--bg-1)',
+                        border: `1px solid ${activeTool === tool.id ? 'var(--border-1)' : 'var(--border-0)'}`,
+                        borderRadius: '6px', padding: '5px 10px',
+                        color: tool.status === 'soon' ? 'var(--text-6)' : 'var(--text-3)',
+                        fontSize: '10px', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {tool.icon} {tool.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <textarea
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate() }}
+                placeholder="Describe what to create… (Ctrl+Enter to generate)"
+                rows={isMobile ? 2 : 3}
+                style={{
+                  width: '100%', background: 'var(--bg-1)', border: '1px solid var(--border-1)',
+                  borderRadius: '6px', color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.6,
+                  padding: '8px 10px', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!prompt.trim() || !openaiApiKey || generating}
+                  style={{
+                    background: prompt.trim() && openaiApiKey && !generating ? '#0f172a' : 'var(--bg-2)',
+                    border: `1px solid ${prompt.trim() && openaiApiKey && !generating ? '#3b82f660' : 'var(--border-1)'}`,
+                    color: prompt.trim() && openaiApiKey && !generating ? '#93c5fd' : 'var(--text-6)',
+                    fontSize: '11px', fontWeight: 600, padding: '6px 16px', borderRadius: '6px',
+                    cursor: !prompt.trim() || !openaiApiKey || generating ? 'default' : 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {generating ? '⟳ Generating…' : '✦ Generate'}
+                </button>
+                {!openaiApiKey && (
+                  <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                    OpenAI key required — add in Settings
+                  </p>
+                )}
+                {genError && (
+                  <p style={{ color: '#ef4444', fontSize: '10px' }}>{genError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Canvas */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              {generating && !canvas && (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>Studio is creating…</p>
+                </div>
+              )}
+              {!canvas && !generating && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>
+                  <span style={{ fontSize: '36px', marginBottom: '12px', display: 'block' }}>✦</span>
+                  <p style={{ color: 'var(--text-5)', fontSize: '12px', textAlign: 'center', lineHeight: 1.6 }}>
+                    Canvas is empty.<br />Enter a prompt and generate.
+                  </p>
+                </div>
+              )}
+              {canvas && (
+                <div style={{ width: '100%', maxWidth: '600px' }}>
+                  <img
+                    src={canvas.url}
+                    alt="Studio creation"
+                    style={{ width: '100%', borderRadius: '4px', display: 'block', border: '1px solid var(--border-0)' }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <a
+                      href={canvas.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        background: 'none', border: '1px solid var(--border-1)',
+                        color: 'var(--text-3)', fontSize: '10px', padding: '4px 12px',
+                        borderRadius: '5px', textDecoration: 'none', display: 'inline-block',
+                      }}
+                    >
+                      ↗ Open full size
+                    </a>
+                  </div>
+                  {canvas.revisedPrompt && canvas.revisedPrompt !== canvas.promptUsed && (
+                    <p style={{ color: 'var(--text-6)', fontSize: '9px', marginTop: '10px', fontStyle: 'italic', lineHeight: 1.5 }}>
+                      Studio interpreted: "{canvas.revisedPrompt.slice(0, 160)}{canvas.revisedPrompt.length > 160 ? '…' : ''}"
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Session history thumbnails */}
+              {history.length > 1 && (
+                <div style={{ width: '100%', maxWidth: '600px', paddingTop: '8px', borderTop: '1px solid var(--border-0)' }}>
+                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Session History</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {history.slice(1).map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => setCanvas(item)}
+                        style={{ background: 'none', border: '1px solid var(--border-1)', padding: '2px', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        <img
+                          src={item.url}
+                          alt=""
+                          style={{ width: '64px', height: '64px', objectFit: 'cover', display: 'block', borderRadius: '2px' }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {tab === 'decisions' && <div className={`flex-1 overflow-y-auto ${px} py-8`}>
 

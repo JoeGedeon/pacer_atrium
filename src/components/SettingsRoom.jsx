@@ -260,7 +260,7 @@ function OptionList({ options, value, onChange }) {
 }
 
 export default function SettingsRoom({
-  user, profile, theme, onThemeChange, apiKey, onApiKeyChange, onSignOut, isMobile,
+  user, profile, theme, onThemeChange, apiKey, onApiKeyChange, openaiApiKey, onOpenaiKeyChange, onSignOut, isMobile,
   arrivalMode = 'silent', onArrivalModeChange,
   middayPulseMode = 'off', onMiddayPulseModeChange,
   eveningReviewMode = 'off', onEveningReviewModeChange,
@@ -268,6 +268,7 @@ export default function SettingsRoom({
   googleStatus = 'disconnected', onConnectGmail, onDisconnectGmail,
 }) {
   const anthropicConnected = !!(typeof apiKey === 'object' ? apiKey?.encrypted : apiKey)
+  const openaiConnected    = !!(typeof openaiApiKey === 'object' ? openaiApiKey?.encrypted : openaiApiKey)
   const googleConnected    = googleStatus === 'connected'
   const [rhythmSaved, setRhythmSaved] = useState(false)
   const rhythmSavedTimer = useRef(null)
@@ -299,12 +300,16 @@ export default function SettingsRoom({
   function handleEveningChange(mode) { onEveningReviewModeChange?.(mode); markRhythmSaved() }
 
   function saveAnthropicKey(bundle) {
-    // bundle is a keyBundle object from ProviderRow's saveProviderKey call
     onApiKeyChange(bundle)
   }
-
   function clearAnthropicKey() {
     onApiKeyChange(null)
+  }
+  function saveOpenaiKey(bundle) {
+    onOpenaiKeyChange?.(bundle)
+  }
+  function clearOpenaiKey() {
+    onOpenaiKeyChange?.(null)
   }
 
   return (
@@ -562,12 +567,12 @@ export default function SettingsRoom({
           />
           <ProviderRow
             name="OpenAI"
-            description="GPT-4o and compatible models"
-            status="future"
-            keyLabel=""
-            storedKey={null}
-            onSave={() => {}}
-            onClear={() => {}}
+            description="Studio image generation via DALL-E 3"
+            status={openaiConnected ? 'connected' : 'not connected'}
+            keyLabel="OpenAI API key (starts with sk-)"
+            storedKey={openaiApiKey}
+            onSave={saveOpenaiKey}
+            onClear={clearOpenaiKey}
           />
           <ProviderRow
             name="Gemini"
@@ -587,18 +592,19 @@ export default function SettingsRoom({
             Which provider handles each PACER function. Routing configuration is fixed in v0.7.
           </p>
           {[
-            { fn: 'VERA Analysis',       provider: 'Anthropic · Claude Haiku' },
-            { fn: 'KEL Recommendations', provider: 'Anthropic · Claude Haiku' },
-            { fn: 'Muse Creation',       provider: 'Anthropic · Claude Haiku' },
-          ].map(({ fn, provider }) => (
+            { fn: 'VERA Analysis',           provider: 'Anthropic · Claude Haiku', connected: anthropicConnected },
+            { fn: 'KEL Recommendations',     provider: 'Anthropic · Claude Haiku', connected: anthropicConnected },
+            { fn: 'Muse Creation',           provider: 'Anthropic · Claude Haiku', connected: anthropicConnected },
+            { fn: 'Studio Image Generation', provider: 'OpenAI · DALL-E 3',        connected: openaiConnected },
+          ].map(({ fn, provider, connected }) => (
             <div key={fn} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '9px 0', borderBottom: '1px solid var(--border-0)',
             }}>
               <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>{fn}</span>
-              <span style={{ color: anthropicConnected ? '#1a7a40' : 'var(--text-5)',
+              <span style={{ color: connected ? '#1a7a40' : 'var(--text-5)',
                 fontSize: '11px', fontStyle: 'italic' }}>
-                {anthropicConnected ? provider : 'No provider connected'}
+                {connected ? provider : 'No provider connected'}
               </span>
             </div>
           ))}
