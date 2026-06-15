@@ -634,10 +634,10 @@ export async function denyCommand(uid, id, commandTitle, rationale) {
   })
 }
 
-export async function completeCommand(uid, id, commandTitle, { completionProof, result }) {
+export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict }) {
   const eventId = await createInstitutionEvent(uid, {
     eventType:       'command_completed',
-    title:           `Command completed: ${commandTitle}`,
+    title:           `Command completed: ${commandTitle}${verdict ? ` — ${verdict}` : ''}`,
     description:     result || completionProof || 'Command completed.',
     relatedEntityId: id,
   })
@@ -645,6 +645,7 @@ export async function completeCommand(uid, id, commandTitle, { completionProof, 
     status:          'completed',
     completionProof: completionProof || null,
     result:          result          || null,
+    verdict:         verdict         || null,
     archivistLogId:  eventId,
     updatedAt:       serverTimestamp(),
   })
