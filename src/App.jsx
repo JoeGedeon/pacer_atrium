@@ -41,6 +41,8 @@ import {
   createThread, listenThreads, updateThread,
   createMediaAsset, updateMediaAsset, listenMediaAssets,
   createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
+  createCommand, updateCommand, submitCommandForApproval,
+  approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -120,6 +122,7 @@ export default function App() {
   const [productions, setProductions]             = useState([])
   const [mediaAssets, setMediaAssets]             = useState([])
   const [doctrineCases, setDoctrineCases]         = useState([])
+  const [commands, setCommands]                   = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -271,7 +274,8 @@ export default function App() {
     const unsubProds     = listenProductions(user.uid, setProductions)
     const unsubMedia     = listenMediaAssets(user.uid, setMediaAssets)
     const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine() }
+    const unsubCommands  = listenCommands(user.uid, setCommands)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -740,6 +744,48 @@ export default function App() {
     })
   }
 
+  // ── Atrium Command handlers ───────────────────────────────────────────────────
+
+  async function createCommandRecord(data) {
+    if (!user) return
+    await createCommand(user.uid, data)
+  }
+
+  async function submitCommandForGate(id) {
+    if (!user) return
+    await submitCommandForApproval(user.uid, id)
+  }
+
+  async function approveCommandRecord(id, title) {
+    if (!user) return
+    await approveCommand(user.uid, id, title)
+  }
+
+  async function denyCommandRecord(id, title, rationale) {
+    if (!user) return
+    await denyCommand(user.uid, id, title, rationale)
+  }
+
+  async function completeCommandRecord(id, title, proof) {
+    if (!user) return
+    await completeCommand(user.uid, id, title, proof)
+  }
+
+  async function failCommandRecord(id, title, reason) {
+    if (!user) return
+    await failCommand(user.uid, id, title, reason)
+  }
+
+  async function archiveCommandRecord(id) {
+    if (!user) return
+    await archiveCommand(user.uid, id)
+  }
+
+  async function updateCommandRecord(id, patch) {
+    if (!user) return
+    await updateCommand(user.uid, id, patch)
+  }
+
   const isHome     = currentRoom === 'home'
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
@@ -1022,6 +1068,15 @@ export default function App() {
             onDenyReview={denyKELReview}
             isMobile={isMobile}
             voiceMode={voiceMode}
+            commands={commands}
+            onCreateCommand={createCommandRecord}
+            onSubmitForGate={submitCommandForGate}
+            onApproveCommand={approveCommandRecord}
+            onDenyCommand={denyCommandRecord}
+            onCompleteCommand={completeCommandRecord}
+            onFailCommand={failCommandRecord}
+            onArchiveCommand={archiveCommandRecord}
+            onUpdateCommand={updateCommandRecord}
           />
         )}
         {isSettings && (
