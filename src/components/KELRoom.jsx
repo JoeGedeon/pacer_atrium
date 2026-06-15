@@ -910,6 +910,7 @@ function CommandsWorkbench({
 export default function KELRoom({
   observations = [], apiKey, onConnectClaude, onDecision,
   kelReviews = [], onApproveReview, onDenyReview, isMobile, voiceMode,
+  threads = [],
   commands = [], onCreateCommand, onSubmitForGate, onApproveCommand, onDenyCommand,
   onCompleteCommand, onFailCommand, onArchiveCommand, onUpdateCommand,
 }) {
@@ -944,7 +945,7 @@ export default function KELRoom({
     setDecided(null)
     setObsIdsAtRequest(validObs.map(o => o.id).filter(Boolean))
     try {
-      const result = await requestKELRecommendation(validObs, apiKey)
+      const result = await requestKELRecommendation(validObs, apiKey, { threads, commands })
       setRec(result)
     } catch (e) {
       console.error('[KEL]', e)

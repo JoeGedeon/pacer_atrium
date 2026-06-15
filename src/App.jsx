@@ -1082,6 +1082,7 @@ export default function App() {
             onDenyReview={denyKELReview}
             isMobile={isMobile}
             voiceMode={voiceMode}
+            threads={threads}
             commands={commands}
             onCreateCommand={createCommandRecord}
             onSubmitForGate={submitCommandForGate}

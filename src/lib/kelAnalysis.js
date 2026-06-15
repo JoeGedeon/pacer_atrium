@@ -16,6 +16,8 @@ Constraints you must honor:
 - One recommendation. Make it count.
 - Be specific: "Audit the broker onboarding checklist" beats "improve processes."
 - Ground every recommendation in specific observations you can cite.
+- If prior approved decisions or active commands are provided, check them FIRST. Do not repeat a recommendation that is already approved, in progress, or has an active command. Find the next highest-leverage item the institution has not yet addressed.
+- If everything you would recommend is already approved or in progress, say so directly: report the most important outstanding action — e.g., "Execute the approved command", "Review evidence for the in-progress command", or "Await outcome of approved work before next recommendation."
 
 Return valid JSON only — no markdown, no explanation outside the JSON:
 {
@@ -26,7 +28,7 @@ Return valid JSON only — no markdown, no explanation outside the JSON:
   "cited": ["brief excerpt from observation 1", "brief excerpt from observation 2"]
 }`
 
-export async function requestKELRecommendation(observations, apiKey) {
+export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [] } = {}) {
   if (!apiKey || observations.length < 2) return null
 
   const context = observations
@@ -40,11 +42,27 @@ export async function requestKELRecommendation(observations, apiKey) {
     })
     .join('\n\n')
 
+  // Build prior decision context so KEL does not repeat approved work
+  const approvedThreads = threads.filter(t => t.decision === 'approved')
+  const activeCommands  = commands.filter(c => !['archived', 'denied'].includes(c.status))
+
+  let priorContext = ''
+  if (approvedThreads.length > 0) {
+    priorContext += `\n\nPrior approved decisions — do not repeat these:\n${
+      approvedThreads.map((t, i) => `${i + 1}. ${t.recommendation}`).join('\n')
+    }`
+  }
+  if (activeCommands.length > 0) {
+    priorContext += `\n\nActive commands already in the system:\n${
+      activeCommands.map((c, i) => `${i + 1}. [${c.status}] ${c.title}${c.intent ? ': ' + c.intent.slice(0, 120) : ''}`).join('\n')
+    }`
+  }
+
   const data = await callClaude({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 600,
     system: SYSTEM,
-    messages: [{ role: 'user', content: `Observations:\n\n${context}` }],
+    messages: [{ role: 'user', content: `Observations:\n\n${context}${priorContext}` }],
   }, apiKey)
 
   const raw = data.content?.[0]?.text || ''
@@ -57,3 +75,4 @@ export async function requestKELRecommendation(observations, apiKey) {
   if (!result.recommendation || !result.domain) throw new Error('Incomplete response')
   return result
 }
+
