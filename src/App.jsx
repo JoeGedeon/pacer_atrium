@@ -41,13 +41,16 @@ import {
   createThread, listenThreads, updateThread,
   createMediaAsset, updateMediaAsset, listenMediaAssets,
   createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
+  listenCommands, updateCommand,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import { uploadVoiceSeed } from './lib/voiceUpload'
+import { seedCommandsIfEmpty } from './lib/seedCommands'
 import PACERVoice from './components/PACERVoice'
+import CommandWorkbench from './components/CommandWorkbench'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -120,6 +123,7 @@ export default function App() {
   const [productions, setProductions]             = useState([])
   const [mediaAssets, setMediaAssets]             = useState([])
   const [doctrineCases, setDoctrineCases]         = useState([])
+  const [commands, setCommands]                   = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -260,6 +264,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     migrateLocalStorage(user.uid)
+    seedCommandsIfEmpty(user.uid)
     const unsubObs       = listenObservations(user.uid, setObservations)
     const unsubMuse      = listenMuseWorks(user.uid, setMuseWorks)
     const unsubGrad      = listenGraduates(user.uid, setGraduates)
@@ -271,7 +276,8 @@ export default function App() {
     const unsubProds     = listenProductions(user.uid, setProductions)
     const unsubMedia     = listenMediaAssets(user.uid, setMediaAssets)
     const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine() }
+    const unsubCommands  = listenCommands(user.uid, setCommands)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -740,6 +746,21 @@ export default function App() {
     })
   }
 
+  async function handleCommandStatusChange(command, newStatus) {
+    await updateCommand(user.uid, command.id, {
+      status: newStatus,
+      _prevStatus: command.status,
+      commandNumber: command.commandNumber,
+    })
+  }
+
+  async function handleParityToggle(command, idx) {
+    const updated = command.parityChecklist.map((item, i) =>
+      i === idx ? { ...item, verified: !item.verified } : item
+    )
+    await updateCommand(user.uid, command.id, { parityChecklist: updated })
+  }
+
   const isHome     = currentRoom === 'home'
   const isAtrium   = currentRoom === 'atrium'
   const isDoctrine = currentRoom === 'doctrine'
@@ -750,6 +771,7 @@ export default function App() {
   const isArchive  = currentRoom === 'archive'
   const isIsles          = currentRoom === 'isles'
   const isKEL            = currentRoom === 'kel'
+  const isCommands       = currentRoom === 'commands'
   const isBusinessCenter = currentRoom === 'businesscenter'
   const isBuilderStudio  = currentRoom === 'builderstudio'
   const isSettings       = currentRoom === 'settings'
@@ -1067,7 +1089,16 @@ export default function App() {
           />
         )}
 
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isOpsCore && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
+        {isCommands && (
+          <CommandWorkbench
+            commands={commands}
+            onStatusChange={handleCommandStatusChange}
+            onParityToggle={handleParityToggle}
+            isMobile={isMobile}
+          />
+        )}
+
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isOpsCore && !isKEL && !isCommands && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
