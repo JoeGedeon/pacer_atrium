@@ -981,6 +981,7 @@ export default function App() {
           <VERARoom
             observations={observations}
             museWorks={museWorks}
+            commands={commands}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}

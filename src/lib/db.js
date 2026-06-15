@@ -569,6 +569,8 @@ export async function createCommand(uid, data) {
     targetSystem:     data.targetSystem      || 'pacer_atrium',
     requiredTools:    data.requiredTools     || [],
     expectedOutput:   data.expectedOutput    || '',
+    successCriteria:  data.successCriteria   || [],
+    patternTag:       data.patternTag        || null,
     completionProof:  null,
     steps:            data.steps             || [],
     analysis:         '',
@@ -634,20 +636,23 @@ export async function denyCommand(uid, id, commandTitle, rationale) {
   })
 }
 
-export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict }) {
+export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal }) {
+  const criteriaNote = criteriaTotal > 0 ? ` · ${criteriaAchieved}/${criteriaTotal} criteria` : ''
   const eventId = await createInstitutionEvent(uid, {
     eventType:       'command_completed',
-    title:           `Command completed: ${commandTitle}${verdict ? ` — ${verdict}` : ''}`,
+    title:           `Command completed: ${commandTitle}${verdict ? ` — ${verdict}` : ''}${criteriaNote}`,
     description:     result || completionProof || 'Command completed.',
     relatedEntityId: id,
   })
   await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
-    status:          'completed',
-    completionProof: completionProof || null,
-    result:          result          || null,
-    verdict:         verdict         || null,
-    archivistLogId:  eventId,
-    updatedAt:       serverTimestamp(),
+    status:           'completed',
+    completionProof:  completionProof  || null,
+    result:           result           || null,
+    verdict:          verdict          || null,
+    criteriaAchieved: criteriaAchieved ?? null,
+    criteriaTotal:    criteriaTotal    ?? null,
+    archivistLogId:   eventId,
+    updatedAt:        serverTimestamp(),
   })
 }
 
