@@ -1035,6 +1035,7 @@ export default function App() {
             commands={commands}
             doctrineCases={doctrineCases}
             institutionEvents={institutionEvents}
+            studioArtifacts={studioArtifacts}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}

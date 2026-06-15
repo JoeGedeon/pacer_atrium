@@ -26,7 +26,7 @@ const VERA_TABS = [
   { id: 'observations',  label: 'Observations' },
 ]
 
-export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], apiKey, onConnectClaude, isMobile, voiceMode, onOpenStudio }) {
+export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], studioArtifacts = [], apiKey, onConnectClaude, isMobile, voiceMode, onOpenStudio }) {
   const [tab,                   setTab]                   = useState('patterns')
   const [patterns,              setPatterns]              = useState(null)
   const [analyzing,             setAnalyzing]             = useState(false)
@@ -78,10 +78,13 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
       Array.isArray(d.relatedConstellations) && d.relatedConstellations.includes(name)
     )
 
+    // Studio artifacts generated from this constellation
+    const artwork = studioArtifacts.filter(a => a.sourceConstellation === name)
+
     return {
       name, obs, obsList, total: cmds.length, cmds, active, pending,
       completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate,
-      confidenceScore, confidenceLabel, events, doctrine,
+      confidenceScore, confidenceLabel, events, doctrine, artwork,
     }
   }
 
@@ -273,6 +276,7 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                 { id: 'commands',     label: `Cmds (${profile.total})` },
                                 { id: 'events',       label: `Events (${profile.events.length})` },
                                 { id: 'doctrine',     label: `Doctrine (${profile.doctrine.length})` },
+                                { id: 'artwork',      label: `Artwork (${profile.artwork.length})` },
                               ].map(t => (
                                 <button key={t.id} onClick={() => setCaseTab(t.id)} style={{
                                   background: 'none', border: 'none', cursor: 'pointer',
@@ -343,28 +347,27 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                       No commands tagged to this constellation yet.
                                     </p>
                                   )}
-                                  {onOpenStudio && (
-                                    <button
-                                      onClick={() => {
-                                        const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
-                                        const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
-                                        const prompt = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
-                                        onOpenStudio({
-                                          prompt: prompt.trim(),
-                                          sourceConstellation: name,
-                                          sourceConstellationConfidence: profile.confidenceScore,
-                                        })
-                                      }}
-                                      style={{
-                                        marginTop: '14px', background: 'none',
-                                        border: '1px solid #a0783040', color: '#a07830',
-                                        fontSize: '10px', cursor: 'pointer', padding: '5px 12px',
-                                        borderRadius: '5px', fontFamily: 'inherit',
-                                        display: 'flex', alignItems: 'center', gap: '5px',
-                                      }}
-                                    >
-                                      ✦ Create Artwork
-                                    </button>
+                                  {profile.artwork.length > 0 && (
+                                    <div style={{ marginTop: '14px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                      {profile.artwork.slice(0, 3).map(a => (
+                                        <img
+                                          key={a.id}
+                                          src={a.url}
+                                          alt={a.title}
+                                          onClick={() => setCaseTab('artwork')}
+                                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '3px', border: '1px solid var(--border-0)', cursor: 'pointer' }}
+                                          onError={e => { e.target.style.display = 'none' }}
+                                        />
+                                      ))}
+                                      {profile.artwork.length > 3 && (
+                                        <button
+                                          onClick={() => setCaseTab('artwork')}
+                                          style={{ width: '48px', height: '48px', background: 'var(--bg-2)', border: '1px solid var(--border-0)', borderRadius: '3px', cursor: 'pointer', color: 'var(--text-5)', fontSize: '9px', fontFamily: 'inherit' }}
+                                        >
+                                          +{profile.artwork.length - 3}
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -444,6 +447,72 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                       <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px' }}>{d.status || 'draft'}</p>
                                     </div>
                                   ))}
+                                </div>
+                              )}
+
+                              {/* Artwork */}
+                              {caseTab === 'artwork' && (
+                                <div>
+                                  {profile.artwork.length === 0 ? (
+                                    <div>
+                                      <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginBottom: '10px' }}>
+                                        No artwork generated from this constellation yet.
+                                      </p>
+                                      {onOpenStudio && (
+                                        <button
+                                          onClick={() => {
+                                            const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
+                                            const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
+                                            const prompt = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
+                                            onOpenStudio({ prompt: prompt.trim(), sourceConstellation: name, sourceConstellationConfidence: profile.confidenceScore })
+                                          }}
+                                          style={{
+                                            background: 'none', border: '1px solid #a0783040',
+                                            color: '#a07830', fontSize: '10px', cursor: 'pointer',
+                                            padding: '5px 12px', borderRadius: '5px', fontFamily: 'inherit',
+                                          }}
+                                        >
+                                          ✦ Create First Artwork
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                                        {profile.artwork.map(a => (
+                                          <div
+                                            key={a.id}
+                                            style={{ cursor: 'pointer', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-0)' }}
+                                            onClick={() => window.open(a.url, '_blank', 'noopener')}
+                                          >
+                                            <img
+                                              src={a.url}
+                                              alt={a.title}
+                                              style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }}
+                                              onError={e => { e.target.style.display = 'none' }}
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                      {onOpenStudio && (
+                                        <button
+                                          onClick={() => {
+                                            const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
+                                            const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
+                                            const prompt = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
+                                            onOpenStudio({ prompt: prompt.trim(), sourceConstellation: name, sourceConstellationConfidence: profile.confidenceScore })
+                                          }}
+                                          style={{
+                                            background: 'none', border: '1px solid #a0783040',
+                                            color: '#a07830', fontSize: '10px', cursor: 'pointer',
+                                            padding: '5px 12px', borderRadius: '5px', fontFamily: 'inherit',
+                                          }}
+                                        >
+                                          ✦ Create More
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
