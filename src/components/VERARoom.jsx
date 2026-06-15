@@ -26,7 +26,7 @@ const VERA_TABS = [
   { id: 'observations',  label: 'Observations' },
 ]
 
-export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], apiKey, onConnectClaude, isMobile, voiceMode }) {
+export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], apiKey, onConnectClaude, isMobile, voiceMode, onOpenStudio }) {
   const [tab,                   setTab]                   = useState('patterns')
   const [patterns,              setPatterns]              = useState(null)
   const [analyzing,             setAnalyzing]             = useState(false)
@@ -342,6 +342,25 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                     <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginTop: '8px' }}>
                                       No commands tagged to this constellation yet.
                                     </p>
+                                  )}
+                                  {onOpenStudio && (
+                                    <button
+                                      onClick={() => {
+                                        const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
+                                        const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
+                                        const prefill = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
+                                        onOpenStudio(prefill.trim())
+                                      }}
+                                      style={{
+                                        marginTop: '14px', background: 'none',
+                                        border: '1px solid #a0783040', color: '#a07830',
+                                        fontSize: '10px', cursor: 'pointer', padding: '5px 12px',
+                                        borderRadius: '5px', fontFamily: 'inherit',
+                                        display: 'flex', alignItems: 'center', gap: '5px',
+                                      }}
+                                    >
+                                      ✦ Create Artwork
+                                    </button>
                                   )}
                                 </div>
                               )}
