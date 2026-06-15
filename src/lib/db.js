@@ -235,6 +235,7 @@ export async function createInstitutionEvent(uid, data) {
     actor:           data.actor           || uid,
     relatedEntityId: data.relatedEntityId || null,
     constellation:   data.constellation   || null,
+    causedByEventId: data.causedByEventId || null,
     createdAt:       serverTimestamp(),
   })
   return ref.id
@@ -668,13 +669,14 @@ export async function denyCommand(uid, id, commandTitle, rationale) {
   })
 }
 
-export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal }) {
+export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal, causedByEventId }) {
   const criteriaNote = criteriaTotal > 0 ? ` · ${criteriaAchieved}/${criteriaTotal} criteria` : ''
   const eventId = await createInstitutionEvent(uid, {
     eventType:       'command_completed',
     title:           `Command completed: ${commandTitle}${verdict ? ` — ${verdict}` : ''}${criteriaNote}`,
     description:     result || completionProof || 'Command completed.',
     relatedEntityId: id,
+    causedByEventId: causedByEventId || null,
   })
   await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
     status:           'completed',

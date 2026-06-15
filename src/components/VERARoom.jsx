@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { clusterObservations, analyzePatterns } from '../lib/veraAnalysis'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import RoomSubNav from './RoomSubNav'
@@ -383,54 +383,78 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                               )}
 
                               {/* Timeline */}
-                              {caseTab === 'timeline' && (
-                                <div>
-                                  {profile.timeline.length === 0 ? (
-                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-                                      No timeline events yet. Tag observations and execute commands to begin the record.
-                                    </p>
-                                  ) : (
-                                    <div style={{ position: 'relative', paddingLeft: '16px' }}>
-                                      <div style={{ position: 'absolute', left: '5px', top: 0, bottom: 0, width: '1px', background: 'var(--border-1)' }} />
-                                      {profile.timeline.map((e, i) => {
-                                        const dot = {
-                                          observation_tagged: '#a07830',
-                                          artwork_created:    '#6366f1',
-                                          command_created:    '#3b82f6',
-                                          command_approved:   '#10b981',
-                                          command_completed:  '#10b981',
-                                          command_denied:     '#ef4444',
-                                          command_failed:     '#ef4444',
-                                          doctrine_updated:   '#f59e0b',
-                                        }[e.eventType] || 'var(--text-5)'
-                                        const date = e.createdAt instanceof Date
-                                          ? e.createdAt
-                                          : new Date(e.createdAt || 0)
-                                        return (
-                                          <div key={e.id || i} style={{ position: 'relative', marginBottom: '12px' }}>
-                                            <div style={{
-                                              position: 'absolute', left: '-12px', top: '3px',
-                                              width: '7px', height: '7px', borderRadius: '50%',
-                                              background: dot, flexShrink: 0,
-                                            }} />
-                                            <p style={{ color: 'var(--text-5)', fontSize: '8px', marginBottom: '2px', lineHeight: 1 }}>
-                                              {date.toLocaleDateString()} · {e.eventType.replace(/_/g, ' ')}
-                                            </p>
-                                            <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.4 }}>
-                                              {e.title}
-                                            </p>
-                                            {e.description && (
-                                              <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px', lineHeight: 1.4, fontStyle: 'italic' }}>
-                                                {e.description.slice(0, 100)}{e.description.length > 100 ? '…' : ''}
-                                              </p>
-                                            )}
-                                          </div>
-                                        )
-                                      })}
+                              {caseTab === 'timeline' && (() => {
+                                const DOT_COLORS = {
+                                  observation_tagged: '#a07830',
+                                  artwork_created:    '#6366f1',
+                                  command_created:    '#3b82f6',
+                                  command_approved:   '#10b981',
+                                  command_completed:  '#10b981',
+                                  command_denied:     '#ef4444',
+                                  command_failed:     '#ef4444',
+                                  doctrine_updated:   '#f59e0b',
+                                }
+
+                                // Build causality tree (max depth 1 in current schema)
+                                const childrenMap = new Map()
+                                const childIds = new Set()
+                                for (const ev of profile.timeline) {
+                                  if (ev.causedByEventId) {
+                                    childIds.add(ev.id)
+                                    const arr = childrenMap.get(ev.causedByEventId) || []
+                                    arr.push(ev)
+                                    childrenMap.set(ev.causedByEventId, arr)
+                                  }
+                                }
+                                const topLevel = profile.timeline.filter(ev => !childIds.has(ev.id))
+
+                                function renderEvent(ev, isChild, key) {
+                                  const dot = DOT_COLORS[ev.eventType] || 'var(--text-5)'
+                                  const date = ev.createdAt instanceof Date ? ev.createdAt : new Date(ev.createdAt || 0)
+                                  return (
+                                    <div key={key} style={{ position: 'relative', marginBottom: isChild ? '8px' : '12px', marginLeft: isChild ? '16px' : '0' }}>
+                                      <div style={{
+                                        position: 'absolute', left: '-12px', top: isChild ? '4px' : '3px',
+                                        width: isChild ? '5px' : '7px', height: isChild ? '5px' : '7px',
+                                        borderRadius: '50%', background: dot, opacity: isChild ? 0.75 : 1,
+                                      }} />
+                                      <p style={{ color: 'var(--text-5)', fontSize: '8px', marginBottom: '2px', lineHeight: 1 }}>
+                                        {date.toLocaleDateString()} · {ev.eventType.replace(/_/g, ' ')}
+                                      </p>
+                                      <p style={{ color: isChild ? 'var(--text-3)' : 'var(--text-2)', fontSize: '11px', lineHeight: 1.4 }}>
+                                        {ev.title}
+                                      </p>
+                                      {ev.description && (
+                                        <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                          {ev.description.slice(0, 100)}{ev.description.length > 100 ? '…' : ''}
+                                        </p>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                              )}
+                                  )
+                                }
+
+                                return (
+                                  <div>
+                                    {profile.timeline.length === 0 ? (
+                                      <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                                        No timeline events yet. Tag observations and execute commands to begin the record.
+                                      </p>
+                                    ) : (
+                                      <div style={{ position: 'relative', paddingLeft: '16px' }}>
+                                        <div style={{ position: 'absolute', left: '5px', top: 0, bottom: 0, width: '1px', background: 'var(--border-1)' }} />
+                                        {topLevel.map((ev, i) => (
+                                          <Fragment key={ev.id || i}>
+                                            {renderEvent(ev, false, ev.id || i)}
+                                            {(childrenMap.get(ev.id) || []).map((child, j) =>
+                                              renderEvent(child, true, child.id || `${i}-${j}`)
+                                            )}
+                                          </Fragment>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
 
                               {/* Observations */}
                               {caseTab === 'observations' && (

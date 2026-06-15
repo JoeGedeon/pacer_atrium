@@ -656,12 +656,16 @@ export default function App() {
     }
     const artifactId = await createStudioArtifact(user.uid, { ...data, url: permanentUrl })
     if (data.sourceConstellation) {
+      const triggerEvent = institutionEvents.find(e =>
+        e.eventType === 'observation_tagged' && e.constellation === data.sourceConstellation
+      )
       createInstitutionEvent(user.uid, {
         eventType:       'artwork_created',
         title:           `Artwork created: ${data.title || data.sourceConstellation}`,
         description:     data.prompt ? data.prompt.slice(0, 100) : null,
         relatedEntityId: artifactId,
         constellation:   data.sourceConstellation,
+        causedByEventId: triggerEvent?.id || null,
       }).catch(() => {})
     }
   }
@@ -849,7 +853,10 @@ export default function App() {
 
   async function completeCommandRecord(id, title, proof) {
     if (!user) return
-    await completeCommand(user.uid, id, title, proof)
+    const approvedEvent = institutionEvents.find(e =>
+      e.eventType === 'command_approved' && e.relatedEntityId === id
+    )
+    await completeCommand(user.uid, id, title, { ...proof, causedByEventId: approvedEvent?.id || null })
   }
 
   async function failCommandRecord(id, title, reason) {
