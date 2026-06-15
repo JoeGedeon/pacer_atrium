@@ -1160,7 +1160,15 @@ export default function KELRoom({
       .filter(c => c.status === 'completed' && ['Success', 'Partial Success'].includes(c.verdict) && c.patternTag)
       .map(c => c.patternTag)
   )
-  const unresolvedObs = validObs.filter(o => !(o.destination && resolvedConstellations.has(o.constellation)))
+  const approvedThreadObsIds = new Set(
+    threads
+      .filter(t => t.decision === 'approved')
+      .flatMap(t => t.observationIds || [])
+  )
+  const unresolvedObs = validObs.filter(o =>
+    !(o.id && approvedThreadObsIds.has(o.id)) &&
+    !(o.destination && resolvedConstellations.has(o.constellation))
+  )
 
   const canRead = !!apiKey && validObs.length >= 2
 
@@ -1174,7 +1182,7 @@ export default function KELRoom({
     try {
       const result = await requestKELRecommendation(
         validObs, apiKey,
-        { threads, commands, localApprovedRecs: localApprovedRecsRef.current }
+        { threads, commands, localApprovedRecs: localApprovedRecsRef.current, approvedThreadObsIds }
       )
       setRec(result)
     } catch (e) {
