@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { requestKELRecommendation } from '../lib/kelAnalysis'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import RoomSubNav from './RoomSubNav'
@@ -964,6 +964,46 @@ export default function KELRoom({
   const [kelSpeaking,    setKelSpeaking]    = useState(false)
   const [obsIdsAtRequest, setObsIdsAtRequest] = useState([])
 
+  // Guard: track command ids submitted for completion but not yet confirmed by Firestore.
+  // Blocks handleRequest from reading stale status before onSnapshot cycles back.
+  const pendingClosuresRef                      = useRef(new Set())
+  const [hasPendingClosures, setHasPendingClosures] = useState(false)
+
+  useEffect(() => {
+    if (!hasPendingClosures || pendingClosuresRef.current.size === 0) return
+    const confirmed = commands.filter(
+      c => pendingClosuresRef.current.has(c.id) && ['completed', 'failed'].includes(c.status)
+    )
+    if (confirmed.length > 0) {
+      confirmed.forEach(c => pendingClosuresRef.current.delete(c.id))
+      setHasPendingClosures(pendingClosuresRef.current.size > 0)
+    }
+  }, [commands, hasPendingClosures])
+
+  async function handleCompleteCommand(id, title, proof) {
+    pendingClosuresRef.current.add(id)
+    setHasPendingClosures(true)
+    try {
+      await onCompleteCommand(id, title, proof)
+    } catch (e) {
+      pendingClosuresRef.current.delete(id)
+      setHasPendingClosures(pendingClosuresRef.current.size > 0)
+      throw e
+    }
+  }
+
+  async function handleFailCommand(id, title, reason) {
+    pendingClosuresRef.current.add(id)
+    setHasPendingClosures(true)
+    try {
+      await onFailCommand(id, title, reason)
+    } catch (e) {
+      pendingClosuresRef.current.delete(id)
+      setHasPendingClosures(pendingClosuresRef.current.size > 0)
+      throw e
+    }
+  }
+
   const pendingReviews  = kelReviews.filter(r => r.status === 'pending')
   const commandsPending = commands.filter(c => c.status === 'pending_approval').length
 
@@ -978,7 +1018,7 @@ export default function KELRoom({
   const canRead  = !!apiKey && validObs.length >= 2
 
   async function handleRequest() {
-    if (!canRead || reading) return
+    if (!canRead || reading || hasPendingClosures) return
     setReading(true)
     setKelError(null)
     setRec(null)
@@ -1032,8 +1072,8 @@ export default function KELRoom({
           onSubmitForGate={onSubmitForGate}
           onApproveCommand={onApproveCommand}
           onDenyCommand={onDenyCommand}
-          onCompleteCommand={onCompleteCommand}
-          onFailCommand={onFailCommand}
+          onCompleteCommand={handleCompleteCommand}
+          onFailCommand={handleFailCommand}
           onArchiveCommand={onArchiveCommand}
           onUpdateCommand={onUpdateCommand}
         />
@@ -1067,6 +1107,15 @@ export default function KELRoom({
             </p>
           )}
 
+          {hasPendingClosures && (
+            <div className="flex items-center gap-3" style={{ paddingTop: '8px', marginBottom: '12px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b', animation: 'pulse-fade 1.5s infinite' }} />
+              <p style={{ color: 'var(--text-4)', fontSize: '12px', fontStyle: 'italic' }}>
+                Waiting for Firestore to confirm command closure…
+              </p>
+            </div>
+          )}
+
           {canRead && !rec && !reading && !kelError && (
             <div style={{ maxWidth: '520px' }}>
               <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
@@ -1076,7 +1125,13 @@ export default function KELRoom({
                 K.E.L. will read the observations and return one recommendation with reasoning.
                 The decision belongs to you — K.E.L. records nothing.
               </p>
-              <button onClick={handleRequest} style={{ ...BTN_PRIMARY, fontSize: '13px', padding: '10px 20px' }}>
+              <button onClick={handleRequest}
+                disabled={hasPendingClosures}
+                style={{
+                  ...BTN_PRIMARY, fontSize: '13px', padding: '10px 20px',
+                  opacity: hasPendingClosures ? 0.4 : 1,
+                  cursor: hasPendingClosures ? 'default' : 'pointer',
+                }}>
                 Request Recommendation
               </button>
             </div>
