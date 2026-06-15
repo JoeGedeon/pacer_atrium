@@ -50,6 +50,7 @@ import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isToke
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import { uploadVoiceSeed } from './lib/voiceUpload'
+import { uploadStudioArtifactImage } from './lib/imageUpload'
 import PACERVoice from './components/PACERVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
@@ -637,7 +638,15 @@ export default function App() {
 
   async function saveStudioArtifact(data) {
     if (!user) return
-    await createStudioArtifact(user.uid, data)
+    let permanentUrl = data.url
+    try {
+      permanentUrl = await uploadStudioArtifactImage(data.url, user.uid)
+    } catch (err) {
+      // Storage upload failed — save with the DALL-E URL as fallback.
+      // The Registry record exists; the image URL may expire after ~1hr.
+      console.warn('[Studio] Storage upload failed, saving DALL-E URL as fallback:', err?.message)
+    }
+    await createStudioArtifact(user.uid, { ...data, url: permanentUrl })
   }
 
   async function plantVoiceSeed(audioBlob) {
