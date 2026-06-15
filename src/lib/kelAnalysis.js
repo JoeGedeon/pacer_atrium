@@ -29,31 +29,72 @@ Return valid JSON only — no markdown, no explanation outside the JSON:
   "cited": ["brief excerpt from observation 1", "brief excerpt from observation 2"]
 }`
 
-export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [] } = {}) {
+export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [], localApprovedRecs = [] } = {}) {
   if (!apiKey || observations.length < 2) return null
 
-  const context = observations
-    .filter(o => o.text && typeof o.text === 'string')
-    .slice(0, 30)
-    .map((o, i) => {
-      const parts = [`${i + 1}. [${o.type}] ${o.text}`]
-      if (o.constellation) parts.push(`  constellation: ${o.constellation}`)
-      if (o.destination)   parts.push(`  routed to: ${o.destination}`)
-      return parts.join('\n')
-    })
-    .join('\n\n')
+  // Constellations that have at least one completed+successful command are resolved.
+  // Observations routed to a resolved constellation are historical evidence, not open work.
+  const resolvedConstellations = new Set(
+    commands
+      .filter(c => c.status === 'completed' && ['Success', 'Partial Success'].includes(c.verdict) && c.patternTag)
+      .map(c => c.patternTag)
+  )
 
-  // Build prior decision context so KEL does not repeat approved work
-  const approvedThreads  = threads.filter(t => t.decision === 'approved')
-  const activeCommands   = commands.filter(c => ['drafted','analyzing','planned','pending_approval','approved','in_progress'].includes(c.status))
-  const closedCommands   = commands.filter(c => ['completed','failed'].includes(c.status))
+  const textObs     = observations.filter(o => o.text && typeof o.text === 'string' && o.status !== 'seed')
+  const activeObs   = textObs.filter(o => !(o.destination && resolvedConstellations.has(o.constellation)))
+  const historicalObs = textObs.filter(o => o.destination && resolvedConstellations.has(o.constellation))
+
+  if (activeObs.length < 2 && textObs.length < 2) return null
+
+  // Use active observations as the primary feed; fall back to all text obs if active < 2
+  const feedObs = activeObs.length >= 2 ? activeObs : textObs
+
+  // Compress observations: group by constellation so K.E.L. sees patterns, not repeated raw text.
+  // Untagged observations appear individually. Tagged ones collapse to one entry per constellation.
+  const constellationGroups = {}
+  const untaggedObs = []
+  for (const o of feedObs.slice(0, 30)) {
+    if (o.constellation) {
+      if (!constellationGroups[o.constellation]) constellationGroups[o.constellation] = []
+      constellationGroups[o.constellation].push(o)
+    } else {
+      untaggedObs.push(o)
+    }
+  }
+
+  const constellationLines = Object.entries(constellationGroups).map(([name, obs]) => {
+    const routed   = obs.filter(o => o.destination)
+    const excerpt  = obs[0].text.slice(0, 120)
+    const extra    = obs.length > 1 ? ` (+${obs.length - 1} more observation${obs.length > 2 ? 's' : ''})` : ''
+    const routeTag = routed.length > 0 ? ` · routed to: ${[...new Set(routed.map(o => o.destination))].join(', ')}` : ''
+    return `◈ ${name} (${obs.length} obs${routeTag})\n  "${excerpt}${obs[0].text.length > 120 ? '…' : ''}"${extra}`
+  })
+
+  const untaggedLines = untaggedObs.slice(0, 10).map((o, i) => {
+    const parts = [`${i + 1}. [${o.type}] ${o.text.slice(0, 150)}${o.text.length > 150 ? '…' : ''}`]
+    if (o.destination) parts.push(`  routed to: ${o.destination}`)
+    return parts.join('\n')
+  })
+
+  const context = [
+    constellationLines.length > 0 ? `Named constellations:\n${constellationLines.join('\n\n')}` : '',
+    untaggedLines.length > 0 ? `Untagged observations:\n${untaggedLines.join('\n\n')}` : '',
+  ].filter(Boolean).join('\n\n')
+
+  const activeCommands = commands.filter(c => ['drafted','analyzing','planned','pending_approval','approved','in_progress'].includes(c.status))
+  const closedCommands = commands.filter(c => ['completed','failed'].includes(c.status))
 
   let priorContext = ''
-  if (approvedThreads.length > 0) {
+
+  // Merge Firestore-persisted approvals + session-local approvals (bridges async listener gap)
+  const persistedApprovals = threads.filter(t => t.decision === 'approved').map(t => t.recommendation)
+  const allApprovedRecs = [...new Set([...persistedApprovals, ...localApprovedRecs])]
+  if (allApprovedRecs.length > 0) {
     priorContext += `\n\nPrior approved decisions — do not repeat these:\n${
-      approvedThreads.map((t, i) => `${i + 1}. ${t.recommendation}`).join('\n')
+      allApprovedRecs.map((r, i) => `${i + 1}. ${r}`).join('\n')
     }`
   }
+
   if (activeCommands.length > 0) {
     priorContext += `\n\nActive commands currently in flight:\n${
       activeCommands.map((c, i) => `${i + 1}. [${c.status}] ${c.title}${c.intent ? ': ' + c.intent.slice(0, 120) : ''}`).join('\n')
@@ -62,6 +103,13 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
   if (closedCommands.length > 0) {
     priorContext += `\n\nClosed commands — these are COMPLETE, do not generate evidence review recommendations for these:\n${
       closedCommands.map((c, i) => `${i + 1}. [${c.status}] ${c.title}${c.result ? ' — ' + c.result.slice(0, 80) : ''}`).join('\n')
+    }`
+  }
+
+  // Historical resolved observations — for context only, not open work
+  if (historicalObs.length > 0) {
+    priorContext += `\n\nResolved observations (already routed and completed — context only, not open work):\n${
+      historicalObs.slice(0, 10).map((o, i) => `${i + 1}. ${o.text.slice(0, 80)}`).join('\n')
     }`
   }
 
@@ -74,7 +122,7 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
       precedentMap[c.patternTag].push(c)
     })
   if (Object.keys(precedentMap).length > 0) {
-    priorContext += `\n\nInstitutional precedent — patterns with proven resolution (reference these before inventing new approaches):\n${
+    priorContext += `\n\nInstitutional precedent — patterns with proven resolution (reference before inventing new approaches):\n${
       Object.entries(precedentMap).map(([tag, cmds]) => {
         const best = cmds.find(c => c.verdict === 'Success') || cmds[0]
         const crit = best.criteriaTotal > 0 ? `, criteria: ${best.criteriaAchieved}/${best.criteriaTotal}` : ''
@@ -89,7 +137,7 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 600,
     system: SYSTEM,
-    messages: [{ role: 'user', content: `Observations:\n\n${context}${priorContext}` }],
+    messages: [{ role: 'user', content: `Active observations (${feedObs.length} unresolved):\n\n${context}${priorContext}` }],
   }, apiKey)
 
   const raw = data.content?.[0]?.text || ''
