@@ -48,6 +48,23 @@ const DOMAIN_COLORS = {
   'Archive':                '#6b7280',
 }
 
+const CONSTELLATIONS = [
+  'Brand Voice Emergence',
+  'Cognitive Loop Closure',
+  'Distributed Continuity',
+  'Governance Before Growth',
+  'Infrastructure Fortification',
+  'Institutional Memory',
+  'Interface as Ritual',
+  'Narrative Threshold',
+  'Operational Trust',
+  'Play Button Requirement',
+  'Premature Expansion',
+  'Theater/OpsCore Doctrine',
+  'Threshold Manifestation',
+  'Visibility Gap',
+]
+
 const FLEETFLOW_SEED = {
   title:            'FleetFlow Architecture Audit',
   intent:           'Audit the FleetFlow monolithic source and produce a modular refactor plan. The current index.html contains all business logic, UI, auth, and data operations in a single file. This command authorizes VERA to audit the structure, PACER to draft a modular extraction strategy, and K.E.L. to execute approved file operations after Human Gate review.',
@@ -111,6 +128,7 @@ function NewCommandForm({ onSubmit, onCancel, seedData }) {
     title: '', intent: '', priority: 'standard', riskLevel: 'medium',
     targetSystem: 'pacer_atrium', assignedAgent: 'pacer',
     supportingAgents: '', executionMode: 'review', expectedOutput: '',
+    patternTag: '',
     ...(seedData || {}),
   })
 
@@ -191,7 +209,13 @@ function NewCommandForm({ onSubmit, onCancel, seedData }) {
       <label style={LABEL_S}>Expected Output</label>
       <textarea value={form.expectedOutput} onChange={e => set('expectedOutput', e.target.value)}
         placeholder="What does success look like? What should be delivered?"
-        rows={3} style={{ ...INPUT_S, resize: 'vertical', marginBottom: '20px' }} />
+        rows={3} style={{ ...INPUT_S, resize: 'vertical' }} />
+
+      <label style={LABEL_S}>Constellation Pattern (optional)</label>
+      <select value={form.patternTag} onChange={e => set('patternTag', e.target.value)} style={{ ...SELECT_S, marginBottom: '20px' }}>
+        <option value="">— No Pattern —</option>
+        {CONSTELLATIONS.map(c => <option key={c} value={c}>{c}</option>)}
+      </select>
 
       <div style={{ display: 'flex', gap: '10px' }}>
         <button onClick={handleSubmit} disabled={!canSubmit}
@@ -538,6 +562,158 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
   )
 }
 
+// ── EvidenceLedger ────────────────────────────────────────────────────────────
+
+function EvidenceLedger({ commands, isMobile }) {
+  const active    = commands.filter(c => ['drafted','analyzing','planned','approved','in_progress'].includes(c.status)).length
+  const pending   = commands.filter(c => c.status === 'pending_approval').length
+  const completed = commands.filter(c => c.status === 'completed').length
+  const failed    = commands.filter(c => c.status === 'failed').length
+
+  const gateTotal    = commands.filter(c => ['approved','denied','in_progress','completed','failed'].includes(c.status)).length
+  const gateApproved = commands.filter(c => ['approved','in_progress','completed'].includes(c.status)).length
+  const governanceScore   = gateTotal > 0 ? Math.round((gateApproved / gateTotal) * 100) : null
+  const execReliability   = (completed + failed) > 0 ? Math.round((completed / (completed + failed)) * 100) : null
+
+  // Aggregate by patternTag
+  const patternMap = {}
+  commands.forEach(cmd => {
+    const tag = cmd.patternTag
+    if (!tag) return
+    if (!patternMap[tag]) patternMap[tag] = { tag, total: 0, completed: 0, failed: 0, archived: 0, lastTitle: null, lastOutcome: null }
+    patternMap[tag].total++
+    if (cmd.status === 'completed') {
+      patternMap[tag].completed++
+      patternMap[tag].lastOutcome = 'Completed'
+      patternMap[tag].lastTitle = cmd.title
+    } else if (cmd.status === 'failed') {
+      patternMap[tag].failed++
+      if (!patternMap[tag].lastTitle) { patternMap[tag].lastOutcome = 'Failed'; patternMap[tag].lastTitle = cmd.title }
+    } else if (cmd.status === 'archived') {
+      patternMap[tag].archived++
+    }
+  })
+
+  const patterns = Object.values(patternMap).sort((a, b) => b.total - a.total)
+  const mostActive     = patterns[0]?.tag || null
+  const highestSuccess = [...patterns].filter(p => p.completed > 0)
+    .sort((a, b) => (b.completed / b.total) - (a.completed / a.total))[0]?.tag || null
+  const highestFailure = [...patterns].filter(p => p.failed > 0)
+    .sort((a, b) => b.failed - a.failed)[0]?.tag || null
+
+  const padX = isMobile ? 'px-4' : 'px-8'
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${padX} py-6`}>
+      <div style={{ maxWidth: '680px' }}>
+
+        {/* Institutional Pulse */}
+        <div style={{
+          background: 'var(--bg-1)', border: '1px solid var(--border-1)',
+          borderRadius: '12px', padding: '20px 24px', marginBottom: '28px',
+        }}>
+          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+            Institutional Pulse
+          </p>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'Active',       value: active,    color: '#3b82f6' },
+              { label: 'Pending Gate', value: pending,   color: '#f59e0b' },
+              { label: 'Completed',    value: completed, color: '#10b981' },
+              { label: 'Failed',       value: failed,    color: '#ef4444' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ textAlign: 'center', flex: 1, minWidth: '60px' }}>
+                <p style={{ color, fontSize: '22px', fontWeight: 700, lineHeight: 1, marginBottom: '4px' }}>{value}</p>
+                <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '16px', paddingTop: '14px', borderTop: '1px solid var(--border-0)', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px' }}>Governance Score</p>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: governanceScore === null ? 'var(--text-6)' : governanceScore >= 80 ? '#10b981' : '#f59e0b' }}>
+                {governanceScore !== null ? `${governanceScore}%` : '—'}
+              </p>
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px' }}>Execution Reliability</p>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: execReliability === null ? 'var(--text-6)' : execReliability >= 80 ? '#10b981' : '#f59e0b' }}>
+                {execReliability !== null ? `${execReliability}%` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {(mostActive || highestSuccess || highestFailure) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', paddingTop: '12px', borderTop: '1px solid var(--border-0)', marginTop: '12px' }}>
+              {mostActive     && <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>Most Active: <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>{mostActive}</span></p>}
+              {highestSuccess && <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>Highest Success: <span style={{ color: '#10b981', fontWeight: 600 }}>{highestSuccess}</span></p>}
+              {highestFailure && <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>Highest Failure: <span style={{ color: '#ef4444', fontWeight: 600 }}>{highestFailure}</span></p>}
+            </div>
+          )}
+        </div>
+
+        {/* Evidence Ledger */}
+        <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '12px' }}>
+          Evidence Ledger
+        </p>
+
+        {patterns.length === 0 ? (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-0)', borderRadius: '8px', padding: '20px' }}>
+            <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7, marginBottom: '8px' }}>
+              No pattern evidence yet.
+            </p>
+            <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.6 }}>
+              When you create commands and tag them with a Constellation Pattern, the ledger builds a record:
+              how many times a pattern generated a command, how many succeeded, which failed, and what the most recent outcome was.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {patterns.map(p => {
+              const successRate = p.total > 0 ? Math.round((p.completed / p.total) * 100) : null
+              const srColor = successRate === null ? 'var(--text-6)'
+                : successRate >= 80 ? '#10b981'
+                : successRate >= 50 ? '#f59e0b'
+                : '#ef4444'
+              return (
+                <div key={p.tag} style={{
+                  background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                  borderLeft: '4px solid #6366f1', borderRadius: '0 10px 10px 0',
+                  padding: '16px 20px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 700 }}>{p.tag}</p>
+                    {successRate !== null && (
+                      <span style={{
+                        background: srColor + '18', border: `1px solid ${srColor}30`,
+                        color: srColor, fontSize: '10px', fontWeight: 700,
+                        borderRadius: '5px', padding: '3px 10px', flexShrink: 0,
+                      }}>{successRate}% success</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: p.lastTitle ? '8px' : 0 }}>
+                    <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{p.total} command{p.total !== 1 ? 's' : ''}</span>
+                    {p.completed > 0 && <span style={{ color: '#10b981', fontSize: '10px' }}>✓ {p.completed} completed</span>}
+                    {p.failed    > 0 && <span style={{ color: '#ef4444', fontSize: '10px' }}>✕ {p.failed} failed</span>}
+                    {p.archived  > 0 && <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{p.archived} archived</span>}
+                  </div>
+                  {p.lastTitle && (
+                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.04em' }}>
+                      Most Recent: <span style={{ color: 'var(--text-4)' }}>{p.lastTitle}</span> — {p.lastOutcome}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
 // ── CommandsWorkbench ──────────────────────────────────────────────────────────
 
 function CommandsWorkbench({
@@ -752,6 +928,7 @@ export default function KELRoom({
 
   const kelTabs = [
     { id: 'commands',  label: `⚡ Commands${commandsPending > 0 ? ` · ${commandsPending}` : ''}` },
+    { id: 'evidence',  label: '⬡ Evidence' },
     { id: 'recommend', label: '◎ Recommend' },
     { id: 'reviews',   label: `📋 Reviews${pendingReviews.length > 0 ? ` · ${pendingReviews.length}` : ''}` },
   ]
@@ -819,6 +996,11 @@ export default function KELRoom({
           onArchiveCommand={onArchiveCommand}
           onUpdateCommand={onUpdateCommand}
         />
+      )}
+
+      {/* ── Evidence tab ── */}
+      {kelTab === 'evidence' && (
+        <EvidenceLedger commands={commands} isMobile={isMobile} />
       )}
 
       {/* ── Recommend tab ── */}

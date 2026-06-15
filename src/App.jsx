@@ -148,6 +148,19 @@ export default function App() {
   const [googleReconnecting, setGoogleReconnecting]   = useState(false)
   const [googleReconnectFailed, setGoogleReconnectFailed] = useState(false)
 
+  // Institution-wide command status — three zoom levels: Atrium header (pulse), Morning Brief (operational), KEL Evidence (investigation)
+  const institutionStatus = useMemo(() => {
+    const active    = commands.filter(c => ['drafted','analyzing','planned','approved','in_progress'].includes(c.status)).length
+    const pending   = commands.filter(c => c.status === 'pending_approval').length
+    const completed = commands.filter(c => c.status === 'completed').length
+    const failed    = commands.filter(c => c.status === 'failed').length
+    const gateTotal    = commands.filter(c => ['approved','denied','in_progress','completed','failed'].includes(c.status)).length
+    const gateApproved = commands.filter(c => ['approved','in_progress','completed'].includes(c.status)).length
+    const governanceScore     = gateTotal > 0 ? Math.round((gateApproved / gateTotal) * 100) : null
+    const executionReliability = (completed + failed) > 0 ? Math.round((completed / (completed + failed)) * 100) : null
+    return { active, pending, completed, failed, governanceScore, executionReliability, total: commands.length }
+  }, [commands])
+
   // Builder readiness derives from thread layer (primary) or kel_decisions (fallback)
   // Unlocked by Human Gate approval on any KEL recommendation — not a separate review ceremony
   const builderReadiness = useMemo(() => {
@@ -892,6 +905,7 @@ export default function App() {
             debugUid={user?.uid}
             debugEmail={user?.email}
             debugProjectId={import.meta.env.VITE_FIREBASE_PROJECT_ID}
+            institutionStatus={institutionStatus}
           />
         )}
 
