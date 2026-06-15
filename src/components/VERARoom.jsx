@@ -50,13 +50,22 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
     const critAchieved = completed.reduce((s, c) => s + (c.criteriaAchieved || 0), 0)
     const successRate  = completed.length > 0 ? Math.round((successes / completed.length) * 100) : null
     const criteriaRate = critTotal > 0 ? Math.round((critAchieved / critTotal) * 100) : null
-    let confidence = 'no data'
-    if (completed.length > 0) {
-      if (successes > 0 && (criteriaRate === null || criteriaRate === 100)) confidence = 'rising'
-      else if (successes > 0) confidence = 'stable'
-      else confidence = 'falling'
-    }
-    return { name, obs, total: cmds.length, active, pending, completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate, confidence }
+
+    // Algorithmic confidence score (0-100) weighted across four signals
+    const obsScore      = Math.min(obs / 20, 1) * 100
+    const successScore  = successRate ?? 0
+    const criteriaScore = criteriaRate ?? (completed.length > 0 ? 50 : 0)
+    const repeatScore   = Math.min(completed.length / 5, 1) * 100
+    const confidenceScore = completed.length === 0 && obs === 0 ? null
+      : Math.round(0.15 * obsScore + 0.35 * successScore + 0.30 * criteriaScore + 0.20 * repeatScore)
+
+    const confidenceLabel = confidenceScore === null ? 'no data'
+      : confidenceScore >= 80 ? 'high'
+      : confidenceScore >= 60 ? 'moderate'
+      : confidenceScore >= 40 ? 'emerging'
+      : 'low'
+
+    return { name, obs, total: cmds.length, active, pending, completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate, confidenceScore, confidenceLabel }
   }
 
   useEffect(() => {
@@ -263,12 +272,17 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                               )}
                               <div>
                                 <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Confidence</p>
-                                <p style={{ color: confColor[profile.confidence], fontSize: '11px', fontWeight: 700 }}>
-                                  {profile.confidence === 'rising'   && '↑ '}
-                                  {profile.confidence === 'stable'   && '→ '}
-                                  {profile.confidence === 'falling'  && '↓ '}
-                                  {profile.confidence}
-                                </p>
+                                {profile.confidenceScore !== null ? (
+                                  <div>
+                                    <p style={{
+                                      color: profile.confidenceScore >= 80 ? '#10b981' : profile.confidenceScore >= 60 ? '#06b6d4' : profile.confidenceScore >= 40 ? '#f59e0b' : '#ef4444',
+                                      fontSize: '15px', fontWeight: 700, lineHeight: 1, marginBottom: '2px',
+                                    }}>{profile.confidenceScore}%</p>
+                                    <p style={{ color: 'var(--text-6)', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{profile.confidenceLabel}</p>
+                                  </div>
+                                ) : (
+                                  <p style={{ color: 'var(--text-6)', fontSize: '11px' }}>no data</p>
+                                )}
                               </div>
                             </div>
 

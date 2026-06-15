@@ -18,6 +18,7 @@ Constraints you must honor:
 - Ground every recommendation in specific observations you can cite.
 - If prior approved decisions or active commands are provided, check them FIRST. Do not repeat a recommendation that is already approved, in progress, or has an active command. Find the next highest-leverage item the institution has not yet addressed.
 - If everything you would recommend is already approved or in progress, say so directly: report the most important outstanding action — e.g., "Execute the approved command", "Review evidence for the in-progress command", or "Await outcome of approved work before next recommendation."
+- If institutional precedent is provided, check it BEFORE generating a new recommendation. When a pattern has a proven resolution, recommend the next step in that pattern's evolution — not a repeat of the resolved step. Cite the precedent in your reasoning. Referencing proven institutional history is stronger than generating a novel suggestion.
 
 Return valid JSON only — no markdown, no explanation outside the JSON:
 {
@@ -61,6 +62,26 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
   if (closedCommands.length > 0) {
     priorContext += `\n\nClosed commands — these are COMPLETE, do not generate evidence review recommendations for these:\n${
       closedCommands.map((c, i) => `${i + 1}. [${c.status}] ${c.title}${c.result ? ' — ' + c.result.slice(0, 80) : ''}`).join('\n')
+    }`
+  }
+
+  // Institutional precedent — patterns with proven resolution
+  const precedentMap = {}
+  commands
+    .filter(c => c.status === 'completed' && c.patternTag && ['Success', 'Partial Success'].includes(c.verdict))
+    .forEach(c => {
+      if (!precedentMap[c.patternTag]) precedentMap[c.patternTag] = []
+      precedentMap[c.patternTag].push(c)
+    })
+  if (Object.keys(precedentMap).length > 0) {
+    priorContext += `\n\nInstitutional precedent — patterns with proven resolution (reference these before inventing new approaches):\n${
+      Object.entries(precedentMap).map(([tag, cmds]) => {
+        const best = cmds.find(c => c.verdict === 'Success') || cmds[0]
+        const crit = best.criteriaTotal > 0 ? `, criteria: ${best.criteriaAchieved}/${best.criteriaTotal}` : ''
+        const successCount = cmds.filter(c => c.verdict === 'Success').length
+        const rate = Math.round((successCount / cmds.length) * 100)
+        return `- ${tag}: ${cmds.length} resolution(s), ${rate}% Success rate — e.g. "${best.title}" (${best.verdict}${crit})`
+      }).join('\n')
     }`
   }
 

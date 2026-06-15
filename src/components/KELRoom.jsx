@@ -1172,6 +1172,17 @@ export default function KELRoom({
   const color      = rec ? domainColor(rec.domain) : '#4b5563'
   const padX       = isMobile ? 'px-6' : 'px-8'
 
+  // Compute precedents: constellations from current observations → successful commands
+  const obsConstellations = new Set(validObs.filter(o => o.constellation).map(o => o.constellation))
+  const precedentMap = {}
+  commands
+    .filter(c => c.status === 'completed' && c.patternTag && obsConstellations.has(c.patternTag) && ['Success', 'Partial Success'].includes(c.verdict))
+    .forEach(c => {
+      if (!precedentMap[c.patternTag]) precedentMap[c.patternTag] = []
+      precedentMap[c.patternTag].push(c)
+    })
+  const precedentEntries = Object.entries(precedentMap)
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--bg-0)' }}>
 
@@ -1318,6 +1329,37 @@ export default function KELRoom({
                   </div>
                 </div>
               )}
+              {precedentEntries.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                  <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px' }}>Institutional Precedent</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {precedentEntries.map(([pattern, cmds]) => {
+                      const best        = cmds.find(c => c.verdict === 'Success') || cmds[0]
+                      const successCount = cmds.filter(c => c.verdict === 'Success').length
+                      const rate        = Math.round((successCount / cmds.length) * 100)
+                      const rateColor   = rate >= 80 ? '#10b981' : rate >= 50 ? '#f59e0b' : '#ef4444'
+                      return (
+                        <div key={pattern} style={{
+                          background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+                          borderLeft: '3px solid #a07830', borderRadius: '0 8px 8px 0',
+                          padding: '10px 14px',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                            <span style={{ color: '#a07830', fontSize: '9px' }}>◈</span>
+                            <span style={{ color: 'var(--text-2)', fontSize: '11px', fontWeight: 600 }}>{pattern}</span>
+                            <span style={{ color: rateColor, fontSize: '9px', fontWeight: 700 }}>{rate}% Success · {cmds.length} resolution{cmds.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          <p style={{ color: 'var(--text-4)', fontSize: '10px', lineHeight: 1.5 }}>
+                            Previously resolved by: <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>"{best.title}"</span>
+                            {best.criteriaTotal > 0 && <span style={{ color: 'var(--text-5)' }}> · {best.criteriaAchieved}/{best.criteriaTotal} criteria</span>}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {!decided ? (
                 <div>
                   <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '12px' }}>Your decision</p>
