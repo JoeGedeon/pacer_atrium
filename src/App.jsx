@@ -564,6 +564,16 @@ export default function App() {
 
   async function acceptConstellation(id, constellation) {
     await updateObservation(user.uid, id, { constellation })
+    if (constellation) {
+      const obs = observations.find(o => o.id === id)
+      createInstitutionEvent(user.uid, {
+        eventType:       'observation_tagged',
+        title:           `Observation tagged: ${constellation}`,
+        description:     obs?.text ? obs.text.slice(0, 100) : null,
+        relatedEntityId: id,
+        constellation,
+      }).catch(() => {}) // fire-and-forget, non-critical
+    }
   }
 
   function toggleVoiceMode() {
@@ -642,11 +652,18 @@ export default function App() {
     try {
       permanentUrl = await uploadStudioArtifactImage(data.url, user.uid)
     } catch (err) {
-      // Storage upload failed — save with the DALL-E URL as fallback.
-      // The Registry record exists; the image URL may expire after ~1hr.
       console.warn('[Studio] Storage upload failed, saving DALL-E URL as fallback:', err?.message)
     }
-    await createStudioArtifact(user.uid, { ...data, url: permanentUrl })
+    const artifactId = await createStudioArtifact(user.uid, { ...data, url: permanentUrl })
+    if (data.sourceConstellation) {
+      createInstitutionEvent(user.uid, {
+        eventType:       'artwork_created',
+        title:           `Artwork created: ${data.title || data.sourceConstellation}`,
+        description:     data.prompt ? data.prompt.slice(0, 100) : null,
+        relatedEntityId: artifactId,
+        constellation:   data.sourceConstellation,
+      }).catch(() => {})
+    }
   }
 
   async function plantVoiceSeed(audioBlob) {

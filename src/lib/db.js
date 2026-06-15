@@ -234,6 +234,7 @@ export async function createInstitutionEvent(uid, data) {
     description:     data.description     || null,
     actor:           data.actor           || uid,
     relatedEntityId: data.relatedEntityId || null,
+    constellation:   data.constellation   || null,
     createdAt:       serverTimestamp(),
   })
   return ref.id

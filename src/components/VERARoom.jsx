@@ -81,10 +81,20 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
     // Studio artifacts generated from this constellation
     const artwork = studioArtifacts.filter(a => a.sourceConstellation === name)
 
+    // Unified timeline: command events (by relatedEntityId) + constellation events (observation_tagged, artwork_created, etc.)
+    const timeline = institutionEvents
+      .filter(e => cmdIds.has(e.relatedEntityId) || e.constellation === name)
+      .slice()
+      .sort((a, b) => {
+        const ta = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0)
+        const tb = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0)
+        return ta - tb
+      })
+
     return {
       name, obs, obsList, total: cmds.length, cmds, active, pending,
       completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate,
-      confidenceScore, confidenceLabel, events, doctrine, artwork,
+      confidenceScore, confidenceLabel, events, doctrine, artwork, timeline,
     }
   }
 
@@ -272,9 +282,9 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                             <div style={{ display: 'flex', gap: '0', padding: '0 14px 0 37px', borderBottom: '1px solid var(--border-0)' }}>
                               {[
                                 { id: 'summary',      label: 'Summary' },
+                                { id: 'timeline',     label: `Timeline (${profile.timeline.length})` },
                                 { id: 'observations', label: `Obs (${profile.obs})` },
                                 { id: 'commands',     label: `Cmds (${profile.total})` },
-                                { id: 'events',       label: `Events (${profile.events.length})` },
                                 { id: 'doctrine',     label: `Doctrine (${profile.doctrine.length})` },
                                 { id: 'artwork',      label: `Artwork (${profile.artwork.length})` },
                               ].map(t => (
@@ -367,6 +377,56 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                           +{profile.artwork.length - 3}
                                         </button>
                                       )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Timeline */}
+                              {caseTab === 'timeline' && (
+                                <div>
+                                  {profile.timeline.length === 0 ? (
+                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                                      No timeline events yet. Tag observations and execute commands to begin the record.
+                                    </p>
+                                  ) : (
+                                    <div style={{ position: 'relative', paddingLeft: '16px' }}>
+                                      <div style={{ position: 'absolute', left: '5px', top: 0, bottom: 0, width: '1px', background: 'var(--border-1)' }} />
+                                      {profile.timeline.map((e, i) => {
+                                        const dot = {
+                                          observation_tagged: '#a07830',
+                                          artwork_created:    '#6366f1',
+                                          command_created:    '#3b82f6',
+                                          command_approved:   '#10b981',
+                                          command_completed:  '#10b981',
+                                          command_denied:     '#ef4444',
+                                          command_failed:     '#ef4444',
+                                          doctrine_updated:   '#f59e0b',
+                                        }[e.eventType] || 'var(--text-5)'
+                                        const date = e.createdAt instanceof Date
+                                          ? e.createdAt
+                                          : new Date(e.createdAt || 0)
+                                        return (
+                                          <div key={e.id || i} style={{ position: 'relative', marginBottom: '12px' }}>
+                                            <div style={{
+                                              position: 'absolute', left: '-12px', top: '3px',
+                                              width: '7px', height: '7px', borderRadius: '50%',
+                                              background: dot, flexShrink: 0,
+                                            }} />
+                                            <p style={{ color: 'var(--text-5)', fontSize: '8px', marginBottom: '2px', lineHeight: 1 }}>
+                                              {date.toLocaleDateString()} · {e.eventType.replace(/_/g, ' ')}
+                                            </p>
+                                            <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.4 }}>
+                                              {e.title}
+                                            </p>
+                                            {e.description && (
+                                              <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                                {e.description.slice(0, 100)}{e.description.length > 100 ? '…' : ''}
+                                              </p>
+                                            )}
+                                          </div>
+                                        )
+                                      })}
                                     </div>
                                   )}
                                 </div>
