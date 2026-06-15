@@ -572,6 +572,11 @@ export async function createStudioArtifact(uid, data) {
   return ref.id
 }
 
+export async function updateStudioArtifact(uid, id, data) {
+  const ref = doc(db, 'users', uid, 'studio_artifacts', id)
+  await updateDoc(ref, data)
+}
+
 export function listenStudioArtifacts(uid, callback) {
   const q = query(artifactColl(uid), orderBy('generatedAt', 'desc'))
   return onSnapshot(q,

@@ -43,7 +43,7 @@ import {
   createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
   createCommand, updateCommand, submitCommandForApproval,
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
-  createStudioArtifact, listenStudioArtifacts,
+  createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -670,6 +670,11 @@ export default function App() {
     }
   }
 
+  async function updateStudioArtifactNotes(id, data) {
+    if (!user) return
+    await updateStudioArtifact(user.uid, id, data)
+  }
+
   async function plantVoiceSeed(audioBlob) {
     if (!user) return
     if (!isCreator(user)) incrementCampusStat('observations')
@@ -1153,6 +1158,7 @@ export default function App() {
             onContextConsumed={() => setStudioContext(null)}
             studioArtifacts={studioArtifacts}
             onSaveArtifact={saveStudioArtifact}
+            onUpdateArtifact={updateStudioArtifactNotes}
             onRecordOutcome={recordOutcome}
           />
         )}
