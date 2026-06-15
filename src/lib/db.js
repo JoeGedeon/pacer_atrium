@@ -234,6 +234,8 @@ export async function createInstitutionEvent(uid, data) {
     description:     data.description     || null,
     actor:           data.actor           || uid,
     relatedEntityId: data.relatedEntityId || null,
+    constellation:   data.constellation   || null,
+    causedByEventId: data.causedByEventId || null,
     createdAt:       serverTimestamp(),
   })
   return ref.id
@@ -548,6 +550,36 @@ export function listenDoctrineCases(uid, callback) {
   )
 }
 
+// ── Studio Artifacts — image generation registry ──────────────────────────────
+// Collection: users/{uid}/studio_artifacts
+
+function artifactColl(uid) { return collection(db, 'users', uid, 'studio_artifacts') }
+
+export async function createStudioArtifact(uid, data) {
+  const ref = await addDoc(artifactColl(uid), {
+    url:                  data.url,
+    title:                data.title                || 'Untitled',
+    prompt:               data.prompt               || '',
+    revisedPrompt:        data.revisedPrompt        || null,
+    model:                data.model                || 'dall-e-3',
+    creator:              'Studio',
+    sourceConstellation:  data.sourceConstellation  || null,
+    sourceDoctrine:       data.sourceDoctrine       || null,
+    sourceObservation:    data.sourceObservation     || null,
+    projectTag:           data.projectTag           || null,
+    generatedAt:          serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function listenStudioArtifacts(uid, callback) {
+  const q = query(artifactColl(uid), orderBy('generatedAt', 'desc'))
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+    err  => console.error('[listenStudioArtifacts] snapshot error:', err),
+  )
+}
+
 // ── Atrium Commands — PACER command chain ─────────────────────────────────────
 // Collection: users/{uid}/atrium_commands
 // Lifecycle: drafted → pending_approval → (approved→in_progress | denied) → (completed | failed) → archived
@@ -637,13 +669,14 @@ export async function denyCommand(uid, id, commandTitle, rationale) {
   })
 }
 
-export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal }) {
+export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal, causedByEventId }) {
   const criteriaNote = criteriaTotal > 0 ? ` · ${criteriaAchieved}/${criteriaTotal} criteria` : ''
   const eventId = await createInstitutionEvent(uid, {
     eventType:       'command_completed',
     title:           `Command completed: ${commandTitle}${verdict ? ` — ${verdict}` : ''}${criteriaNote}`,
     description:     result || completionProof || 'Command completed.',
     relatedEntityId: id,
+    causedByEventId: causedByEventId || null,
   })
   await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
     status:           'completed',

@@ -49,10 +49,28 @@ const DECISION_STYLES = {
 }
 
 const EVENT_STYLES = {
+  // Builder / governance
   builder_review_requested: { bg: '#0a0d14', border: '#1e3a5f', color: '#3b82f6', label: 'Review Requested' },
   builder_review_approved:  { bg: '#041208', border: '#0a3018', color: '#10b981', label: 'Review Approved'  },
   builder_review_denied:    { bg: '#140808', border: '#3a1010', color: '#ef4444', label: 'Review Denied'    },
   graduate_added:           { bg: '#0a0a04', border: '#3a3010', color: '#f59e0b', label: 'Graduate Added'   },
+  // Commands
+  command_created:          { bg: '#0a0d14', border: '#1e3a5f', color: '#3b82f6', label: 'Command Created'  },
+  command_approved:         { bg: '#041208', border: '#0a3018', color: '#10b981', label: 'Command Approved' },
+  command_denied:           { bg: '#140808', border: '#3a1010', color: '#ef4444', label: 'Command Denied'   },
+  command_completed:        { bg: '#041208', border: '#0a3018', color: '#10b981', label: 'Command Completed'},
+  command_failed:           { bg: '#140808', border: '#3a1010', color: '#ef4444', label: 'Command Failed'   },
+  // Observations
+  observation_tagged:       { bg: '#0f0e08', border: '#3a3010', color: '#a07830', label: 'Observation Tagged'},
+  // Studio
+  artwork_created:          { bg: '#0d0a1f', border: '#2d1f5f', color: '#6366f1', label: 'Artwork Created'  },
+  // Content / Theater
+  forge_artifact_created:   { bg: '#041208', border: '#0a3018', color: '#10b981', label: 'Artifact Forged'  },
+  production_published:     { bg: '#0a0d14', border: '#1e3a5f', color: '#3b82f6', label: 'Production Live'  },
+  media_asset_published:    { bg: '#0a0d14', border: '#1e3a5f', color: '#3b82f6', label: 'Asset Published'  },
+  outcome_recorded:         { bg: '#0a0a04', border: '#3a3010', color: '#f59e0b', label: 'Outcome Recorded' },
+  // Doctrine
+  doctrine_updated:         { bg: '#0f0e08', border: '#3a2010', color: '#f59e0b', label: 'Doctrine Updated' },
 }
 
 function eventStyle(type) {

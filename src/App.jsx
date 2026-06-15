@@ -43,12 +43,14 @@ import {
   createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
   createCommand, updateCommand, submitCommandForApproval,
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
+  createStudioArtifact, listenStudioArtifacts,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import { uploadVoiceSeed } from './lib/voiceUpload'
+import { uploadStudioArtifactImage } from './lib/imageUpload'
 import PACERVoice from './components/PACERVoice'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
@@ -120,7 +122,8 @@ export default function App() {
     } catch {}
     return localStorage.getItem('pacer_openai_key') || null
   })
-  const [studioPrompt, setStudioPrompt]           = useState(null)
+  const [studioContext, setStudioContext]         = useState(null) // { prompt, sourceConstellation, sourceDoctrine, sourceObservation }
+  const [studioArtifacts, setStudioArtifacts]    = useState([])
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
   const [kelDecisions, setKelDecisions]           = useState([])
@@ -294,9 +297,10 @@ export default function App() {
     const unsubLogs      = listenCreatorLogs(user.uid, setCreatorLogs)
     const unsubProds     = listenProductions(user.uid, setProductions)
     const unsubMedia     = listenMediaAssets(user.uid, setMediaAssets)
-    const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)
-    const unsubCommands  = listenCommands(user.uid, setCommands)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands() }
+    const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)
+    const unsubCommands   = listenCommands(user.uid, setCommands)
+    const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -560,6 +564,16 @@ export default function App() {
 
   async function acceptConstellation(id, constellation) {
     await updateObservation(user.uid, id, { constellation })
+    if (constellation) {
+      const obs = observations.find(o => o.id === id)
+      createInstitutionEvent(user.uid, {
+        eventType:       'observation_tagged',
+        title:           `Observation tagged: ${constellation}`,
+        description:     obs?.text ? obs.text.slice(0, 100) : null,
+        relatedEntityId: id,
+        constellation,
+      }).catch(() => {}) // fire-and-forget, non-critical
+    }
   }
 
   function toggleVoiceMode() {
@@ -624,9 +638,36 @@ export default function App() {
     }
   }
 
-  function handleOpenStudio(prefillPrompt) {
-    setStudioPrompt(prefillPrompt)
+  function handleOpenStudio(prefillPromptOrContext) {
+    const ctx = typeof prefillPromptOrContext === 'string'
+      ? { prompt: prefillPromptOrContext }
+      : prefillPromptOrContext
+    setStudioContext(ctx)
     setCurrentRoom('builderstudio')
+  }
+
+  async function saveStudioArtifact(data) {
+    if (!user) return
+    let permanentUrl = data.url
+    try {
+      permanentUrl = await uploadStudioArtifactImage(data.url, user.uid)
+    } catch (err) {
+      console.warn('[Studio] Storage upload failed, saving DALL-E URL as fallback:', err?.message)
+    }
+    const artifactId = await createStudioArtifact(user.uid, { ...data, url: permanentUrl })
+    if (data.sourceConstellation) {
+      const triggerEvent = institutionEvents.find(e =>
+        e.eventType === 'observation_tagged' && e.constellation === data.sourceConstellation
+      )
+      createInstitutionEvent(user.uid, {
+        eventType:       'artwork_created',
+        title:           `Artwork created: ${data.title || data.sourceConstellation}`,
+        description:     data.prompt ? data.prompt.slice(0, 100) : null,
+        relatedEntityId: artifactId,
+        constellation:   data.sourceConstellation,
+        causedByEventId: triggerEvent?.id || null,
+      }).catch(() => {})
+    }
   }
 
   async function plantVoiceSeed(audioBlob) {
@@ -812,7 +853,10 @@ export default function App() {
 
   async function completeCommandRecord(id, title, proof) {
     if (!user) return
-    await completeCommand(user.uid, id, title, proof)
+    const approvedEvent = institutionEvents.find(e =>
+      e.eventType === 'command_approved' && e.relatedEntityId === id
+    )
+    await completeCommand(user.uid, id, title, { ...proof, causedByEventId: approvedEvent?.id || null })
   }
 
   async function failCommandRecord(id, title, reason) {
@@ -1015,6 +1059,7 @@ export default function App() {
             commands={commands}
             doctrineCases={doctrineCases}
             institutionEvents={institutionEvents}
+            studioArtifacts={studioArtifacts}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}
@@ -1104,8 +1149,10 @@ export default function App() {
             onForge={forgeArtifact}
             apiKey={apiKey}
             openaiApiKey={openaiApiKey}
-            initialPrompt={studioPrompt}
-            onPromptConsumed={() => setStudioPrompt(null)}
+            studioContext={studioContext}
+            onContextConsumed={() => setStudioContext(null)}
+            studioArtifacts={studioArtifacts}
+            onSaveArtifact={saveStudioArtifact}
             onRecordOutcome={recordOutcome}
           />
         )}

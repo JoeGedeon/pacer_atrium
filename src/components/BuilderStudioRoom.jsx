@@ -15,6 +15,7 @@ const CREATION_TOOLS = [
 
 const BUILDER_TABS = [
   { id: 'create',    label: 'Create' },
+  { id: 'registry',  label: 'Registry' },
   { id: 'decisions', label: 'Decisions' },
   { id: 'outcomes',  label: 'Outcomes' },
 ]
@@ -476,25 +477,27 @@ function ThreadCard({ thread, onForge, hasApiKey, onRecordOutcome }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, openaiApiKey, initialPrompt, onPromptConsumed, onRecordOutcome }) {
+export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, openaiApiKey, studioContext, onContextConsumed, studioArtifacts = [], onSaveArtifact, onRecordOutcome }) {
   const [tab,        setTab]        = useState('create')
   const [activeTool, setActiveTool] = useState('generate-image')
-  const [prompt,     setPrompt]     = useState(initialPrompt || '')
+  const [prompt,     setPrompt]     = useState(studioContext?.prompt || '')
   const [generating, setGenerating] = useState(false)
   const [genError,   setGenError]   = useState(null)
   const [canvas,     setCanvas]     = useState(null)
   const [history,    setHistory]    = useState([])
+  const [sourceCtx,  setSourceCtx]  = useState(studioContext || null)
   const px = isMobile ? 'px-6' : 'px-10'
   const approvedThreads  = threads.filter(t => t.decision === 'approved')
   const completedThreads = approvedThreads.filter(t => t.outcomeSignal)
 
   useEffect(() => {
-    if (initialPrompt) {
-      setPrompt(initialPrompt)
+    if (studioContext) {
+      setPrompt(studioContext.prompt || '')
+      setSourceCtx(studioContext)
       setTab('create')
-      onPromptConsumed?.()
+      onContextConsumed?.()
     }
-  }, [initialPrompt]) // eslint-disable-line
+  }, [studioContext]) // eslint-disable-line
 
   async function handleGenerate() {
     if (!prompt.trim() || !openaiApiKey || generating) return
@@ -502,9 +505,20 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
     setGenError(null)
     try {
       const result = await generateImage(prompt.trim(), openaiApiKey)
-      const item = { ...result, promptUsed: prompt.trim(), id: Date.now() }
+      const item = { ...result, promptUsed: prompt.trim(), id: Date.now(), sourceCtx }
       setCanvas(item)
       setHistory(prev => [item, ...prev].slice(0, 10))
+      // Auto-save to Artifact Registry
+      const title = sourceCtx?.sourceConstellation || prompt.trim().slice(0, 50)
+      onSaveArtifact?.({
+        url:                 result.url,
+        title,
+        prompt:              prompt.trim(),
+        revisedPrompt:       result.revisedPrompt || null,
+        sourceConstellation: sourceCtx?.sourceConstellation || null,
+        sourceDoctrine:      sourceCtx?.sourceDoctrine || null,
+        sourceObservation:   sourceCtx?.sourceObservation || null,
+      })
     } catch (err) {
       setGenError(err.message || 'Generation failed.')
     } finally {
@@ -545,6 +559,65 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
       </div>
 
       <RoomSubNav tabs={BUILDER_TABS} activeTab={tab} onSelect={setTab} />
+
+      {tab === 'registry' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-8`}>
+          <div style={{ maxWidth: '720px' }}>
+            {studioArtifacts.length === 0 ? (
+              <div style={{ opacity: 0.4, textAlign: 'center', paddingTop: '60px' }}>
+                <span style={{ fontSize: '28px', display: 'block', marginBottom: '10px' }}>✦</span>
+                <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.6 }}>
+                  No artifacts yet.<br />Generate an image in Create to start the registry.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '16px' }}>
+                  Artifact Registry — {studioArtifacts.length} saved
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '12px' }}>
+                  {studioArtifacts.map(a => (
+                    <div
+                      key={a.id}
+                      style={{
+                        background: 'var(--bg-1)', border: '1px solid var(--border-0)',
+                        borderRadius: '6px', overflow: 'hidden',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => window.open(a.url, '_blank', 'noopener')}
+                    >
+                      <img
+                        src={a.url}
+                        alt={a.title}
+                        style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }}
+                        onError={e => { e.target.style.display = 'none' }}
+                      />
+                      <div style={{ padding: '8px 10px' }}>
+                        <p style={{ color: 'var(--text-1)', fontSize: '11px', fontWeight: 600, marginBottom: '3px', lineHeight: 1.3 }}>
+                          {a.title}
+                        </p>
+                        {a.sourceConstellation && (
+                          <p style={{ color: '#a07830', fontSize: '8px', marginBottom: '2px' }}>
+                            ◈ {a.sourceConstellation}
+                          </p>
+                        )}
+                        {a.sourceDoctrine && (
+                          <p style={{ color: '#6366f1', fontSize: '8px', marginBottom: '2px' }}>
+                            ⬡ {a.sourceDoctrine}
+                          </p>
+                        )}
+                        <p style={{ color: 'var(--text-6)', fontSize: '8px', marginTop: '2px' }}>
+                          {a.generatedAt?.toDate?.().toLocaleDateString?.() ?? ''}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {tab === 'create' && (
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
@@ -611,6 +684,15 @@ export default function BuilderStudioRoom({ isMobile, builderReadiness, threads 
                       {tool.icon} {tool.label}
                     </button>
                   ))}
+                </div>
+              )}
+              {sourceCtx?.sourceConstellation && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ color: '#a07830', fontSize: '8px' }}>◈</span>
+                  <span style={{ color: '#a07830', fontSize: '9px', fontWeight: 500 }}>{sourceCtx.sourceConstellation}</span>
+                  {sourceCtx.sourceConstellationConfidence !== null && sourceCtx.sourceConstellationConfidence !== undefined && (
+                    <span style={{ color: 'var(--text-6)', fontSize: '8px' }}>{sourceCtx.sourceConstellationConfidence}% confidence</span>
+                  )}
                 </div>
               )}
               <textarea

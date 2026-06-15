@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { clusterObservations, analyzePatterns } from '../lib/veraAnalysis'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import RoomSubNav from './RoomSubNav'
@@ -26,7 +26,7 @@ const VERA_TABS = [
   { id: 'observations',  label: 'Observations' },
 ]
 
-export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], apiKey, onConnectClaude, isMobile, voiceMode, onOpenStudio }) {
+export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], studioArtifacts = [], apiKey, onConnectClaude, isMobile, voiceMode, onOpenStudio }) {
   const [tab,                   setTab]                   = useState('patterns')
   const [patterns,              setPatterns]              = useState(null)
   const [analyzing,             setAnalyzing]             = useState(false)
@@ -78,10 +78,23 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
       Array.isArray(d.relatedConstellations) && d.relatedConstellations.includes(name)
     )
 
+    // Studio artifacts generated from this constellation
+    const artwork = studioArtifacts.filter(a => a.sourceConstellation === name)
+
+    // Unified timeline: command events (by relatedEntityId) + constellation events (observation_tagged, artwork_created, etc.)
+    const timeline = institutionEvents
+      .filter(e => cmdIds.has(e.relatedEntityId) || e.constellation === name)
+      .slice()
+      .sort((a, b) => {
+        const ta = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0)
+        const tb = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0)
+        return ta - tb
+      })
+
     return {
       name, obs, obsList, total: cmds.length, cmds, active, pending,
       completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate,
-      confidenceScore, confidenceLabel, events, doctrine,
+      confidenceScore, confidenceLabel, events, doctrine, artwork, timeline,
     }
   }
 
@@ -269,10 +282,11 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                             <div style={{ display: 'flex', gap: '0', padding: '0 14px 0 37px', borderBottom: '1px solid var(--border-0)' }}>
                               {[
                                 { id: 'summary',      label: 'Summary' },
+                                { id: 'timeline',     label: `Timeline (${profile.timeline.length})` },
                                 { id: 'observations', label: `Obs (${profile.obs})` },
                                 { id: 'commands',     label: `Cmds (${profile.total})` },
-                                { id: 'events',       label: `Events (${profile.events.length})` },
                                 { id: 'doctrine',     label: `Doctrine (${profile.doctrine.length})` },
+                                { id: 'artwork',      label: `Artwork (${profile.artwork.length})` },
                               ].map(t => (
                                 <button key={t.id} onClick={() => setCaseTab(t.id)} style={{
                                   background: 'none', border: 'none', cursor: 'pointer',
@@ -343,27 +357,104 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                       No commands tagged to this constellation yet.
                                     </p>
                                   )}
-                                  {onOpenStudio && (
-                                    <button
-                                      onClick={() => {
-                                        const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
-                                        const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
-                                        const prefill = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
-                                        onOpenStudio(prefill.trim())
-                                      }}
-                                      style={{
-                                        marginTop: '14px', background: 'none',
-                                        border: '1px solid #a0783040', color: '#a07830',
-                                        fontSize: '10px', cursor: 'pointer', padding: '5px 12px',
-                                        borderRadius: '5px', fontFamily: 'inherit',
-                                        display: 'flex', alignItems: 'center', gap: '5px',
-                                      }}
-                                    >
-                                      ✦ Create Artwork
-                                    </button>
+                                  {profile.artwork.length > 0 && (
+                                    <div style={{ marginTop: '14px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                      {profile.artwork.slice(0, 3).map(a => (
+                                        <img
+                                          key={a.id}
+                                          src={a.url}
+                                          alt={a.title}
+                                          onClick={() => setCaseTab('artwork')}
+                                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '3px', border: '1px solid var(--border-0)', cursor: 'pointer' }}
+                                          onError={e => { e.target.style.display = 'none' }}
+                                        />
+                                      ))}
+                                      {profile.artwork.length > 3 && (
+                                        <button
+                                          onClick={() => setCaseTab('artwork')}
+                                          style={{ width: '48px', height: '48px', background: 'var(--bg-2)', border: '1px solid var(--border-0)', borderRadius: '3px', cursor: 'pointer', color: 'var(--text-5)', fontSize: '9px', fontFamily: 'inherit' }}
+                                        >
+                                          +{profile.artwork.length - 3}
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
+
+                              {/* Timeline */}
+                              {caseTab === 'timeline' && (() => {
+                                const DOT_COLORS = {
+                                  observation_tagged: '#a07830',
+                                  artwork_created:    '#6366f1',
+                                  command_created:    '#3b82f6',
+                                  command_approved:   '#10b981',
+                                  command_completed:  '#10b981',
+                                  command_denied:     '#ef4444',
+                                  command_failed:     '#ef4444',
+                                  doctrine_updated:   '#f59e0b',
+                                }
+
+                                // Build causality tree (max depth 1 in current schema)
+                                const childrenMap = new Map()
+                                const childIds = new Set()
+                                for (const ev of profile.timeline) {
+                                  if (ev.causedByEventId) {
+                                    childIds.add(ev.id)
+                                    const arr = childrenMap.get(ev.causedByEventId) || []
+                                    arr.push(ev)
+                                    childrenMap.set(ev.causedByEventId, arr)
+                                  }
+                                }
+                                const topLevel = profile.timeline.filter(ev => !childIds.has(ev.id))
+
+                                function renderEvent(ev, isChild, key) {
+                                  const dot = DOT_COLORS[ev.eventType] || 'var(--text-5)'
+                                  const date = ev.createdAt instanceof Date ? ev.createdAt : new Date(ev.createdAt || 0)
+                                  return (
+                                    <div key={key} style={{ position: 'relative', marginBottom: isChild ? '8px' : '12px', marginLeft: isChild ? '16px' : '0' }}>
+                                      <div style={{
+                                        position: 'absolute', left: '-12px', top: isChild ? '4px' : '3px',
+                                        width: isChild ? '5px' : '7px', height: isChild ? '5px' : '7px',
+                                        borderRadius: '50%', background: dot, opacity: isChild ? 0.75 : 1,
+                                      }} />
+                                      <p style={{ color: 'var(--text-5)', fontSize: '8px', marginBottom: '2px', lineHeight: 1 }}>
+                                        {date.toLocaleDateString()} · {ev.eventType.replace(/_/g, ' ')}
+                                      </p>
+                                      <p style={{ color: isChild ? 'var(--text-3)' : 'var(--text-2)', fontSize: '11px', lineHeight: 1.4 }}>
+                                        {ev.title}
+                                      </p>
+                                      {ev.description && (
+                                        <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                          {ev.description.slice(0, 100)}{ev.description.length > 100 ? '…' : ''}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )
+                                }
+
+                                return (
+                                  <div>
+                                    {profile.timeline.length === 0 ? (
+                                      <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
+                                        No timeline events yet. Tag observations and execute commands to begin the record.
+                                      </p>
+                                    ) : (
+                                      <div style={{ position: 'relative', paddingLeft: '16px' }}>
+                                        <div style={{ position: 'absolute', left: '5px', top: 0, bottom: 0, width: '1px', background: 'var(--border-1)' }} />
+                                        {topLevel.map((ev, i) => (
+                                          <Fragment key={ev.id || i}>
+                                            {renderEvent(ev, false, ev.id || i)}
+                                            {(childrenMap.get(ev.id) || []).map((child, j) =>
+                                              renderEvent(child, true, child.id || `${i}-${j}`)
+                                            )}
+                                          </Fragment>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
 
                               {/* Observations */}
                               {caseTab === 'observations' && (
@@ -440,6 +531,72 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                                       <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px' }}>{d.status || 'draft'}</p>
                                     </div>
                                   ))}
+                                </div>
+                              )}
+
+                              {/* Artwork */}
+                              {caseTab === 'artwork' && (
+                                <div>
+                                  {profile.artwork.length === 0 ? (
+                                    <div>
+                                      <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginBottom: '10px' }}>
+                                        No artwork generated from this constellation yet.
+                                      </p>
+                                      {onOpenStudio && (
+                                        <button
+                                          onClick={() => {
+                                            const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
+                                            const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
+                                            const prompt = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
+                                            onOpenStudio({ prompt: prompt.trim(), sourceConstellation: name, sourceConstellationConfidence: profile.confidenceScore })
+                                          }}
+                                          style={{
+                                            background: 'none', border: '1px solid #a0783040',
+                                            color: '#a07830', fontSize: '10px', cursor: 'pointer',
+                                            padding: '5px 12px', borderRadius: '5px', fontFamily: 'inherit',
+                                          }}
+                                        >
+                                          ✦ Create First Artwork
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                                        {profile.artwork.map(a => (
+                                          <div
+                                            key={a.id}
+                                            style={{ cursor: 'pointer', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-0)' }}
+                                            onClick={() => window.open(a.url, '_blank', 'noopener')}
+                                          >
+                                            <img
+                                              src={a.url}
+                                              alt={a.title}
+                                              style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }}
+                                              onError={e => { e.target.style.display = 'none' }}
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                      {onOpenStudio && (
+                                        <button
+                                          onClick={() => {
+                                            const excerpt = profile.obsList[0]?.text?.slice(0, 80) || ''
+                                            const conf = profile.confidenceScore !== null ? `${profile.confidenceScore}% confidence pattern` : 'emerging pattern'
+                                            const prompt = `Visual interpretation of "${name}" — ${conf}${excerpt ? '. Theme: ' + excerpt : ''}. Dark, cinematic, institutional aesthetic.`
+                                            onOpenStudio({ prompt: prompt.trim(), sourceConstellation: name, sourceConstellationConfidence: profile.confidenceScore })
+                                          }}
+                                          style={{
+                                            background: 'none', border: '1px solid #a0783040',
+                                            color: '#a07830', fontSize: '10px', cursor: 'pointer',
+                                            padding: '5px 12px', borderRadius: '5px', fontFamily: 'inherit',
+                                          }}
+                                        >
+                                          ✦ Create More
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
