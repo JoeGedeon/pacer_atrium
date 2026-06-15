@@ -501,6 +501,7 @@ export async function createDoctrineCase(uid, data) {
     originRoom:             data.originRoom             || '',
     triggerEvent:           data.triggerEvent           || '',
     articlesInvolved:       data.articlesInvolved       || [],
+    relatedConstellations:  data.relatedConstellations  || [],
     summary:                data.summary                || '',
     facts:                  data.facts                  || '',
     evidence:               data.evidence               || '',

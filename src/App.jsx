@@ -982,6 +982,8 @@ export default function App() {
             observations={observations}
             museWorks={museWorks}
             commands={commands}
+            doctrineCases={doctrineCases}
+            institutionEvents={institutionEvents}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}
