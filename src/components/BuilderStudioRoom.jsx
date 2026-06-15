@@ -691,7 +691,7 @@ function WorksRail({ studioArtifacts, activeItemId, onSelect, onNew }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, openaiApiKey, studioContext, onContextConsumed, studioArtifacts = [], onSaveArtifact, onUpdateArtifact, onRecordOutcome }) {
+export default function BuilderStudioRoom({ isMobile, builderReadiness, threads = [], onNavigate, onForge, apiKey, openaiApiKey, studioContext, onContextConsumed, studioArtifacts = [], onSaveArtifact, onUpdateArtifact = () => {}, onRecordOutcome }) {
   const [tab,          setTab]          = useState('create')
   const [prompt,       setPrompt]       = useState(studioContext?.prompt || '')
   const [generating,   setGenerating]   = useState(false)
