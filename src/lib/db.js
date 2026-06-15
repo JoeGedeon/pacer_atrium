@@ -489,6 +489,90 @@ export function listenMediaAssets(uid, callback) {
   )
 }
 
+// ── Commands — institutional execution directives ─────────────────────────────
+// Commands are the highest-level execution unit in PACER.
+// PACER generates the intelligence. Human Gate approves. K.E.L. executes.
+// ARCHIVIST records. Status lifecycle: pending_approval → approved → in_progress → completed → archived
+
+function commandColl(uid) { return collection(db, 'users', uid, 'commands') }
+
+export async function createCommand(uid, data) {
+  const ref = await addDoc(commandColl(uid), {
+    commandNumber:    data.commandNumber    || null,
+    title:            data.title,
+    targetSystem:     data.targetSystem     || null,
+    status:           data.status          || 'pending_approval',
+    priority:         data.priority         || 'medium',
+    risk:             data.risk             || 'medium',
+    executionAgent:   data.executionAgent   || 'K.E.L.',
+    state:            data.state            || '',
+    constraint:       data.constraint       || '',
+    nextAction:       data.nextAction       || '',
+    successCondition: data.successCondition || '',
+    phases:           data.phases           || [],
+    artifacts:        data.artifacts        || [],
+    proofRequired:    data.proofRequired    || '',
+    parityChecklist:  data.parityChecklist  || [],
+    risks:            data.risks            || [],
+    approvedAt:       null,
+    startedAt:        null,
+    completedAt:      null,
+    createdAt:        serverTimestamp(),
+    updatedAt:        serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_created',
+    title:           `Command created: ${data.title}`,
+    description:     `Status: pending_approval · Target: ${data.targetSystem || 'unspecified'} · Risk: ${data.risk || 'medium'}`,
+    relatedEntityId: ref.id,
+  })
+  return ref.id
+}
+
+export async function updateCommand(uid, id, patch) {
+  const prev = patch._prevStatus
+  const next = patch.status
+  const { _prevStatus: _, ...safePatch } = patch
+
+  await updateDoc(doc(db, 'users', uid, 'commands', id), {
+    ...safePatch,
+    updatedAt: serverTimestamp(),
+    ...(next === 'approved'    && { approvedAt:   serverTimestamp() }),
+    ...(next === 'in_progress' && { startedAt:    serverTimestamp() }),
+    ...(next === 'completed'   && { completedAt:  serverTimestamp() }),
+  })
+
+  if (next && next !== prev) {
+    await createInstitutionEvent(uid, {
+      eventType:       'command_status_changed',
+      title:           `Command ${patch.commandNumber || id} → ${next}`,
+      description:     `Status transition: ${prev || '?'} → ${next}`,
+      relatedEntityId: id,
+    })
+  }
+}
+
+export function listenCommands(uid, callback) {
+  const q = query(commandColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id:          d.id,
+          createdAt:   data.createdAt?.toDate?.()   ?? new Date(),
+          updatedAt:   data.updatedAt?.toDate?.()   ?? new Date(),
+          approvedAt:  data.approvedAt?.toDate?.()  ?? null,
+          startedAt:   data.startedAt?.toDate?.()   ?? null,
+          completedAt: data.completedAt?.toDate?.() ?? null,
+        }
+      }))
+    },
+    err => { console.error('[listenCommands] snapshot error:', err?.code, err?.message) },
+  )
+}
+
 // ── Doctrine Cases — constitutional review records ────────────────────────────
 
 function doctrineColl(uid) { return collection(db, 'users', uid, 'doctrine_cases') }
