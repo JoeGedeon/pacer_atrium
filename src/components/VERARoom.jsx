@@ -26,37 +26,63 @@ const VERA_TABS = [
   { id: 'observations',  label: 'Observations' },
 ]
 
-export default function VERARoom({ observations = [], museWorks = [], commands = [], apiKey, onConnectClaude, isMobile, voiceMode }) {
+export default function VERARoom({ observations = [], museWorks = [], commands = [], doctrineCases = [], institutionEvents = [], apiKey, onConnectClaude, isMobile, voiceMode }) {
   const [tab,                   setTab]                   = useState('patterns')
   const [patterns,              setPatterns]              = useState(null)
   const [analyzing,             setAnalyzing]             = useState(false)
   const [analysisError,         setAnalysisError]         = useState(null)
   const [veraSpeaking,          setVeraSpeaking]          = useState(false)
   const [selectedConstellation, setSelectedConstellation] = useState(null)
+  const [caseTab,               setCaseTab]               = useState('summary')
   const hasAnalyzed = useRef(false)
 
   const { byConstellation, byTheme, remaining } = clusterObservations(observations)
   const obsConstellations = Object.keys(byConstellation)
 
   function computeProfile(name) {
-    const obs      = (byConstellation[name] || []).length
-    const cmds     = commands.filter(c => c.patternTag === name)
-    const active   = cmds.filter(c => ['drafted','analyzing','planned','approved','in_progress'].includes(c.status)).length
-    const pending  = cmds.filter(c => c.status === 'pending_approval').length
+    const obsList   = byConstellation[name] || []
+    const obs       = obsList.length
+    const cmds      = commands.filter(c => c.patternTag === name)
+    const cmdIds    = new Set(cmds.map(c => c.id))
+    const active    = cmds.filter(c => ['drafted','analyzing','planned','approved','in_progress'].includes(c.status)).length
+    const pending   = cmds.filter(c => c.status === 'pending_approval').length
     const completed = cmds.filter(c => c.status === 'completed')
-    const failed   = cmds.filter(c => c.status === 'failed').length
+    const failed    = cmds.filter(c => c.status === 'failed').length
     const successes = completed.filter(c => c.verdict === 'Success').length
     const critTotal    = completed.reduce((s, c) => s + (c.criteriaTotal    || 0), 0)
     const critAchieved = completed.reduce((s, c) => s + (c.criteriaAchieved || 0), 0)
     const successRate  = completed.length > 0 ? Math.round((successes / completed.length) * 100) : null
     const criteriaRate = critTotal > 0 ? Math.round((critAchieved / critTotal) * 100) : null
-    let confidence = 'no data'
-    if (completed.length > 0) {
-      if (successes > 0 && (criteriaRate === null || criteriaRate === 100)) confidence = 'rising'
-      else if (successes > 0) confidence = 'stable'
-      else confidence = 'falling'
+
+    // Algorithmic confidence score (0-100) weighted across four signals
+    const obsScore      = Math.min(obs / 20, 1) * 100
+    const successScore  = successRate ?? 0
+    const criteriaScore = criteriaRate ?? (completed.length > 0 ? 50 : 0)
+    const repeatScore   = Math.min(completed.length / 5, 1) * 100
+    const confidenceScore = completed.length === 0 && obs === 0 ? null
+      : Math.round(0.15 * obsScore + 0.35 * successScore + 0.30 * criteriaScore + 0.20 * repeatScore)
+
+    const confidenceLabel = confidenceScore === null ? 'no data'
+      : confidenceScore >= 80 ? 'high'
+      : confidenceScore >= 60 ? 'moderate'
+      : confidenceScore >= 40 ? 'emerging'
+      : 'low'
+
+    // ARCHIVIST events linked to this constellation's commands
+    const events = institutionEvents
+      .filter(e => cmdIds.has(e.relatedEntityId))
+      .slice(0, 20)
+
+    // Doctrine linked to this constellation
+    const doctrine = doctrineCases.filter(d =>
+      Array.isArray(d.relatedConstellations) && d.relatedConstellations.includes(name)
+    )
+
+    return {
+      name, obs, obsList, total: cmds.length, cmds, active, pending,
+      completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate,
+      confidenceScore, confidenceLabel, events, doctrine,
     }
-    return { name, obs, total: cmds.length, active, pending, completed: completed.length, failed, successRate, critAchieved, critTotal, criteriaRate, confidence }
   }
 
   useEffect(() => {
@@ -214,7 +240,10 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                         overflow: 'hidden',
                       }}>
                         <button
-                          onClick={() => setSelectedConstellation(open ? null : name)}
+                          onClick={() => {
+                            if (open) setSelectedConstellation(null)
+                            else { setSelectedConstellation(name); setCaseTab('summary') }
+                          }}
                           style={{
                             width: '100%', textAlign: 'left', background: 'none', border: 'none',
                             cursor: 'pointer', padding: '10px 14px',
@@ -229,54 +258,173 @@ export default function VERARoom({ observations = [], museWorks = [], commands =
                         </button>
 
                         {open && profile && (
-                          <div style={{ padding: '0 14px 14px 37px', borderTop: '1px solid var(--border-0)' }}>
-                            <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, margin: '10px 0 10px' }}>
-                              Constellation Profile
-                            </p>
-                            <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                          <div style={{ borderTop: '1px solid var(--border-0)' }}>
+
+                            {/* Case file header + sub-tab nav */}
+                            <div style={{ padding: '6px 14px 0 37px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>
+                                VERA Case File
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0', padding: '0 14px 0 37px', borderBottom: '1px solid var(--border-0)' }}>
                               {[
-                                { label: 'Observations', value: profile.obs,       color: 'var(--text-2)' },
-                                { label: 'Commands',     value: profile.total,     color: 'var(--text-2)' },
-                                { label: 'Completed',    value: profile.completed, color: '#10b981' },
-                                { label: 'Active',       value: profile.active,    color: '#3b82f6' },
-                                { label: 'Failed',       value: profile.failed,    color: '#ef4444' },
-                              ].filter(s => s.value > 0 || s.label === 'Observations').map(s => (
-                                <div key={s.label}>
-                                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{s.label}</p>
-                                  <p style={{ color: s.color, fontSize: '15px', fontWeight: 700, lineHeight: 1 }}>{s.value}</p>
-                                </div>
+                                { id: 'summary',      label: 'Summary' },
+                                { id: 'observations', label: `Obs (${profile.obs})` },
+                                { id: 'commands',     label: `Cmds (${profile.total})` },
+                                { id: 'events',       label: `Events (${profile.events.length})` },
+                                { id: 'doctrine',     label: `Doctrine (${profile.doctrine.length})` },
+                              ].map(t => (
+                                <button key={t.id} onClick={() => setCaseTab(t.id)} style={{
+                                  background: 'none', border: 'none', cursor: 'pointer',
+                                  padding: '5px 8px 6px', fontFamily: 'inherit',
+                                  fontSize: '9px', letterSpacing: '0.04em',
+                                  color: caseTab === t.id ? 'var(--text-1)' : 'var(--text-6)',
+                                  borderBottom: caseTab === t.id ? '2px solid #a07830' : '2px solid transparent',
+                                  fontWeight: caseTab === t.id ? 600 : 400,
+                                  whiteSpace: 'nowrap',
+                                }}>
+                                  {t.label}
+                                </button>
                               ))}
                             </div>
 
-                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                              {profile.successRate !== null && (
-                                <div>
-                                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Success Rate</p>
-                                  <p style={{ color: profile.successRate >= 80 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: 700 }}>{profile.successRate}%</p>
-                                </div>
-                              )}
-                              {profile.criteriaRate !== null && (
-                                <div>
-                                  <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Criteria</p>
-                                  <p style={{ color: profile.criteriaRate === 100 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: 700 }}>{profile.critAchieved}/{profile.critTotal}</p>
-                                </div>
-                              )}
-                              <div>
-                                <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Confidence</p>
-                                <p style={{ color: confColor[profile.confidence], fontSize: '11px', fontWeight: 700 }}>
-                                  {profile.confidence === 'rising'   && '↑ '}
-                                  {profile.confidence === 'stable'   && '→ '}
-                                  {profile.confidence === 'falling'  && '↓ '}
-                                  {profile.confidence}
-                                </p>
-                              </div>
-                            </div>
+                            <div style={{ padding: '12px 14px 14px 37px' }}>
 
-                            {profile.total === 0 && (
-                              <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>
-                                No commands tagged to this constellation yet.
-                              </p>
-                            )}
+                              {/* Summary */}
+                              {caseTab === 'summary' && (
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '14px' }}>
+                                    {profile.confidenceScore !== null ? (
+                                      <>
+                                        <span style={{
+                                          color: profile.confidenceScore >= 80 ? '#10b981' : profile.confidenceScore >= 60 ? '#06b6d4' : profile.confidenceScore >= 40 ? '#f59e0b' : '#ef4444',
+                                          fontSize: '22px', fontWeight: 700, lineHeight: 1,
+                                        }}>{profile.confidenceScore}%</span>
+                                        <span style={{ color: 'var(--text-5)', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                                          {profile.confidenceLabel} confidence
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>No confidence data yet</span>
+                                    )}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                    {[
+                                      { label: 'Observations', value: profile.obs,       color: 'var(--text-2)' },
+                                      { label: 'Commands',     value: profile.total,     color: 'var(--text-2)' },
+                                      { label: 'Active',       value: profile.active,    color: '#3b82f6' },
+                                      { label: 'Completed',    value: profile.completed, color: '#10b981' },
+                                      { label: 'Failed',       value: profile.failed,    color: '#ef4444' },
+                                    ].filter(s => s.value > 0 || s.label === 'Observations').map(s => (
+                                      <div key={s.label}>
+                                        <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{s.label}</p>
+                                        <p style={{ color: s.color, fontSize: '16px', fontWeight: 700, lineHeight: 1 }}>{s.value}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {(profile.successRate !== null || profile.criteriaRate !== null) && (
+                                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                      {profile.successRate !== null && (
+                                        <div>
+                                          <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Success Rate</p>
+                                          <p style={{ color: profile.successRate >= 80 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: 700 }}>{profile.successRate}%</p>
+                                        </div>
+                                      )}
+                                      {profile.criteriaRate !== null && (
+                                        <div>
+                                          <p style={{ color: 'var(--text-6)', fontSize: '8px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Criteria</p>
+                                          <p style={{ color: profile.criteriaRate === 100 ? '#10b981' : '#f59e0b', fontSize: '13px', fontWeight: 700 }}>{profile.critAchieved}/{profile.critTotal}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {profile.total === 0 && profile.obs > 0 && (
+                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic', marginTop: '8px' }}>
+                                      No commands tagged to this constellation yet.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Observations */}
+                              {caseTab === 'observations' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {profile.obsList.length === 0 ? (
+                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>No observations.</p>
+                                  ) : profile.obsList.slice(0, 25).map(o => (
+                                    <div key={o.id} style={{ borderLeft: '2px solid #a0783040', paddingLeft: '8px' }}>
+                                      <p style={{ color: 'var(--text-5)', fontSize: '8px', marginBottom: '2px' }}>
+                                        {o.type}{o.timestamp?.toDate ? ` · ${o.timestamp.toDate().toLocaleDateString()}` : ''}
+                                      </p>
+                                      <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
+                                        {(o.text?.length ?? 0) > 120 ? o.text.slice(0, 120) + '…' : (o.text || '')}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Commands */}
+                              {caseTab === 'commands' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                  {profile.cmds.length === 0 ? (
+                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>No commands tagged to this constellation.</p>
+                                  ) : profile.cmds.map(c => {
+                                    const sColor = { completed: '#10b981', failed: '#ef4444', in_progress: '#3b82f6', approved: '#3b82f6', pending_approval: '#f59e0b', drafted: '#6b7280', analyzing: '#6b7280', planned: '#6b7280' }[c.status] || '#6b7280'
+                                    const vColor = { 'Success': '#10b981', 'Partial Success': '#f59e0b', 'Failed': '#ef4444', 'Inconclusive': '#6b7280' }[c.verdict]
+                                    return (
+                                      <div key={c.id} style={{ borderLeft: '2px solid var(--border-1)', paddingLeft: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                                          <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '3px', background: sColor + '22', color: sColor, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            {c.status.replace(/_/g, ' ')}
+                                          </span>
+                                          {vColor && (
+                                            <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '3px', background: vColor + '22', color: vColor, fontWeight: 600 }}>
+                                              {c.verdict}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p style={{ color: 'var(--text-1)', fontSize: '11px', fontWeight: 500, lineHeight: 1.4 }}>{c.title}</p>
+                                        {c.criteriaTotal > 0 && (
+                                          <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px' }}>Criteria: {c.criteriaAchieved || 0}/{c.criteriaTotal}</p>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Events */}
+                              {caseTab === 'events' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {profile.events.length === 0 ? (
+                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>No ARCHIVIST events linked to this constellation's commands.</p>
+                                  ) : profile.events.map((e, i) => (
+                                    <div key={e.id || i} style={{ borderLeft: '2px solid var(--border-1)', paddingLeft: '8px' }}>
+                                      <p style={{ color: 'var(--text-5)', fontSize: '8px', marginBottom: '2px' }}>
+                                        {e.eventType}{e.occurredAt?.toDate ? ` · ${e.occurredAt.toDate().toLocaleDateString()}` : ''}
+                                      </p>
+                                      <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.4 }}>{e.title}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Doctrine */}
+                              {caseTab === 'doctrine' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {profile.doctrine.length === 0 ? (
+                                    <p style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>No doctrine cases linked to this constellation.</p>
+                                  ) : profile.doctrine.map(d => (
+                                    <div key={d.id} style={{ borderLeft: '2px solid #a0783040', paddingLeft: '8px' }}>
+                                      <p style={{ color: 'var(--text-1)', fontSize: '11px', fontWeight: 500 }}>{d.title}</p>
+                                      <p style={{ color: 'var(--text-5)', fontSize: '9px', marginTop: '2px' }}>{d.status || 'draft'}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                            </div>
                           </div>
                         )}
                       </div>
