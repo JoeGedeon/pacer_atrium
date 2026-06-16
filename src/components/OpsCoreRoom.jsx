@@ -198,63 +198,67 @@ function OpsCoreEnvironment({ envState }) {
 }
 
 // ── Broadcast Panel ──────────────────────────────────────────────────────────
+// Monitor component, not a page takeover. List stays primary; the player is a
+// constrained, bordered "wall-mounted" frame that opens beneath the selected card.
 
-function BroadcastPanel({ featuredBroadcast, isMobile }) {
-  const padX = isMobile ? 'px-4' : 'px-6'
+const PLAYER_HEIGHT = 300
 
-  if (!featuredBroadcast) {
-    return (
-      <div className="flex-1" style={{
-        background: '#000', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '14px', minHeight: '60vh',
-      }}>
-        <p style={{ fontSize: '36px', lineHeight: 1, opacity: 0.18 }}>📡</p>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', fontWeight: 600,
-          letterSpacing: '0.04em', textTransform: 'uppercase' }}>Standby</p>
-        <p style={{ color: 'rgba(255,255,255,0.16)', fontSize: '11px', textAlign: 'center',
-          lineHeight: 1.65, maxWidth: '260px' }}>
-          No active transmission. Publish a media asset from Theater to begin broadcasting.
-        </p>
-      </div>
-    )
-  }
-
-  const asset   = featuredBroadcast.asset
-  const isMedia = featuredBroadcast.type === 'media'
-  const videoE  = videoEmbed(asset.videoUrl)
-  const audioE  = isMedia ? audioEmbed(asset.audioUrl) : null
+function BroadcastPlayer({ item, muted, onMuteToggle, onClose }) {
+  const isMedia = item.type === 'media'
+  const videoE  = videoEmbed(item.videoUrl)
+  const audioE  = isMedia ? audioEmbed(item.audioUrl) : null
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column', background: '#000' }}>
-
-      {/* Live indicator bar */}
-      <div style={{ padding: '10px 20px', background: '#06100a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981',
+    <div style={{
+      background: '#000', borderRadius: '10px', overflow: 'hidden',
+      border: '1px solid #ffffff14', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.6)',
+      margin: '8px 0 4px',
+    }}>
+      {/* Title bar */}
+      <div style={{ padding: '9px 14px', background: '#06100a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981',
           boxShadow: '0 0 8px #10b981', display: 'inline-block', flexShrink: 0 }} />
-        <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.2em',
-          textTransform: 'uppercase', fontWeight: 800 }}>Live Transmission</p>
-        <p style={{ color: '#6ee7b7', fontSize: '9px', marginLeft: 'auto' }}>
-          {new Date(asset.publishedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.18em',
+          textTransform: 'uppercase', fontWeight: 800 }}>On Air</p>
+        <p style={{ color: '#6ee7b7', fontSize: '10px', marginLeft: '4px', overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          {item.title || 'Untitled'}
         </p>
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+          {videoE?.type === 'video' && (
+            <button onClick={onMuteToggle} style={{
+              background: 'transparent', border: '1px solid #ffffff20', borderRadius: '5px',
+              color: '#9ca3af', fontSize: '10px', padding: '3px 8px', cursor: 'pointer',
+            }}>
+              {muted ? '🔇 Unmute' : '🔊 Mute'}
+            </button>
+          )}
+          <button onClick={onClose} style={{
+            background: 'transparent', border: '1px solid #ffffff20', borderRadius: '5px',
+            color: '#9ca3af', fontSize: '10px', padding: '3px 8px', cursor: 'pointer',
+          }}>
+            ✕ Close
+          </button>
+        </div>
       </div>
 
-      {/* Player */}
+      {/* Constrained player surface — never full-bleed */}
       {videoE ? (
-        <div style={{ background: '#000', flexShrink: 0 }}>
+        <div style={{ background: '#000', height: PLAYER_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {videoE.type === 'iframe' ? (
             <iframe src={videoE.src}
-              style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen />
           ) : (
-            <video controls src={videoE.src}
-              style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'contain', background: '#000' }} />
+            <video controls muted={muted} src={videoE.src}
+              style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain', background: '#000' }} />
           )}
         </div>
       ) : audioE ? (
-        <div style={{ background: '#0a0618', padding: '28px 24px', flexShrink: 0 }}>
+        <div style={{ background: '#0a0618', padding: '20px' }}>
           <p style={{ color: '#a855f780', fontSize: '9px', letterSpacing: '0.14em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: '14px' }}>🔊 Audio Broadcast</p>
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: '12px' }}>🔊 Audio Broadcast</p>
           {audioE.type === 'iframe'
             ? <iframe src={audioE.src}
                 style={{ width: '100%', height: '120px', border: 'none', display: 'block' }}
@@ -263,40 +267,129 @@ function BroadcastPanel({ featuredBroadcast, isMobile }) {
           }
         </div>
       ) : (
-        <div style={{ background: '#000', aspectRatio: '16/9', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0 }}>
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '13px', fontStyle: 'italic' }}>Media file missing</p>
-          <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '10px', textAlign: 'center',
-            maxWidth: '240px', lineHeight: 1.6 }}>
+        <div style={{ background: '#000', height: '140px', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '12px', fontStyle: 'italic' }}>Media file missing</p>
+          <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '10px', textAlign: 'center', maxWidth: '240px' }}>
             Open Theater → 🎬 Media to upload a file to this asset.
           </p>
         </div>
       )}
 
-      {/* Asset identity */}
-      <div className={`${padX} py-5`} style={{ background: '#000', borderTop: '1px solid #ffffff08' }}>
-        <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.2em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>On Air</p>
-        <p style={{ color: '#f8fafc', fontSize: '22px', fontWeight: 700, lineHeight: 1.2,
-          letterSpacing: '-0.01em', marginBottom: '6px' }}>
-          {asset.title || 'Untitled'}
-        </p>
-        <p style={{ color: '#4b5563', fontSize: '10px' }}>
-          Published {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-        </p>
-      </div>
-
-      {/* Script — context only */}
-      {(isMedia && asset.transcript) && (
-        <div className={`${padX} pb-6`} style={{ background: '#000', borderTop: '1px solid #ffffff06' }}>
+      {/* Script — context only, collapsed length */}
+      {(isMedia && item.transcript) && (
+        <div style={{ padding: '14px 16px', borderTop: '1px solid #ffffff06' }}>
           <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px', paddingTop: '16px' }}>📄 Script</p>
-          <p style={{ color: '#374151', fontSize: '12px', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {asset.transcript.length > 500 ? asset.transcript.slice(0, 500) + '…' : asset.transcript}
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>📄 Script</p>
+          <p style={{ color: '#9ca3af', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            {item.transcript.length > 300 ? item.transcript.slice(0, 300) + '…' : item.transcript}
           </p>
         </div>
       )}
+    </div>
+  )
+}
 
+function BroadcastPanel({ mediaAssets = [], productions = [], isMobile }) {
+  const padX = isMobile ? 'px-4' : 'px-6'
+
+  const broadcasts = useMemo(() => {
+    const fromMedia = mediaAssets
+      .filter(a => a.publishedAt && (a.videoUrl || a.audioUrl))
+      .map(a => ({
+        id: `media:${a.id}`, type: 'media', title: a.title, publishedAt: a.publishedAt,
+        videoUrl: a.videoUrl, audioUrl: a.audioUrl, transcript: a.transcript,
+        mediaType: a.videoUrl ? 'video' : 'audio',
+      }))
+    const fromProd = productions
+      .filter(p => p.publishedAt && p.videoUrl)
+      .map(p => ({
+        id: `prod:${p.id}`, type: 'production', title: p.title, publishedAt: p.publishedAt,
+        videoUrl: p.videoUrl, audioUrl: null, transcript: null, mediaType: 'video',
+      }))
+    return [...fromMedia, ...fromProd].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+  }, [mediaAssets, productions])
+
+  const [selectedId, setSelectedId] = useState(null)
+  const [muted, setMuted]           = useState(false)
+
+  if (broadcasts.length === 0) {
+    return (
+      <div className={`flex-1 ${px} py-5`} style={{ display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '12px', minHeight: '260px' }}>
+        <p style={{ fontSize: '28px', lineHeight: 1, opacity: 0.25 }}>📡</p>
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontWeight: 600,
+          letterSpacing: '0.04em', textTransform: 'uppercase' }}>Standby</p>
+        <p style={{ color: 'var(--text-6)', fontSize: '11px', textAlign: 'center',
+          lineHeight: 1.65, maxWidth: '260px' }}>
+          No active transmission. Publish a media asset from Theater to begin broadcasting.
+        </p>
+      </div>
+    )
+  }
+
+  const selected = broadcasts.find(b => b.id === selectedId) || null
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${padX} py-5`}>
+      <div style={{ maxWidth: '640px' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>
+            Broadcasts
+          </p>
+          <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.6 }}>
+            {broadcasts.length} live transmission{broadcasts.length !== 1 ? 's' : ''}. Select one to preview.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {broadcasts.map(item => {
+            const isOpen = selectedId === item.id
+            const icon   = item.mediaType === 'video' ? '🎬' : '🔊'
+            return (
+              <div key={item.id}>
+                <div style={{
+                  background: isOpen ? 'var(--bg-2)' : 'var(--bg-1)',
+                  border: `1px solid ${isOpen ? '#10b98130' : 'var(--border-1)'}`,
+                  borderRadius: '8px', padding: '12px 14px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                }}>
+                  <span style={{ fontSize: '14px', flexShrink: 0 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.title || 'Untitled'}
+                    </p>
+                    <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '1px' }}>
+                      Published {new Date(item.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedId(isOpen ? null : item.id)}
+                    style={{
+                      background: isOpen ? '#10b98115' : 'transparent',
+                      border: `1px solid ${isOpen ? '#10b98140' : 'var(--border-1)'}`,
+                      borderRadius: '6px', padding: '6px 12px', flexShrink: 0,
+                      color: isOpen ? '#10b981' : 'var(--text-3)',
+                      fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isOpen ? '▼ Playing' : '▶ Preview'}
+                  </button>
+                </div>
+                {isOpen && (
+                  <BroadcastPlayer
+                    item={item}
+                    muted={muted}
+                    onMuteToggle={() => setMuted(m => !m)}
+                    onClose={() => setSelectedId(null)}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -619,7 +712,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
       <RoomSubNav tabs={OPSCORE_TABS} activeTab={view} onSelect={setView} />
 
-      {view === 'broadcast' && <BroadcastPanel featuredBroadcast={featuredBroadcast} isMobile={isMobile} />}
+      {view === 'broadcast' && <BroadcastPanel mediaAssets={mediaAssets} productions={productions} isMobile={isMobile} />}
       {view === 'assets'    && <AssetsPanel mediaAssets={mediaAssets} isMobile={isMobile} />}
 
       {view === 'attention' && (
@@ -744,11 +837,12 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             return (
               <>
                 {videoE && (
-                  <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
+                  <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20`, height: '300px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {videoE.type === 'iframe' ? (
-                      <iframe src={videoE.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                      <iframe src={videoE.src} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                     ) : (
-                      <video controls src={videoE.src} style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }} />
+                      <video controls src={videoE.src} style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }} />
                     )}
                   </div>
                 )}
@@ -778,11 +872,12 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             const embed = videoEmbed(featuredBroadcast.asset.videoUrl)
             if (!embed) return null
             return (
-              <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
+              <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20`, height: '300px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {embed.type === 'iframe' ? (
-                  <iframe src={embed.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  <iframe src={embed.src} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                 ) : (
-                  <video controls src={embed.src} style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }} />
+                  <video controls src={embed.src} style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }} />
                 )}
               </div>
             )
