@@ -3,6 +3,7 @@ import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import { videoEmbed, audioEmbed } from './TheaterRoom'
 import { mediaAssetPipelineStage } from '../lib/pipelineStage'
 import { PipelinePill } from './PipelinePill'
+import { ATTENTION_LEVEL_META, attentionLevelRank, observationAttentionLevel, patternAttentionLevel, toMillis } from '../lib/attentionLevel'
 import RoomSubNav from './RoomSubNav'
 
 const SIGNAL_TYPES = [
@@ -496,9 +497,9 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   const attentionQueue = useMemo(() =>
     observations
       .filter(o => !o.destination)
-      .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0))
+      .sort((a, b) => toMillis(a.timestamp, now) - toMillis(b.timestamp, now))
       .slice(0, 6)
-  , [observations])
+  , [observations, now])
 
   // Constellation frequency — all of them, not just regex-matched
   const patterns = useMemo(() => {
@@ -510,6 +511,29 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   }, [observations])
 
   const maxPattern = patterns[0]?.[1] || 1
+
+  // Attention hierarchy — a display-only re-sort. attentionQueue/patterns stay
+  // oldest-first / count-first because `lead`'s P2 branch and maxPattern depend
+  // on that exact ordering; these copies exist only for the rendered lists below.
+  const displayAttentionQueue = useMemo(() =>
+    [...attentionQueue].sort((a, b) => {
+      const levelA = observationAttentionLevel(a, { now, signal: matchSignal(a.constellation) })
+      const levelB = observationAttentionLevel(b, { now, signal: matchSignal(b.constellation) })
+      const rankDiff = attentionLevelRank(levelA) - attentionLevelRank(levelB)
+      if (rankDiff !== 0) return rankDiff
+      return toMillis(a.timestamp, now) - toMillis(b.timestamp, now)
+    })
+  , [attentionQueue, now])
+
+  const displayPatterns = useMemo(() =>
+    [...patterns].sort((a, b) => {
+      const levelA = patternAttentionLevel(a[1], maxPattern, matchSignal(a[0]))
+      const levelB = patternAttentionLevel(b[1], maxPattern, matchSignal(b[0]))
+      const rankDiff = attentionLevelRank(levelA) - attentionLevelRank(levelB)
+      if (rankDiff !== 0) return rankDiff
+      return b[1] - a[1]
+    })
+  , [patterns, maxPattern])
 
   // KEL threads awaiting outcome
   const pendingActions = useMemo(() =>
@@ -566,7 +590,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
     // P2: Observation unrouted for 7+ days
     const oldest = attentionQueue[0]
     if (oldest) {
-      const age = now - (oldest.timestamp?.toMillis?.() || 0)
+      const age = now - toMillis(oldest.timestamp, now)
       if (age > week) return {
         icon:     '⚠',
         headline: 'ATTENTION REQUIRED',
@@ -902,9 +926,9 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
           <section>
             <p style={SECTION}>Attention Map</p>
             <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
-              Unrouted observations — oldest first.
+              Unrouted observations — most urgent first.
             </p>
-            {attentionQueue.length === 0 ? (
+            {displayAttentionQueue.length === 0 ? (
               <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
                   {observations.length === 0 ? 'No observations yet.' : 'All observations routed.'}
@@ -912,28 +936,37 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {attentionQueue.map((obs, i) => {
-                  const ts  = obs.timestamp?.toDate?.() || new Date()
-                  const age = now - ts.getTime()
+                {displayAttentionQueue.map((obs, i) => {
+                  const age = now - toMillis(obs.timestamp, now)
                   const ageLabel = age > 30 * day ? `${Math.floor(age / (30 * day))}mo ago`
                     : age > week ? `${Math.floor(age / week)}w ago`
                     : age > day  ? `${Math.floor(age / day)}d ago`
                     : 'Today'
-                  const urgent = age > week
+                  const level = observationAttentionLevel(obs, { now, signal: matchSignal(obs.constellation) })
+                  const meta = ATTENTION_LEVEL_META[level]
+                  const isBackground = level === 'background'
                   return (
                     <div key={obs.id} style={{
                       background: 'var(--bg-2)',
-                      border: `1px solid ${urgent ? '#f9731618' : 'var(--border-0)'}`,
-                      borderLeft: `3px solid ${urgent ? '#f97316' : 'var(--border-2)'}`,
+                      border: `1px solid ${meta.color}18`,
+                      borderLeft: `3px solid ${meta.color}`,
                       borderRadius: '0 6px 6px 0', padding: '10px 12px',
+                      opacity: isBackground ? 0.7 : 1,
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: obs.constellation ? '4px' : '0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{
+                          background: meta.color + '15', border: `1px solid ${meta.color}30`, color: meta.color,
+                          fontSize: '9px', fontWeight: 700, borderRadius: '4px',
+                          padding: '2px 7px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                        }}>
+                          {meta.label}
+                        </span>
                         {obs.constellation && (
                           <span style={{ color: '#a07830', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                             ✦ {obs.constellation}
                           </span>
                         )}
-                        <span style={{ color: urgent ? '#f97316' : 'var(--text-6)', fontSize: '9px', marginLeft: 'auto', flexShrink: 0 }}>
+                        <span style={{ color: 'var(--text-6)', fontSize: '9px', marginLeft: 'auto', flexShrink: 0 }}>
                           {ageLabel}
                         </span>
                       </div>
@@ -953,7 +986,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
               What is becoming true.
             </p>
-            {patterns.length === 0 ? (
+            {displayPatterns.length === 0 ? (
               <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
                   No constellations yet. VERA names patterns as observations arrive.
@@ -961,21 +994,32 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {patterns.map(([name, count], i) => {
+                {displayPatterns.map(([name, count], i) => {
                   const sig = matchSignal(name)
                   const barPct = Math.max(6, Math.round((count / maxPattern) * 100))
-                  const isLead = i === 0
+                  const level = patternAttentionLevel(count, maxPattern, sig)
+                  const meta = ATTENTION_LEVEL_META[level]
+                  const isLead = level === 'critical'
+                  const isBackground = level === 'background'
                   return (
-                    <div key={name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <div key={name} style={{ opacity: isBackground ? 0.65 : 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                        <span style={{
+                          background: meta.color + '15', border: `1px solid ${meta.color}30`, color: meta.color,
+                          fontSize: '8px', fontWeight: 700, borderRadius: '4px',
+                          padding: '1px 5px', letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0,
+                        }}>
+                          {meta.label}
+                        </span>
                         <span style={{
                           color: sig?.color || (isLead ? '#a07830' : 'var(--text-3)'),
                           fontSize: isLead ? '12px' : '11px',
                           fontWeight: isLead ? 600 : 400,
+                          flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           ✦ {name}
                         </span>
-                        <span style={{ color: isLead ? 'var(--text-3)' : 'var(--text-5)', fontSize: '10px' }}>
+                        <span style={{ color: isLead ? 'var(--text-3)' : 'var(--text-5)', fontSize: '10px', flexShrink: 0 }}>
                           {count}
                         </span>
                       </div>
