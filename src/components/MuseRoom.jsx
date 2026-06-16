@@ -386,12 +386,20 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
 
 // ── Muse Room ─────────────────────────────────────────────────────────────────
 
-export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile }) {
+export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile, externalSeed, onExternalSeedConsumed }) {
   const [mode, setMode] = useState('canvas')
 
   const [activeWork, setActiveWork] = useState(null)
   const [activeObs, setActiveObs]   = useState(null)
   const [inboxObs, setInboxObs]     = useState(null)
+
+  // Cross-room handoff — e.g. a Theater media asset sent in "for packaging"
+  useEffect(() => {
+    if (!externalSeed) return
+    setInboxObs(externalSeed)
+    setMode('inbox')
+    onExternalSeedConsumed?.()
+  }, [externalSeed]) // eslint-disable-line react-hooks/exhaustive-deps
   const [draft, setDraft]           = useState({ title: '', category: 'characters' })
   const [adding, setAdding]         = useState(false)
   const [surfaced, setSurfaced]     = useState(new Set())
