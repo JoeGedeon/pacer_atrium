@@ -475,6 +475,8 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   const [morningBrief, setMorningBrief] = useState('')
   const [briefLoading, setBriefLoading] = useState(false)
   const [briefSpeaking, setBriefSpeaking] = useState(false)
+  const [broadcastExpanded, setBroadcastExpanded] = useState(false)
+  const [broadcastMuted, setBroadcastMuted]       = useState(false)
   const now = Date.now()
 
   // Signal counts by type
@@ -630,6 +632,20 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
     if (recentProd) return { type: 'production', asset: recentProd }
     return null
   }, [mediaAssets, productions])
+
+  // Normalize media/production into BroadcastPlayer's expected shape — same
+  // player component as the dedicated Broadcast tab, so there's one wall-monitor, not two.
+  const featuredItem = useMemo(() => {
+    if (!featuredBroadcast) return null
+    const { type, asset } = featuredBroadcast
+    return {
+      type,
+      title:      asset.title,
+      videoUrl:   asset.videoUrl,
+      audioUrl:   type === 'media' ? asset.audioUrl   : null,
+      transcript: type === 'media' ? asset.transcript : null,
+    }
+  }, [featuredBroadcast])
 
   // Derives from existing computed state — no new data needed
   const envState = featuredBroadcast ? 'live' : lead.strength === 'High' ? 'attention' : 'standby'
@@ -832,59 +848,44 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             </div>
           </div>
 
-          {/* Featured broadcast — media asset (video + audio + transcript) */}
-          {featuredBroadcast?.type === 'media' && (() => {
-            const asset = featuredBroadcast.asset
-            const videoE = videoEmbed(asset.videoUrl)
-            const audioE = audioEmbed(asset.audioUrl)
-            return (
-              <>
-                {videoE && (
-                  <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20`, height: '300px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {videoE.type === 'iframe' ? (
-                      <iframe src={videoE.src} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                    ) : (
-                      <video controls src={videoE.src} style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }} />
-                    )}
-                  </div>
-                )}
-                {audioE && (
-                  <div style={{ borderTop: `1px solid ${lead.color}15`, background: 'var(--bg-2)' }}>
-                    {audioE.type === 'iframe' ? (
-                      <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
-                    ) : (
-                      <audio controls src={audioE.src} style={{ width: '100%', display: 'block', padding: '12px 16px' }} />
-                    )}
-                  </div>
-                )}
-                {asset.transcript && (
-                  <div style={{ borderTop: `1px solid ${lead.color}15`, padding: '14px 24px' }}>
-                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>📄 Script</p>
-                    <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
-                      {asset.transcript.length > 400 ? asset.transcript.slice(0, 400) + '…' : asset.transcript}
-                    </p>
-                  </div>
-                )}
-              </>
-            )
-          })()}
+          {/* Featured broadcast — collapsed wall-monitor strip by default.
+              Attention deserves the room before video does; expand is opt-in. */}
+          {featuredItem && !broadcastExpanded && (
+            <div style={{
+              borderTop: `1px solid ${lead.color}20`, padding: '10px 24px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981',
+                boxShadow: '0 0 8px #10b981', display: 'inline-block', flexShrink: 0 }} />
+              <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.16em',
+                textTransform: 'uppercase', fontWeight: 800, flexShrink: 0 }}>On Air</p>
+              <p style={{ color: 'var(--text-4)', fontSize: '11px', flex: 1, minWidth: 0,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {featuredItem.title || 'Untitled'}
+              </p>
+              <button
+                onClick={() => setBroadcastExpanded(true)}
+                style={{
+                  background: 'transparent', border: '1px solid #10b98140', borderRadius: '6px',
+                  padding: '5px 12px', color: '#10b981', fontSize: '11px', fontWeight: 600,
+                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                }}
+              >
+                ▶ Expand
+              </button>
+            </div>
+          )}
 
-          {/* Featured broadcast — published production with videoUrl */}
-          {featuredBroadcast?.type === 'production' && featuredBroadcast.asset.videoUrl && (() => {
-            const embed = videoEmbed(featuredBroadcast.asset.videoUrl)
-            if (!embed) return null
-            return (
-              <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20`, height: '300px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {embed.type === 'iframe' ? (
-                  <iframe src={embed.src} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                ) : (
-                  <video controls src={embed.src} style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }} />
-                )}
-              </div>
-            )
-          })()}
+          {featuredItem && broadcastExpanded && (
+            <div style={{ borderTop: `1px solid ${lead.color}20`, padding: '12px 24px 4px' }}>
+              <BroadcastPlayer
+                item={featuredItem}
+                muted={broadcastMuted}
+                onMuteToggle={() => setBroadcastMuted(m => !m)}
+                onClose={() => setBroadcastExpanded(false)}
+              />
+            </div>
+          )}
 
           {/* Source */}
           <div style={{ padding: featuredBroadcast ? '10px 24px 14px' : '0 24px 14px' }}>
