@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { createMuseWork, updateMuseWork } from '../lib/db'
 import { getManifestDecision, DECISION_META } from '../lib/museDirector'
 import { FORMATS } from '../lib/theaterEnrichment'
+import { observationPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
 const MUSE_TABS = [
@@ -137,9 +139,12 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
                   <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.5 }}>
                     {(obs.text?.length ?? 0) > 85 ? obs.text.slice(0, 85) + '…' : (obs.text || '')}
                   </p>
-                  {obs.constellation && (
-                    <p style={{ color: '#a07830', fontSize: '9px', marginTop: '3px' }}>{obs.constellation}</p>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {obs.constellation && (
+                      <p style={{ color: '#a07830', fontSize: '9px' }}>{obs.constellation}</p>
+                    )}
+                    <PipelinePill {...observationPipelineStage(obs)} />
+                  </div>
                 </button>
               ))}
             </div>
@@ -606,9 +611,12 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                         <p style={{ color: isSelected ? 'var(--text-1)' : 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
                           {obs.text.length > 65 ? obs.text.slice(0, 65) + '…' : obs.text}
                         </p>
-                        {obs.constellation && (
-                          <p style={{ color: '#a07830', fontSize: '9px', marginTop: '4px' }}>{obs.constellation}</p>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                          {obs.constellation && (
+                            <p style={{ color: '#a07830', fontSize: '9px' }}>{obs.constellation}</p>
+                          )}
+                          <PipelinePill {...observationPipelineStage(obs)} />
+                        </div>
                       </button>
                     )
                   })}

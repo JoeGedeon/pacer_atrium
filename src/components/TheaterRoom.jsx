@@ -4,6 +4,8 @@ import { createMultiManifestTest } from '../lib/db'
 import { uploadMediaVideo, uploadMediaAudio } from '../lib/mediaUpload'
 import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+import { theaterProductionPipelineStage, mediaAssetPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 
 export function videoEmbed(url) {
   if (!url) return null
@@ -342,9 +344,10 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
               </span>
             )}
           </div>
-          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4, marginBottom: '5px' }}>
             {production.title || 'Untitled Production'}
           </p>
+          <PipelinePill {...theaterProductionPipelineStage(production)} />
         </div>
         <span style={{ color: 'var(--text-5)', fontSize: '11px', flexShrink: 0 }}>
           {expanded ? '▲' : '▼'}
@@ -1607,9 +1610,10 @@ function AssetCard({ asset, productions = [], onUpdate, onPublish, onCreateProdu
               <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600 }}>📡 OpsCore</span>
             )}
           </div>
-          <p style={{ color: expanded ? '#e2e8f0' : 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+          <p style={{ color: expanded ? '#e2e8f0' : 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4, marginBottom: '5px' }}>
             {asset.title || 'Untitled Asset'}
           </p>
+          <PipelinePill {...mediaAssetPipelineStage(asset)} />
         </div>
         <span style={{ color: 'var(--text-5)', fontSize: '11px', flexShrink: 0 }}>
           {expanded ? '▲' : '▼'}

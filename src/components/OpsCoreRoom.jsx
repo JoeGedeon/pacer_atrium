@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import { videoEmbed, audioEmbed } from './TheaterRoom'
+import { mediaAssetPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
 const SIGNAL_TYPES = [
@@ -441,7 +443,8 @@ function AssetsPanel({ mediaAssets, isMobile }) {
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {asset.title || 'Untitled'}
                     </p>
-                    <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '1px' }}>{typeText}</p>
+                    <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '1px', marginBottom: '4px' }}>{typeText}</p>
+                    <PipelinePill {...mediaAssetPipelineStage(asset)} />
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <p style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
