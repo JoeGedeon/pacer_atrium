@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import { videoEmbed, audioEmbed } from './TheaterRoom'
+import { mediaAssetPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
+import { ATTENTION_LEVEL_META, attentionLevelRank, observationAttentionLevel, patternAttentionLevel, toMillis } from '../lib/attentionLevel'
 import RoomSubNav from './RoomSubNav'
 
 const SIGNAL_TYPES = [
@@ -198,63 +201,67 @@ function OpsCoreEnvironment({ envState }) {
 }
 
 // ── Broadcast Panel ──────────────────────────────────────────────────────────
+// Monitor component, not a page takeover. List stays primary; the player is a
+// constrained, bordered "wall-mounted" frame that opens beneath the selected card.
 
-function BroadcastPanel({ featuredBroadcast, isMobile }) {
-  const padX = isMobile ? 'px-4' : 'px-6'
+const PLAYER_HEIGHT = 300
 
-  if (!featuredBroadcast) {
-    return (
-      <div className="flex-1" style={{
-        background: '#000', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '14px', minHeight: '60vh',
-      }}>
-        <p style={{ fontSize: '36px', lineHeight: 1, opacity: 0.18 }}>📡</p>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', fontWeight: 600,
-          letterSpacing: '0.04em', textTransform: 'uppercase' }}>Standby</p>
-        <p style={{ color: 'rgba(255,255,255,0.16)', fontSize: '11px', textAlign: 'center',
-          lineHeight: 1.65, maxWidth: '260px' }}>
-          No active transmission. Publish a media asset from Theater to begin broadcasting.
-        </p>
-      </div>
-    )
-  }
-
-  const asset   = featuredBroadcast.asset
-  const isMedia = featuredBroadcast.type === 'media'
-  const videoE  = videoEmbed(asset.videoUrl)
-  const audioE  = isMedia ? audioEmbed(asset.audioUrl) : null
+function BroadcastPlayer({ item, muted, onMuteToggle, onClose }) {
+  const isMedia = item.type === 'media'
+  const videoE  = videoEmbed(item.videoUrl)
+  const audioE  = isMedia ? audioEmbed(item.audioUrl) : null
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column', background: '#000' }}>
-
-      {/* Live indicator bar */}
-      <div style={{ padding: '10px 20px', background: '#06100a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981',
+    <div style={{
+      background: '#000', borderRadius: '10px', overflow: 'hidden',
+      border: '1px solid #ffffff14', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.6)',
+      margin: '8px 0 4px',
+    }}>
+      {/* Title bar */}
+      <div style={{ padding: '9px 14px', background: '#06100a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981',
           boxShadow: '0 0 8px #10b981', display: 'inline-block', flexShrink: 0 }} />
-        <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.2em',
-          textTransform: 'uppercase', fontWeight: 800 }}>Live Transmission</p>
-        <p style={{ color: '#6ee7b7', fontSize: '9px', marginLeft: 'auto' }}>
-          {new Date(asset.publishedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.18em',
+          textTransform: 'uppercase', fontWeight: 800 }}>On Air</p>
+        <p style={{ color: '#6ee7b7', fontSize: '10px', marginLeft: '4px', overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          {item.title || 'Untitled'}
         </p>
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+          {videoE?.type === 'video' && (
+            <button onClick={onMuteToggle} style={{
+              background: 'transparent', border: '1px solid #ffffff20', borderRadius: '5px',
+              color: '#9ca3af', fontSize: '10px', padding: '3px 8px', cursor: 'pointer',
+            }}>
+              {muted ? '🔇 Unmute' : '🔊 Mute'}
+            </button>
+          )}
+          <button onClick={onClose} style={{
+            background: 'transparent', border: '1px solid #ffffff20', borderRadius: '5px',
+            color: '#9ca3af', fontSize: '10px', padding: '3px 8px', cursor: 'pointer',
+          }}>
+            ✕ Close
+          </button>
+        </div>
       </div>
 
-      {/* Player */}
+      {/* Constrained player surface — never full-bleed */}
       {videoE ? (
-        <div style={{ background: '#000', flexShrink: 0 }}>
+        <div style={{ background: '#000', height: PLAYER_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {videoE.type === 'iframe' ? (
             <iframe src={videoE.src}
-              style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen />
           ) : (
-            <video controls src={videoE.src}
-              style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'contain', background: '#000' }} />
+            <video controls muted={muted} src={videoE.src}
+              style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain', background: '#000' }} />
           )}
         </div>
       ) : audioE ? (
-        <div style={{ background: '#0a0618', padding: '28px 24px', flexShrink: 0 }}>
+        <div style={{ background: '#0a0618', padding: '20px' }}>
           <p style={{ color: '#a855f780', fontSize: '9px', letterSpacing: '0.14em',
-            textTransform: 'uppercase', fontWeight: 700, marginBottom: '14px' }}>🔊 Audio Broadcast</p>
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: '12px' }}>🔊 Audio Broadcast</p>
           {audioE.type === 'iframe'
             ? <iframe src={audioE.src}
                 style={{ width: '100%', height: '120px', border: 'none', display: 'block' }}
@@ -263,40 +270,129 @@ function BroadcastPanel({ featuredBroadcast, isMobile }) {
           }
         </div>
       ) : (
-        <div style={{ background: '#000', aspectRatio: '16/9', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0 }}>
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '13px', fontStyle: 'italic' }}>Media file missing</p>
-          <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '10px', textAlign: 'center',
-            maxWidth: '240px', lineHeight: 1.6 }}>
+        <div style={{ background: '#000', height: '140px', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '12px', fontStyle: 'italic' }}>Media file missing</p>
+          <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '10px', textAlign: 'center', maxWidth: '240px' }}>
             Open Theater → 🎬 Media to upload a file to this asset.
           </p>
         </div>
       )}
 
-      {/* Asset identity */}
-      <div className={`${padX} py-5`} style={{ background: '#000', borderTop: '1px solid #ffffff08' }}>
-        <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.2em',
-          textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>On Air</p>
-        <p style={{ color: '#f8fafc', fontSize: '22px', fontWeight: 700, lineHeight: 1.2,
-          letterSpacing: '-0.01em', marginBottom: '6px' }}>
-          {asset.title || 'Untitled'}
-        </p>
-        <p style={{ color: '#4b5563', fontSize: '10px' }}>
-          Published {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-        </p>
-      </div>
-
-      {/* Script — context only */}
-      {(isMedia && asset.transcript) && (
-        <div className={`${padX} pb-6`} style={{ background: '#000', borderTop: '1px solid #ffffff06' }}>
+      {/* Script — context only, collapsed length */}
+      {(isMedia && item.transcript) && (
+        <div style={{ padding: '14px 16px', borderTop: '1px solid #ffffff06' }}>
           <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.1em',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px', paddingTop: '16px' }}>📄 Script</p>
-          <p style={{ color: '#374151', fontSize: '12px', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {asset.transcript.length > 500 ? asset.transcript.slice(0, 500) + '…' : asset.transcript}
+            textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px' }}>📄 Script</p>
+          <p style={{ color: '#9ca3af', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            {item.transcript.length > 300 ? item.transcript.slice(0, 300) + '…' : item.transcript}
           </p>
         </div>
       )}
+    </div>
+  )
+}
 
+function BroadcastPanel({ mediaAssets = [], productions = [], isMobile }) {
+  const padX = isMobile ? 'px-4' : 'px-6'
+
+  const broadcasts = useMemo(() => {
+    const fromMedia = mediaAssets
+      .filter(a => a.publishedAt && (a.videoUrl || a.audioUrl))
+      .map(a => ({
+        id: `media:${a.id}`, type: 'media', title: a.title, publishedAt: a.publishedAt,
+        videoUrl: a.videoUrl, audioUrl: a.audioUrl, transcript: a.transcript,
+        mediaType: a.videoUrl ? 'video' : 'audio',
+      }))
+    const fromProd = productions
+      .filter(p => p.publishedAt && p.videoUrl)
+      .map(p => ({
+        id: `prod:${p.id}`, type: 'production', title: p.title, publishedAt: p.publishedAt,
+        videoUrl: p.videoUrl, audioUrl: null, transcript: null, mediaType: 'video',
+      }))
+    return [...fromMedia, ...fromProd].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+  }, [mediaAssets, productions])
+
+  const [selectedId, setSelectedId] = useState(null)
+  const [muted, setMuted]           = useState(false)
+
+  if (broadcasts.length === 0) {
+    return (
+      <div className={`flex-1 ${px} py-5`} style={{ display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '12px', minHeight: '260px' }}>
+        <p style={{ fontSize: '28px', lineHeight: 1, opacity: 0.25 }}>📡</p>
+        <p style={{ color: 'var(--text-5)', fontSize: '12px', fontWeight: 600,
+          letterSpacing: '0.04em', textTransform: 'uppercase' }}>Standby</p>
+        <p style={{ color: 'var(--text-6)', fontSize: '11px', textAlign: 'center',
+          lineHeight: 1.65, maxWidth: '260px' }}>
+          No active transmission. Publish a media asset from Theater to begin broadcasting.
+        </p>
+      </div>
+    )
+  }
+
+  const selected = broadcasts.find(b => b.id === selectedId) || null
+
+  return (
+    <div className={`flex-1 overflow-y-auto ${padX} py-5`}>
+      <div style={{ maxWidth: '640px' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <p style={{ color: 'var(--text-1)', fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>
+            Broadcasts
+          </p>
+          <p style={{ color: 'var(--text-5)', fontSize: '11px', lineHeight: 1.6 }}>
+            {broadcasts.length} live transmission{broadcasts.length !== 1 ? 's' : ''}. Select one to preview.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {broadcasts.map(item => {
+            const isOpen = selectedId === item.id
+            const icon   = item.mediaType === 'video' ? '🎬' : '🔊'
+            return (
+              <div key={item.id}>
+                <div style={{
+                  background: isOpen ? 'var(--bg-2)' : 'var(--bg-1)',
+                  border: `1px solid ${isOpen ? '#10b98130' : 'var(--border-1)'}`,
+                  borderRadius: '8px', padding: '12px 14px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                }}>
+                  <span style={{ fontSize: '14px', flexShrink: 0 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 600,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.title || 'Untitled'}
+                    </p>
+                    <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '1px' }}>
+                      Published {new Date(item.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedId(isOpen ? null : item.id)}
+                    style={{
+                      background: isOpen ? '#10b98115' : 'transparent',
+                      border: `1px solid ${isOpen ? '#10b98140' : 'var(--border-1)'}`,
+                      borderRadius: '6px', padding: '6px 12px', flexShrink: 0,
+                      color: isOpen ? '#10b981' : 'var(--text-3)',
+                      fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isOpen ? '▼ Playing' : '▶ Preview'}
+                  </button>
+                </div>
+                {isOpen && (
+                  <BroadcastPlayer
+                    item={item}
+                    muted={muted}
+                    onMuteToggle={() => setMuted(m => !m)}
+                    onClose={() => setSelectedId(null)}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -348,7 +444,8 @@ function AssetsPanel({ mediaAssets, isMobile }) {
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {asset.title || 'Untitled'}
                     </p>
-                    <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '1px' }}>{typeText}</p>
+                    <p style={{ color: 'var(--text-6)', fontSize: '10px', marginTop: '1px', marginBottom: '4px' }}>{typeText}</p>
+                    <PipelinePill {...mediaAssetPipelineStage(asset)} />
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <p style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
@@ -379,6 +476,8 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   const [morningBrief, setMorningBrief] = useState('')
   const [briefLoading, setBriefLoading] = useState(false)
   const [briefSpeaking, setBriefSpeaking] = useState(false)
+  const [broadcastExpanded, setBroadcastExpanded] = useState(false)
+  const [broadcastMuted, setBroadcastMuted]       = useState(false)
   const now = Date.now()
 
   // Signal counts by type
@@ -398,9 +497,9 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   const attentionQueue = useMemo(() =>
     observations
       .filter(o => !o.destination)
-      .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0))
+      .sort((a, b) => toMillis(a.timestamp, now) - toMillis(b.timestamp, now))
       .slice(0, 6)
-  , [observations])
+  , [observations, now])
 
   // Constellation frequency — all of them, not just regex-matched
   const patterns = useMemo(() => {
@@ -412,6 +511,29 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
   }, [observations])
 
   const maxPattern = patterns[0]?.[1] || 1
+
+  // Attention hierarchy — a display-only re-sort. attentionQueue/patterns stay
+  // oldest-first / count-first because `lead`'s P2 branch and maxPattern depend
+  // on that exact ordering; these copies exist only for the rendered lists below.
+  const displayAttentionQueue = useMemo(() =>
+    [...attentionQueue].sort((a, b) => {
+      const levelA = observationAttentionLevel(a, { now, signal: matchSignal(a.constellation) })
+      const levelB = observationAttentionLevel(b, { now, signal: matchSignal(b.constellation) })
+      const rankDiff = attentionLevelRank(levelA) - attentionLevelRank(levelB)
+      if (rankDiff !== 0) return rankDiff
+      return toMillis(a.timestamp, now) - toMillis(b.timestamp, now)
+    })
+  , [attentionQueue, now])
+
+  const displayPatterns = useMemo(() =>
+    [...patterns].sort((a, b) => {
+      const levelA = patternAttentionLevel(a[1], maxPattern, matchSignal(a[0]))
+      const levelB = patternAttentionLevel(b[1], maxPattern, matchSignal(b[0]))
+      const rankDiff = attentionLevelRank(levelA) - attentionLevelRank(levelB)
+      if (rankDiff !== 0) return rankDiff
+      return b[1] - a[1]
+    })
+  , [patterns, maxPattern])
 
   // KEL threads awaiting outcome
   const pendingActions = useMemo(() =>
@@ -468,7 +590,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
     // P2: Observation unrouted for 7+ days
     const oldest = attentionQueue[0]
     if (oldest) {
-      const age = now - (oldest.timestamp?.toMillis?.() || 0)
+      const age = now - toMillis(oldest.timestamp, now)
       if (age > week) return {
         icon:     '⚠',
         headline: 'ATTENTION REQUIRED',
@@ -534,6 +656,20 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
     if (recentProd) return { type: 'production', asset: recentProd }
     return null
   }, [mediaAssets, productions])
+
+  // Normalize media/production into BroadcastPlayer's expected shape — same
+  // player component as the dedicated Broadcast tab, so there's one wall-monitor, not two.
+  const featuredItem = useMemo(() => {
+    if (!featuredBroadcast) return null
+    const { type, asset } = featuredBroadcast
+    return {
+      type,
+      title:      asset.title,
+      videoUrl:   asset.videoUrl,
+      audioUrl:   type === 'media' ? asset.audioUrl   : null,
+      transcript: type === 'media' ? asset.transcript : null,
+    }
+  }, [featuredBroadcast])
 
   // Derives from existing computed state — no new data needed
   const envState = featuredBroadcast ? 'live' : lead.strength === 'High' ? 'attention' : 'standby'
@@ -619,7 +755,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
       <RoomSubNav tabs={OPSCORE_TABS} activeTab={view} onSelect={setView} />
 
-      {view === 'broadcast' && <BroadcastPanel featuredBroadcast={featuredBroadcast} isMobile={isMobile} />}
+      {view === 'broadcast' && <BroadcastPanel mediaAssets={mediaAssets} productions={productions} isMobile={isMobile} />}
       {view === 'assets'    && <AssetsPanel mediaAssets={mediaAssets} isMobile={isMobile} />}
 
       {view === 'attention' && (
@@ -736,57 +872,44 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             </div>
           </div>
 
-          {/* Featured broadcast — media asset (video + audio + transcript) */}
-          {featuredBroadcast?.type === 'media' && (() => {
-            const asset = featuredBroadcast.asset
-            const videoE = videoEmbed(asset.videoUrl)
-            const audioE = audioEmbed(asset.audioUrl)
-            return (
-              <>
-                {videoE && (
-                  <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
-                    {videoE.type === 'iframe' ? (
-                      <iframe src={videoE.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                    ) : (
-                      <video controls src={videoE.src} style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }} />
-                    )}
-                  </div>
-                )}
-                {audioE && (
-                  <div style={{ borderTop: `1px solid ${lead.color}15`, background: 'var(--bg-2)' }}>
-                    {audioE.type === 'iframe' ? (
-                      <iframe src={audioE.src} style={{ width: '100%', height: '120px', border: 'none', display: 'block' }} scrolling="no" frameBorder="no" allow="autoplay" />
-                    ) : (
-                      <audio controls src={audioE.src} style={{ width: '100%', display: 'block', padding: '12px 16px' }} />
-                    )}
-                  </div>
-                )}
-                {asset.transcript && (
-                  <div style={{ borderTop: `1px solid ${lead.color}15`, padding: '14px 24px' }}>
-                    <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>📄 Script</p>
-                    <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
-                      {asset.transcript.length > 400 ? asset.transcript.slice(0, 400) + '…' : asset.transcript}
-                    </p>
-                  </div>
-                )}
-              </>
-            )
-          })()}
+          {/* Featured broadcast — collapsed wall-monitor strip by default.
+              Attention deserves the room before video does; expand is opt-in. */}
+          {featuredItem && !broadcastExpanded && (
+            <div style={{
+              borderTop: `1px solid ${lead.color}20`, padding: '10px 24px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981',
+                boxShadow: '0 0 8px #10b981', display: 'inline-block', flexShrink: 0 }} />
+              <p style={{ color: '#10b981', fontSize: '9px', letterSpacing: '0.16em',
+                textTransform: 'uppercase', fontWeight: 800, flexShrink: 0 }}>On Air</p>
+              <p style={{ color: 'var(--text-4)', fontSize: '11px', flex: 1, minWidth: 0,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {featuredItem.title || 'Untitled'}
+              </p>
+              <button
+                onClick={() => setBroadcastExpanded(true)}
+                style={{
+                  background: 'transparent', border: '1px solid #10b98140', borderRadius: '6px',
+                  padding: '5px 12px', color: '#10b981', fontSize: '11px', fontWeight: 600,
+                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                }}
+              >
+                ▶ Expand
+              </button>
+            </div>
+          )}
 
-          {/* Featured broadcast — published production with videoUrl */}
-          {featuredBroadcast?.type === 'production' && featuredBroadcast.asset.videoUrl && (() => {
-            const embed = videoEmbed(featuredBroadcast.asset.videoUrl)
-            if (!embed) return null
-            return (
-              <div style={{ background: '#000', borderTop: `1px solid ${lead.color}20` }}>
-                {embed.type === 'iframe' ? (
-                  <iframe src={embed.src} style={{ width: '100%', aspectRatio: '16/9', border: 'none', display: 'block' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                ) : (
-                  <video controls src={embed.src} style={{ width: '100%', display: 'block', maxHeight: '320px', objectFit: 'contain' }} />
-                )}
-              </div>
-            )
-          })()}
+          {featuredItem && broadcastExpanded && (
+            <div style={{ borderTop: `1px solid ${lead.color}20`, padding: '12px 24px 4px' }}>
+              <BroadcastPlayer
+                item={featuredItem}
+                muted={broadcastMuted}
+                onMuteToggle={() => setBroadcastMuted(m => !m)}
+                onClose={() => setBroadcastExpanded(false)}
+              />
+            </div>
+          )}
 
           {/* Source */}
           <div style={{ padding: featuredBroadcast ? '10px 24px 14px' : '0 24px 14px' }}>
@@ -803,9 +926,9 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
           <section>
             <p style={SECTION}>Attention Map</p>
             <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
-              Unrouted observations — oldest first.
+              Unrouted observations — most urgent first.
             </p>
-            {attentionQueue.length === 0 ? (
+            {displayAttentionQueue.length === 0 ? (
               <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
                   {observations.length === 0 ? 'No observations yet.' : 'All observations routed.'}
@@ -813,28 +936,37 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {attentionQueue.map((obs, i) => {
-                  const ts  = obs.timestamp?.toDate?.() || new Date()
-                  const age = now - ts.getTime()
+                {displayAttentionQueue.map((obs, i) => {
+                  const age = now - toMillis(obs.timestamp, now)
                   const ageLabel = age > 30 * day ? `${Math.floor(age / (30 * day))}mo ago`
                     : age > week ? `${Math.floor(age / week)}w ago`
                     : age > day  ? `${Math.floor(age / day)}d ago`
                     : 'Today'
-                  const urgent = age > week
+                  const level = observationAttentionLevel(obs, { now, signal: matchSignal(obs.constellation) })
+                  const meta = ATTENTION_LEVEL_META[level]
+                  const isBackground = level === 'background'
                   return (
                     <div key={obs.id} style={{
                       background: 'var(--bg-2)',
-                      border: `1px solid ${urgent ? '#f9731618' : 'var(--border-0)'}`,
-                      borderLeft: `3px solid ${urgent ? '#f97316' : 'var(--border-2)'}`,
+                      border: `1px solid ${meta.color}18`,
+                      borderLeft: `3px solid ${meta.color}`,
                       borderRadius: '0 6px 6px 0', padding: '10px 12px',
+                      opacity: isBackground ? 0.7 : 1,
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: obs.constellation ? '4px' : '0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{
+                          background: meta.color + '15', border: `1px solid ${meta.color}30`, color: meta.color,
+                          fontSize: '9px', fontWeight: 700, borderRadius: '4px',
+                          padding: '2px 7px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                        }}>
+                          {meta.label}
+                        </span>
                         {obs.constellation && (
                           <span style={{ color: '#a07830', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                             ✦ {obs.constellation}
                           </span>
                         )}
-                        <span style={{ color: urgent ? '#f97316' : 'var(--text-6)', fontSize: '9px', marginLeft: 'auto', flexShrink: 0 }}>
+                        <span style={{ color: 'var(--text-6)', fontSize: '9px', marginLeft: 'auto', flexShrink: 0 }}>
                           {ageLabel}
                         </span>
                       </div>
@@ -854,7 +986,7 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
             <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '10px' }}>
               What is becoming true.
             </p>
-            {patterns.length === 0 ? (
+            {displayPatterns.length === 0 ? (
               <div style={{ background: 'var(--bg-2)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
                 <p style={{ color: 'var(--text-5)', fontSize: '12px' }}>
                   No constellations yet. VERA names patterns as observations arrive.
@@ -862,21 +994,32 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {patterns.map(([name, count], i) => {
+                {displayPatterns.map(([name, count], i) => {
                   const sig = matchSignal(name)
                   const barPct = Math.max(6, Math.round((count / maxPattern) * 100))
-                  const isLead = i === 0
+                  const level = patternAttentionLevel(count, maxPattern, sig)
+                  const meta = ATTENTION_LEVEL_META[level]
+                  const isLead = level === 'critical'
+                  const isBackground = level === 'background'
                   return (
-                    <div key={name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <div key={name} style={{ opacity: isBackground ? 0.65 : 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                        <span style={{
+                          background: meta.color + '15', border: `1px solid ${meta.color}30`, color: meta.color,
+                          fontSize: '8px', fontWeight: 700, borderRadius: '4px',
+                          padding: '1px 5px', letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0,
+                        }}>
+                          {meta.label}
+                        </span>
                         <span style={{
                           color: sig?.color || (isLead ? '#a07830' : 'var(--text-3)'),
                           fontSize: isLead ? '12px' : '11px',
                           fontWeight: isLead ? 600 : 400,
+                          flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           ✦ {name}
                         </span>
-                        <span style={{ color: isLead ? 'var(--text-3)' : 'var(--text-5)', fontSize: '10px' }}>
+                        <span style={{ color: isLead ? 'var(--text-3)' : 'var(--text-5)', fontSize: '10px', flexShrink: 0 }}>
                           {count}
                         </span>
                       </div>

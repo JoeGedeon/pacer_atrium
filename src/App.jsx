@@ -100,6 +100,7 @@ export default function App() {
   const isMobile = useIsMobile()
 
   const [currentRoom, setCurrentRoom]             = useState('home')
+  const [museExternalSeed, setMuseExternalSeed]   = useState(null) // cross-room handoff — e.g. Theater asset sent to MUSE for packaging
   const [atriumMode, setAtriumMode]               = useState('observe') // 'observe' | 'conversation'
   const [voiceMode, setVoiceMode]                 = useState(() => localStorage.getItem('pacer_voice_mode') === 'on')
   const [observations, setObservations]           = useState([])
@@ -724,8 +725,8 @@ export default function App() {
   }
 
   async function createProductionRecord(data) {
-    if (!user) return
-    await createProduction(user.uid, data)
+    if (!user) return null
+    return await createProduction(user.uid, data)
   }
 
   async function updateProductionRecord(id, patch) {
@@ -769,6 +770,13 @@ export default function App() {
       description:     `"${title}" is now broadcasting in OpsCore Field View.`,
       relatedEntityId: assetId,
     })
+  }
+
+  function sendAssetToMuse(asset) {
+    setMuseExternalSeed({
+      text: `Media asset: ${asset.title || 'Untitled Asset'}${asset.transcript ? '\n\n' + asset.transcript : ''}`,
+    })
+    setCurrentRoom('muse')
   }
 
   async function createDoctrineCaseRecord(data) {
@@ -1081,6 +1089,8 @@ export default function App() {
             onConnectClaude={() => setShowKeyGate(true)}
             onNavigate={setCurrentRoom}
             isMobile={isMobile}
+            externalSeed={museExternalSeed}
+            onExternalSeedConsumed={() => setMuseExternalSeed(null)}
           />
         )}
         {isVERA && (
@@ -1129,6 +1139,7 @@ export default function App() {
             onCreateMediaAsset={createMediaAssetRecord}
             onUpdateMediaAsset={updateMediaAssetRecord}
             onPublishMediaAsset={publishMediaAssetRecord}
+            onSendToMuse={sendAssetToMuse}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             uid={user?.uid}

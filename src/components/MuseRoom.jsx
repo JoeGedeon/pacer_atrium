@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { createMuseWork, updateMuseWork } from '../lib/db'
 import { getManifestDecision, DECISION_META } from '../lib/museDirector'
 import { FORMATS } from '../lib/theaterEnrichment'
+import { observationPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
 const MUSE_TABS = [
@@ -137,9 +139,12 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
                   <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.5 }}>
                     {(obs.text?.length ?? 0) > 85 ? obs.text.slice(0, 85) + '…' : (obs.text || '')}
                   </p>
-                  {obs.constellation && (
-                    <p style={{ color: '#a07830', fontSize: '9px', marginTop: '3px' }}>{obs.constellation}</p>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {obs.constellation && (
+                      <p style={{ color: '#a07830', fontSize: '9px' }}>{obs.constellation}</p>
+                    )}
+                    <PipelinePill {...observationPipelineStage(obs)} />
+                  </div>
                 </button>
               ))}
             </div>
@@ -386,12 +391,20 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
 
 // ── Muse Room ─────────────────────────────────────────────────────────────────
 
-export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile }) {
+export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile, externalSeed, onExternalSeedConsumed }) {
   const [mode, setMode] = useState('canvas')
 
   const [activeWork, setActiveWork] = useState(null)
   const [activeObs, setActiveObs]   = useState(null)
   const [inboxObs, setInboxObs]     = useState(null)
+
+  // Cross-room handoff — e.g. a Theater media asset sent in "for packaging"
+  useEffect(() => {
+    if (!externalSeed) return
+    setInboxObs(externalSeed)
+    setMode('inbox')
+    onExternalSeedConsumed?.()
+  }, [externalSeed]) // eslint-disable-line react-hooks/exhaustive-deps
   const [draft, setDraft]           = useState({ title: '', category: 'characters' })
   const [adding, setAdding]         = useState(false)
   const [surfaced, setSurfaced]     = useState(new Set())
@@ -598,9 +611,12 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                         <p style={{ color: isSelected ? 'var(--text-1)' : 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
                           {obs.text.length > 65 ? obs.text.slice(0, 65) + '…' : obs.text}
                         </p>
-                        {obs.constellation && (
-                          <p style={{ color: '#a07830', fontSize: '9px', marginTop: '4px' }}>{obs.constellation}</p>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                          {obs.constellation && (
+                            <p style={{ color: '#a07830', fontSize: '9px' }}>{obs.constellation}</p>
+                          )}
+                          <PipelinePill {...observationPipelineStage(obs)} />
+                        </div>
                       </button>
                     )
                   })}

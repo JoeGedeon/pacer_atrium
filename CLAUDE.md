@@ -141,6 +141,27 @@ No state may be skipped. No new states without a canonization decision.
 
 ---
 
+## PACER Governance Rule — Lifecycle Authority
+
+Operational lifecycle and Creative lifecycle are separate systems. Do not merge them.
+
+**Operational lifecycle** tracks custody, routing, publication state, and institutional ownership.
+Observation → Approved → Packaged → Production → Published → Archived
+Implementation: `src/lib/pipelineStage.js` (canonical mapping) + `src/components/PipelinePill.jsx` (canonical display). Answers: **"Where is this artifact?"**
+
+**Creative lifecycle** tracks maturity, refinement, narrative development, and readiness — this is the canonized PACER Object Lifecycle above (Observed → Shaping → Structured → Premiere Ready → Opening Night → Published Memory). Answers: **"How developed is this artifact?"**
+
+These questions must remain independent. A field answering both becomes a field that answers neither.
+
+All new artifact types must:
+1. Map to the shared operational lifecycle through `pipelineStage.js`.
+2. Use `PipelinePill.jsx` for operational state display.
+3. Never create room-specific status badges.
+4. Never redefine operational stages locally.
+5. Preserve doctrine-defined creative lifecycle systems where they already exist.
+
+---
+
 ## Named Systems (Do Not Rename)
 
 | Name | Role | Notes |
@@ -200,3 +221,5 @@ Institutional memory, doctrine, observations, evidence, commands, reviews, and g
 - Merge inline and external theme scripts into one "universal" version
 - Rename any system listed in the Named Systems table
 - Improve the raccoon metaphor
+- Create a room-specific status badge instead of using `PipelinePill.jsx`
+- Redefine operational lifecycle stages locally, or merge operational and creative lifecycle into one field

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { requestKELRecommendation } from '../lib/kelAnalysis'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+import { kelCommandPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -306,13 +308,14 @@ function CommandDetail({ cmd, onBack, onSubmitForGate, onApprove, onDeny, onComp
             {badge(sm.label, sm.color)}
           </div>
         </div>
-        <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>
+        <p style={{ color: 'var(--text-5)', fontSize: '10px', marginBottom: '8px' }}>
           {cmd.targetSystem}
           {cmd.executionMode && ` · ${cmd.executionMode === 'execution' ? 'Execution Mode' : 'Review Mode'}`}
           {cmd.assignedAgent && ` · ${cmd.assignedAgent.toUpperCase()}`}
           {cmd.supportingAgents?.length > 0 && ` + ${cmd.supportingAgents.join(', ').toUpperCase()}`}
           {cmd.createdAt && ` · ${timeAgo(cmd.createdAt)}`}
         </p>
+        <PipelinePill {...kelCommandPipelineStage(cmd)} />
       </div>
 
       {/* Intent */}
@@ -1055,7 +1058,7 @@ function CommandsWorkbench({
                       </span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>{cmd.targetSystem}</span>
                     {cmd.assignedAgent && <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>· {cmd.assignedAgent.toUpperCase()}</span>}
                     {tot > 0 && <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>· {done}/{tot} steps</span>}
@@ -1068,6 +1071,7 @@ function CommandsWorkbench({
                       </span>
                     )}
                   </div>
+                  <PipelinePill {...kelCommandPipelineStage(cmd)} />
                 </button>
               )
             })}
