@@ -29,7 +29,7 @@ Return valid JSON only — no markdown, no explanation outside the JSON:
   "cited": ["brief excerpt from observation 1", "brief excerpt from observation 2"]
 }`
 
-export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [], localApprovedRecs = [], approvedThreadObsIds = new Set() } = {}) {
+export async function requestKELRecommendation(observations, apiKey, { threads = [], commands = [], localApprovedRecs = [], approvedThreadObsIds = new Set(), lineage = [] } = {}) {
   if (!apiKey || observations.length < 2) return null
 
   // Resolved constellations: patterns with a completed+successful command.
@@ -85,12 +85,24 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
     constellationGroups[o.constellation].push(o)
   }
 
-  const constellationLines = Object.entries(constellationGroups).map(([name, obs]) => {
-    const routed   = obs.filter(o => o.destination)
-    const excerpt  = obs[0].text.slice(0, 120)
-    const extra    = obs.length > 1 ? ` (+${obs.length - 1} more observation${obs.length > 2 ? 's' : ''})` : ''
-    const routeTag = routed.length > 0 ? ` · routed to: ${[...new Set(routed.map(o => o.destination))].join(', ')}` : ''
-    return `◈ ${name} (${obs.length} obs${routeTag})\n  "${excerpt}${obs[0].text.length > 120 ? '…' : ''}"${extra}`
+  // Lineage-weighted scores: count published outcomes per constellation.
+  // Constellations with more published outcomes rank first — K.E.L. attends to
+  // earlier context more strongly, so proven patterns lead the prompt.
+  const lineageScores = {}
+  for (const l of lineage) {
+    if (l.constellation) lineageScores[l.constellation] = (lineageScores[l.constellation] || 0) + 1
+  }
+
+  const sortedConstellationEntries = Object.entries(constellationGroups)
+    .sort(([a], [b]) => (lineageScores[b] || 0) - (lineageScores[a] || 0))
+
+  const constellationLines = sortedConstellationEntries.map(([name, obs]) => {
+    const routed      = obs.filter(o => o.destination)
+    const excerpt     = obs[0].text.slice(0, 120)
+    const extra       = obs.length > 1 ? ` (+${obs.length - 1} more observation${obs.length > 2 ? 's' : ''})` : ''
+    const routeTag    = routed.length > 0 ? ` · routed to: ${[...new Set(routed.map(o => o.destination))].join(', ')}` : ''
+    const lineageTag  = lineageScores[name] ? ` · ${lineageScores[name]} published outcome${lineageScores[name] !== 1 ? 's' : ''}` : ''
+    return `◈ ${name} (${obs.length} obs${routeTag}${lineageTag})\n  "${excerpt}${obs[0].text.length > 120 ? '…' : ''}"${extra}`
   })
 
   const untaggedLines = dedupedUntagged.slice(0, 8).map((o, i) => {
@@ -153,6 +165,16 @@ export async function requestKELRecommendation(observations, apiKey, { threads =
         const rate = Math.round((successCount / cmds.length) * 100)
         return `- ${tag}: ${cmds.length} resolution(s), ${rate}% Success rate — e.g. "${best.title}" (${best.verdict}${crit})`
       }).join('\n')
+    }`
+  }
+
+  // Lineage signal block: constellations that have produced published outcomes
+  const provenConsts = Object.entries(lineageScores)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+  if (provenConsts.length > 0) {
+    priorContext += `\n\nLineage signal — constellations with proven published outcomes (prefer these when multiple options are comparable in urgency):\n${
+      provenConsts.map(([c, n]) => `- ${c}: ${n} published outcome${n !== 1 ? 's' : ''}`).join('\n')
     }`
   }
 

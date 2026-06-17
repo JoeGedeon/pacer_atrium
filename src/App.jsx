@@ -1298,6 +1298,7 @@ export default function App() {
             onFailCommand={failCommandRecord}
             onArchiveCommand={archiveCommandRecord}
             onUpdateCommand={updateCommandRecord}
+            lineage={lineage}
           />
         )}
         {isSettings && (

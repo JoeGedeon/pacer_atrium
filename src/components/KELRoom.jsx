@@ -1090,6 +1090,7 @@ export default function KELRoom({
   threads = [],
   commands = [], onCreateCommand, onSubmitForGate, onApproveCommand, onDenyCommand,
   onCompleteCommand, onFailCommand, onArchiveCommand, onUpdateCommand,
+  lineage = [],
 }) {
   const [kelTab,         setKelTab]         = useState('commands')
   const [rec,            setRec]            = useState(null)
@@ -1191,7 +1192,7 @@ export default function KELRoom({
     try {
       const result = await requestKELRecommendation(
         validObs, apiKey,
-        { threads, commands, localApprovedRecs: localApprovedRecsRef.current, approvedThreadObsIds }
+        { threads, commands, localApprovedRecs: localApprovedRecsRef.current, approvedThreadObsIds, lineage }
       )
       setRec(result)
     } catch (e) {
