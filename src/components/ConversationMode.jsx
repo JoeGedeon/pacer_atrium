@@ -27,6 +27,7 @@ export default function ConversationMode({
   const [error, setError]           = useState(null)
   const recognitionRef  = useRef(null)
   const historyEndRef   = useRef(null)
+  const historyRef      = useRef([])
   const startTimeRef    = useRef(null)
   const gotResultRef    = useRef(false)
 
@@ -42,6 +43,7 @@ export default function ConversationMode({
   }, [])
 
   useEffect(() => {
+    historyRef.current = history
     historyEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [history])
 
@@ -119,10 +121,7 @@ export default function ConversationMode({
       if (event.results[event.results.length - 1].isFinal) {
         setLiveTranscript('')
         recognition.stop()
-        setHistory(prev => {
-          processQuery(transcript, prev)
-          return prev
-        })
+        processQuery(transcript, historyRef.current)
       }
     }
 
