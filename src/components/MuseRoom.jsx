@@ -578,9 +578,9 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
         <>
           <div className="flex flex-1 overflow-hidden">
 
-            {/* LEFT WING */}
+            {/* LEFT WING — hidden on mobile (signals accessible via Signals tab) */}
             <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
-              style={{ width: '210px', borderRight: '1px solid var(--border-0)' }}>
+              style={{ width: '210px', borderRight: '1px solid var(--border-0)', display: isMobile ? 'none' : 'flex' }}>
               <div className="flex items-center gap-2 mb-4 px-2">
                 <span className="animate-pulse shrink-0" style={{
                   width: '5px', height: '5px', borderRadius: '50%', background: '#10b981',
@@ -624,18 +624,32 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
               )}
             </div>
 
-            {/* CENTER STAGE */}
+            {/* CENTER STAGE — full width on mobile when an item is selected, hidden when nothing selected */}
             <div className="flex-1 flex flex-col overflow-hidden"
-              style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-0)' }}>
+              style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-0)',
+                display: isMobile && !activeWork && !activeObs ? 'none' : 'flex' }}>
+              {isMobile && (activeWork || activeObs) && (
+                <button
+                  onClick={() => { setActiveWork(null); setActiveObs(null) }}
+                  style={{
+                    padding: '10px 16px', textAlign: 'left', background: 'var(--bg-0)',
+                    border: 'none', borderBottom: '1px solid var(--border-0)',
+                    color: 'var(--text-4)', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit',
+                    flexShrink: 0,
+                  }}
+                >
+                  ← Works
+                </button>
+              )}
               {activeWork ? (
-                <div className="flex flex-col flex-1 px-12 py-10 overflow-y-auto">
+                <div className="flex flex-col flex-1 overflow-y-auto" style={{ padding: isMobile ? '20px 16px' : '40px 48px' }}>
                   <div className="flex items-start justify-between mb-6">
                     <div>
                       <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                         textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
                         {activeCat?.icon} {activeCat?.label}
                       </p>
-                      <h2 style={{ fontSize: '32px', color: 'var(--text-0)', fontWeight: 700,
+                      <h2 style={{ fontSize: isMobile ? '22px' : '32px', color: 'var(--text-0)', fontWeight: 700,
                         letterSpacing: '-0.025em', lineHeight: 1.15 }}>
                         {activeWork.title}
                       </h2>
@@ -708,7 +722,7 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                   </div>
                 </div>
               ) : activeObs ? (
-                <div className="flex flex-col flex-1 px-12 py-10 overflow-y-auto">
+                <div className="flex flex-col flex-1 overflow-y-auto" style={{ padding: isMobile ? '20px 16px' : '40px 48px' }}>
                   <div className="flex items-start justify-between mb-8">
                     <div style={{ flex: 1, paddingRight: '24px' }}>
                       <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
@@ -762,9 +776,13 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
               )}
             </div>
 
-            {/* RIGHT WING */}
+            {/* RIGHT WING — full width on mobile when no item selected; hidden when item active */}
             <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
-              style={{ width: '250px', background: 'var(--bg-0)' }}>
+              style={{
+                width: isMobile ? '100%' : '250px',
+                background: 'var(--bg-0)',
+                display: isMobile && (activeWork || activeObs) ? 'none' : 'flex',
+              }}>
               <div className="flex items-center justify-between mb-4 px-2">
                 <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', fontWeight: 600 }}>Works in Progress</p>
