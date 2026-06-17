@@ -30,6 +30,24 @@ export function toMillis(value, fallback = Date.now()) {
 const day  = 86400000
 const week = 7 * day
 
+// Canonical signal taxonomy — shared by OpsCore display and the proactive voice gate.
+// Declared once here so no room defines its own copy (Campus Rule #001).
+export const SIGNAL_TYPES = [
+  { id: 'revenue',       label: 'Revenue Risk',      color: '#ef4444', pattern: /revenue|finance|billing|money|cost|price|budget/i },
+  { id: 'communication', label: 'Communication Risk', color: '#f59e0b', pattern: /communication|clarity|feedback|message|signal|voice|expression/i },
+  { id: 'safety',        label: 'Safety Risk',        color: '#f97316', pattern: /safety|risk|compliance|warning|danger|liability/i },
+  { id: 'friction',      label: 'Customer Friction',  color: '#a855f7', pattern: /customer|friction|service|client|satisfaction|complaint/i },
+  { id: 'process',       label: 'Process Drift',      color: '#3b82f6', pattern: /process|workflow|system|operation|drift|procedure|efficiency/i },
+]
+
+export function matchSignal(constellation) {
+  if (!constellation) return null
+  for (const sig of SIGNAL_TYPES) {
+    if (sig.pattern.test(constellation)) return sig
+  }
+  return null
+}
+
 // Revenue and safety risk outrank communication/friction, which outrank process
 // drift — the same severity ordering already implied by SIGNAL_TYPES' colors.
 const SIGNAL_WEIGHT = { revenue: 2, safety: 2, communication: 1, friction: 1, process: 0 }

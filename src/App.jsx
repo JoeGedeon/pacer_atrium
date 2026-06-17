@@ -53,6 +53,7 @@ import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import { uploadVoiceSeed } from './lib/voiceUpload'
 import { uploadStudioArtifactImage } from './lib/imageUpload'
 import PACERVoice from './components/PACERVoice'
+import { useProactiveAnnouncements } from './lib/useProactiveAnnouncements'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -531,6 +532,17 @@ export default function App() {
       setArrivalLoading(false) // clears spinner in case brief was in loading state
     })
   }, [emailData, calendarEvents]) // eslint-disable-line
+
+  // Phase 2: proactive announcements — fires for the three approved system events.
+  // voiceMode gates whether PACER speaks unprompted; getVoiceConfig('home') keeps
+  // tone neutral until Phase 3 room personalities are added.
+  useProactiveAnnouncements({
+    observations,
+    kelDecisions,
+    arrivalText,
+    voiceMode,
+    voiceConfig: getVoiceConfig(currentRoom),
+  })
 
   async function submitObservation(obs) {
     if (!isCreator(user)) incrementCampusStat('observations')
