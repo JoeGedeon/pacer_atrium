@@ -55,6 +55,7 @@ import { uploadVoiceSeed } from './lib/voiceUpload'
 import { uploadStudioArtifactImage } from './lib/imageUpload'
 import PACERVoice from './components/PACERVoice'
 import { useProactiveAnnouncements } from './lib/useProactiveAnnouncements'
+import { lineageBriefingContext } from './lib/lineageBriefingContext'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -176,6 +177,9 @@ export default function App() {
     const executionReliability = (completed + failed) > 0 ? Math.round((completed / (completed + failed)) * 100) : null
     return { active, pending, completed, failed, governanceScore, executionReliability, total: commands.length }
   }, [commands])
+
+  // Lineage briefing context — derived once, injected into conversation and morning brief
+  const lineageCtx = useMemo(() => lineageBriefingContext(lineage, observations), [lineage, observations])
 
   // Builder readiness derives from thread layer (primary) or kel_decisions (fallback)
   // Unlocked by Human Gate approval on any KEL recommendation — not a separate review ceremony
@@ -427,6 +431,7 @@ export default function App() {
             observations, productions, institutionEvents, creatorLogs, kelReviews,
             emailContext:    emailIncluded    ? emailContextString(currentEmail)    : null,
             calendarContext: calendarIncluded ? calendarContextString(currentCalendar) : null,
+            lineageContext:  lineageCtx,
           },
           apiKey
         )
@@ -1090,6 +1095,7 @@ export default function App() {
                 emailContext={emailContextString(emailData)}
                 calendarContext={calendarContextString(calendarEvents)}
                 voiceConfig={getVoiceConfig('atrium')}
+                lineageContext={lineageCtx}
               />
             )
             : (
