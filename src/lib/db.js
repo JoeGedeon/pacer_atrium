@@ -685,7 +685,7 @@ export async function denyCommand(uid, id, commandTitle, rationale) {
   })
 }
 
-export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal, causedByEventId }) {
+export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal, causedByEventId, lineageData }) {
   const criteriaNote = criteriaTotal > 0 ? ` · ${criteriaAchieved}/${criteriaTotal} criteria` : ''
   const eventId = await createInstitutionEvent(uid, {
     eventType:       'command_completed',
@@ -704,6 +704,9 @@ export async function completeCommand(uid, id, commandTitle, { completionProof, 
     archivistLogId:   eventId,
     updatedAt:        serverTimestamp(),
   })
+  if (lineageData) {
+    await createLineage(uid, lineageData)
+  }
 }
 
 export async function failCommand(uid, id, commandTitle, failureReason) {
@@ -751,6 +754,7 @@ export function listenCommands(uid, callback) {
 // Fields that don't apply to a given artifact type are stored as null.
 export async function createLineage(uid, data) {
   return addDoc(collection(db, 'users', uid, 'lineage'), {
+    commandId:     data.commandId     || null,
     observationId: data.observationId || null,
     threadId:      data.threadId      || null,
     museWorkId:    data.museWorkId    || null,

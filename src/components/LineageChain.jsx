@@ -4,6 +4,7 @@
 
 const STEPS = [
   { key: 'observation', label: 'Originated from Observation', field: 'observationId' },
+  { key: 'command',     label: 'Executed as K.E.L. Command',  field: 'commandId'     },
   { key: 'thread',      label: 'Promoted through Thread',     field: 'threadId'      },
   { key: 'muse',        label: 'Developed in MUSE Work',      field: 'museWorkId'    },
   { key: 'production',  label: 'Packaged as Production',      field: 'productionId'  },
