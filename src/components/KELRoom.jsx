@@ -821,11 +821,10 @@ function EvidenceLedger({ commands, isMobile }) {
         {patterns.length === 0 ? (
           <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-0)', borderRadius: '8px', padding: '20px' }}>
             <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7, marginBottom: '8px' }}>
-              No pattern evidence yet.
+              No problem has yet been named clearly enough to warrant institutional action.
             </p>
             <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.6 }}>
-              When you create commands and tag them with a Constellation Pattern, the ledger builds a record:
-              how many times a pattern generated a command, how many succeeded, which failed, and what the most recent outcome was.
+              When commands are created and tagged with a Constellation Pattern, the ledger builds a record of how many times a pattern generated action, how many succeeded, and what the most recent outcome was.
             </p>
           </div>
         ) : (
@@ -1003,7 +1002,7 @@ function CommandsWorkbench({
           commands.length === 0 ? (
             <div style={{ maxWidth: '540px', paddingTop: '8px' }}>
               <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '20px' }}>
-                The workbench is ready. No commands yet.
+                No problem has yet been named clearly enough to warrant institutional action.
               </p>
               <div style={{
                 background: '#020b18', border: '1px solid #1d4ed820',
@@ -1284,9 +1283,14 @@ export default function KELRoom({
           )}
 
           {apiKey && validObs.length < 2 && (
-            <p style={{ color: 'var(--text-4)', fontSize: '13px', lineHeight: 1.7, maxWidth: '440px' }}>
-              K.E.L. needs at least 2 observations to recommend. Add more in Atrium.
-            </p>
+            <div style={{ maxWidth: '440px' }}>
+              <p style={{ color: 'var(--text-4)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
+                No problem has yet been named clearly enough to warrant institutional action.
+              </p>
+              <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.7 }}>
+                K.E.L. reads the observation stream. Enter at least two observations in Atrium to begin.
+              </p>
+            </div>
           )}
 
           {hasPendingClosures && (

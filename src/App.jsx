@@ -446,7 +446,7 @@ export default function App() {
     const unrouted = observations.filter(o => !o.destination).length
     const pending  = productions.filter(p => p.humanGateStatus === 'pending' || (p.status === 'staged' && !p.humanGateStatus)).length
     const parts = []
-    if (observations.length === 0) parts.push('The Atrium is quiet.')
+    if (observations.length === 0) parts.push('Your institution has not yet generated sufficient signal to distinguish what matters from what does not.')
     else parts.push(`${observations.length} observation${observations.length !== 1 ? 's' : ''} in memory.`)
     if (unrouted > 0) parts.push(`${unrouted} awaiting routing.`)
     if (pending > 0) parts.push(`${pending} production${pending !== 1 ? 's' : ''} awaiting approval.`)
