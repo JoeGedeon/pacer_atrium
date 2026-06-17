@@ -197,9 +197,15 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         </div>
 
         <p style={{
-          color: 'var(--text-1)', fontSize: '13px', lineHeight: 1.8,
+          color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7,
+          marginBottom: '10px', marginTop: '4px',
+        }}>
+          PACER turns observations into actions, actions into outcomes, and outcomes into institutional memory.
+        </p>
+
+        <p style={{
+          color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.8,
           fontStyle: 'italic', marginBottom: '40px',
-          marginTop: '4px',
         }}>
           How do we preserve what matters while moving it forward?
         </p>
@@ -246,7 +252,7 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
                 <p className="text-sm font-semibold" style={{ color: '#a5b4fc', marginBottom: '4px' }}>
                   Morning Brief
                 </p>
-                <p style={{ fontSize: '11px', color: '#3730a3' }}>
+                <p style={{ fontSize: '11px', color: '#818cf8' }}>
                   What requires your attention today
                 </p>
               </div>
@@ -270,7 +276,7 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
                 <p className="text-sm font-semibold" style={{ color: '#93c5fd', marginBottom: '4px' }}>
                   Capture Observation
                 </p>
-                <p style={{ fontSize: '11px', color: '#1d3a6a' }}>Enter the Atrium</p>
+                <p style={{ fontSize: '11px', color: '#60a5fa' }}>Enter the Atrium</p>
               </div>
             </div>
           </button>
