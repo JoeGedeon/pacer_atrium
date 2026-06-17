@@ -45,6 +45,7 @@ import {
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
   createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
   batchUpdateObservations,
+  createLineage,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -758,6 +759,24 @@ export default function App() {
       description:     `"${title}" survived Theater review and is now live in OpsCore Field View.`,
       relatedEntityId: productionId,
     })
+    const prod          = productions.find(p => p.id === productionId)
+    const observationId = prod?.sourceObservationId || null
+    const thread        = observationId ? threads.find(t => t.observationIds?.includes(observationId)) : null
+    await createLineage(user.uid, {
+      observationId,
+      threadId:      thread?.id || null,
+      museWorkId:    null,
+      assetId:       null,
+      productionId,
+      publishedBy:   user.uid,
+      constellation: prod?.sourceConstellation || null,
+      path: [
+        ...(observationId ? ['observation'] : []),
+        ...(thread?.id    ? ['thread']      : []),
+        'production',
+        'published',
+      ],
+    })
   }
 
   async function createMediaAssetRecord(data) {
@@ -781,6 +800,27 @@ export default function App() {
       title:           'Media Asset Published to OpsCore',
       description:     `"${title}" is now broadcasting in OpsCore Field View.`,
       relatedEntityId: assetId,
+    })
+    const asset         = mediaAssets.find(a => a.id === assetId)
+    const observationId = asset?.sourceObservation || null
+    const productionId  = asset?.productionId      || null
+    const prod          = productionId ? productions.find(p => p.id === productionId) : null
+    const thread        = observationId ? threads.find(t => t.observationIds?.includes(observationId)) : null
+    await createLineage(user.uid, {
+      observationId,
+      threadId:      thread?.id || null,
+      museWorkId:    null,
+      assetId,
+      productionId,
+      publishedBy:   user.uid,
+      constellation: prod?.sourceConstellation || asset?.sourceConstellation || null,
+      path: [
+        ...(observationId ? ['observation'] : []),
+        ...(thread?.id    ? ['thread']      : []),
+        ...(productionId  ? ['production']  : []),
+        'asset',
+        'published',
+      ],
     })
   }
 
