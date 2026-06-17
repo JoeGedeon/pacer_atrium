@@ -745,3 +745,35 @@ export function listenCommands(uid, callback) {
     err => { console.error('[listenCommands] snapshot error:', err) },
   )
 }
+
+// ── Lineage ─────────────────────────────────────────────────────────────────
+// Written once at publish time. Never updated — this is a frozen historical record.
+// Fields that don't apply to a given artifact type are stored as null.
+export async function createLineage(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'lineage'), {
+    observationId: data.observationId || null,
+    threadId:      data.threadId      || null,
+    museWorkId:    data.museWorkId    || null,
+    assetId:       data.assetId       || null,
+    productionId:  data.productionId  || null,
+    publishedBy:   data.publishedBy   || null,
+    constellation: data.constellation || null,
+    path:          data.path          || [],
+    publishedAt:   serverTimestamp(),
+  })
+}
+
+export function listenLineage(uid, callback) {
+  const q = query(
+    collection(db, 'users', uid, 'lineage'),
+    orderBy('publishedAt', 'desc'),
+  )
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({
+      ...d.data(),
+      id:          d.id,
+      publishedAt: d.data().publishedAt?.toDate?.() ?? new Date(),
+    }))),
+    err => { console.error('[listenLineage] snapshot error:', err?.code, err?.message) },
+  )
+}

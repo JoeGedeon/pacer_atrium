@@ -45,6 +45,7 @@ import {
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
   createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
   batchUpdateObservations,
+  createLineage, listenLineage,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -54,6 +55,7 @@ import { uploadVoiceSeed } from './lib/voiceUpload'
 import { uploadStudioArtifactImage } from './lib/imageUpload'
 import PACERVoice from './components/PACERVoice'
 import { useProactiveAnnouncements } from './lib/useProactiveAnnouncements'
+import { lineageBriefingContext } from './lib/lineageBriefingContext'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -137,6 +139,7 @@ export default function App() {
   const [mediaAssets, setMediaAssets]             = useState([])
   const [doctrineCases, setDoctrineCases]         = useState([])
   const [commands, setCommands]                   = useState([])
+  const [lineage, setLineage]                     = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -174,6 +177,9 @@ export default function App() {
     const executionReliability = (completed + failed) > 0 ? Math.round((completed / (completed + failed)) * 100) : null
     return { active, pending, completed, failed, governanceScore, executionReliability, total: commands.length }
   }, [commands])
+
+  // Lineage briefing context — derived once, injected into conversation and morning brief
+  const lineageCtx = useMemo(() => lineageBriefingContext(lineage, observations), [lineage, observations])
 
   // Builder readiness derives from thread layer (primary) or kel_decisions (fallback)
   // Unlocked by Human Gate approval on any KEL recommendation — not a separate review ceremony
@@ -303,7 +309,8 @@ export default function App() {
     const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)
     const unsubCommands   = listenCommands(user.uid, setCommands)
     const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts() }
+    const unsubLineage    = listenLineage(user.uid, setLineage)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -424,6 +431,7 @@ export default function App() {
             observations, productions, institutionEvents, creatorLogs, kelReviews,
             emailContext:    emailIncluded    ? emailContextString(currentEmail)    : null,
             calendarContext: calendarIncluded ? calendarContextString(currentCalendar) : null,
+            lineageContext:  lineageCtx,
           },
           apiKey
         )
@@ -758,6 +766,24 @@ export default function App() {
       description:     `"${title}" survived Theater review and is now live in OpsCore Field View.`,
       relatedEntityId: productionId,
     })
+    const prod          = productions.find(p => p.id === productionId)
+    const observationId = prod?.sourceObservationId || null
+    const thread        = observationId ? threads.find(t => t.observationIds?.includes(observationId)) : null
+    await createLineage(user.uid, {
+      observationId,
+      threadId:      thread?.id || null,
+      museWorkId:    null,
+      assetId:       null,
+      productionId,
+      publishedBy:   user.uid,
+      constellation: prod?.sourceConstellation || null,
+      path: [
+        ...(observationId ? ['observation'] : []),
+        ...(thread?.id    ? ['thread']      : []),
+        'production',
+        'published',
+      ],
+    })
   }
 
   async function createMediaAssetRecord(data) {
@@ -781,6 +807,27 @@ export default function App() {
       title:           'Media Asset Published to OpsCore',
       description:     `"${title}" is now broadcasting in OpsCore Field View.`,
       relatedEntityId: assetId,
+    })
+    const asset         = mediaAssets.find(a => a.id === assetId)
+    const observationId = asset?.sourceObservation || null
+    const productionId  = asset?.productionId      || null
+    const prod          = productionId ? productions.find(p => p.id === productionId) : null
+    const thread        = observationId ? threads.find(t => t.observationIds?.includes(observationId)) : null
+    await createLineage(user.uid, {
+      observationId,
+      threadId:      thread?.id || null,
+      museWorkId:    null,
+      assetId,
+      productionId,
+      publishedBy:   user.uid,
+      constellation: prod?.sourceConstellation || asset?.sourceConstellation || null,
+      path: [
+        ...(observationId ? ['observation'] : []),
+        ...(thread?.id    ? ['thread']      : []),
+        ...(productionId  ? ['production']  : []),
+        'asset',
+        'published',
+      ],
     })
   }
 
@@ -1048,6 +1095,7 @@ export default function App() {
                 emailContext={emailContextString(emailData)}
                 calendarContext={calendarContextString(calendarEvents)}
                 voiceConfig={getVoiceConfig('atrium')}
+                lineageContext={lineageCtx}
               />
             )
             : (
@@ -1120,7 +1168,7 @@ export default function App() {
             onOpenStudio={handleOpenStudio}
           />
         )}
-        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} uid={user?.uid} isMobile={isMobile} />}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} lineage={lineage} uid={user?.uid} isMobile={isMobile} />}
         {isIsles && (
           <IslesRoom
             observations={observations}
@@ -1156,6 +1204,7 @@ export default function App() {
             onConnectClaude={() => setShowKeyGate(true)}
             uid={user?.uid}
             isMobile={isMobile}
+            lineage={lineage}
           />
         )}
         {isOpsCore  && (
@@ -1165,6 +1214,7 @@ export default function App() {
             productions={productions}
             mediaAssets={mediaAssets}
             institutionEvents={institutionEvents}
+            lineage={lineage}
             apiKey={apiKey}
             onBuildBrief={buildArrivalText}
             isMobile={isMobile}

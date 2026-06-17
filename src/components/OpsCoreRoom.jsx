@@ -5,6 +5,7 @@ import { mediaAssetPipelineStage } from '../lib/pipelineStage'
 import { PipelinePill } from './PipelinePill'
 import { ATTENTION_LEVEL_META, SIGNAL_TYPES, matchSignal, attentionLevelRank, observationAttentionLevel, patternAttentionLevel, toMillis } from '../lib/attentionLevel'
 import RoomSubNav from './RoomSubNav'
+import LineageAnalytics from './LineageAnalytics'
 
 const SECTION = {
   color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
@@ -17,6 +18,7 @@ const OPSCORE_TABS = [
   { id: 'attention',  label: '🎯 Attention' },
   { id: 'broadcast',  label: '📡 Broadcast' },
   { id: 'assets',     label: '🎬 Assets' },
+  { id: 'lineage',    label: '◈ Lineage' },
 ]
 
 // ── OpsCore Environment Layer ─────────────────────────────────────────────────
@@ -454,7 +456,7 @@ function AssetsPanel({ mediaAssets, isMobile }) {
 const day  = 86400000
 const week = 7 * day
 
-export default function OpsCoreRoom({ observations = [], threads = [], productions = [], mediaAssets = [], institutionEvents = [], apiKey, onBuildBrief, isMobile }) {
+export default function OpsCoreRoom({ observations = [], threads = [], productions = [], mediaAssets = [], institutionEvents = [], lineage = [], apiKey, onBuildBrief, isMobile }) {
   const [briefing, setBriefing]         = useState(false)
   const [view, setView]                 = useState('attention')
   const [morningBrief, setMorningBrief] = useState('')
@@ -741,6 +743,18 @@ export default function OpsCoreRoom({ observations = [], threads = [], productio
 
       {view === 'broadcast' && <BroadcastPanel mediaAssets={mediaAssets} productions={productions} isMobile={isMobile} />}
       {view === 'assets'    && <AssetsPanel mediaAssets={mediaAssets} isMobile={isMobile} />}
+      {view === 'lineage'   && (
+        <div className={`flex-1 overflow-y-auto ${px} py-5`}>
+          <p style={{ color: 'var(--text-0)', fontSize: '14px', fontWeight: 700,
+            letterSpacing: '-0.01em', marginBottom: '4px' }}>
+            Lineage Analytics
+          </p>
+          <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '20px' }}>
+            What should we do more of?
+          </p>
+          <LineageAnalytics lineage={lineage} observations={observations} mode="operational" />
+        </div>
+      )}
 
       {view === 'attention' && (
       <div className={`flex-1 overflow-y-auto ${px} py-5`} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
