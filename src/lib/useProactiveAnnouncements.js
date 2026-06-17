@@ -13,6 +13,10 @@ export function useProactiveAnnouncements({ observations, kelDecisions, arrivalT
   const prevObsIdsRef      = useRef(new Set())
   const prevDecisionIdsRef = useRef(new Set())
   const prevArrivalRef     = useRef(null)
+  // Always-current ref so data-change effects use the room config from the latest
+  // render, not whichever config happened to be closed over when deps last changed.
+  const voiceConfigRef     = useRef(voiceConfig)
+  useEffect(() => { voiceConfigRef.current = voiceConfig })
 
   useEffect(() => {
     const t = setTimeout(() => { settledRef.current = true }, SETTLE_MS)
@@ -30,7 +34,7 @@ export function useProactiveAnnouncements({ observations, kelDecisions, arrivalT
         if (!prevObsIdsRef.current.has(obs.id)) {
           const signal = matchSignal(obs.constellation)
           if (observationAttentionLevel(obs, { now, signal }) === 'critical') {
-            speakWithVoice(PROACTIVE_ANNOUNCEMENTS.CRITICAL_ATTENTION, voiceConfig, {})
+            speakWithVoice(PROACTIVE_ANNOUNCEMENTS.CRITICAL_ATTENTION, voiceConfigRef.current, {})
             break
           }
         }
@@ -47,7 +51,7 @@ export function useProactiveAnnouncements({ observations, kelDecisions, arrivalT
     if (settledRef.current && voiceMode) {
       for (const decision of kelDecisions) {
         if (!prevDecisionIdsRef.current.has(decision.id) && decision.decision === 'approved') {
-          speakWithVoice(PROACTIVE_ANNOUNCEMENTS.COMMAND_APPROVED, voiceConfig, {})
+          speakWithVoice(PROACTIVE_ANNOUNCEMENTS.COMMAND_APPROVED, voiceConfigRef.current, {})
           break
         }
       }
@@ -59,7 +63,7 @@ export function useProactiveAnnouncements({ observations, kelDecisions, arrivalT
   // Briefing Ready: arrivalText populated (or refreshed) after initial settle.
   useEffect(() => {
     if (settledRef.current && voiceMode && arrivalText && arrivalText !== prevArrivalRef.current) {
-      speakWithVoice(PROACTIVE_ANNOUNCEMENTS.BRIEFING_READY, voiceConfig, {})
+      speakWithVoice(PROACTIVE_ANNOUNCEMENTS.BRIEFING_READY, voiceConfigRef.current, {})
     }
     prevArrivalRef.current = arrivalText
   }, [arrivalText]) // eslint-disable-line

@@ -541,7 +541,7 @@ export default function App() {
     kelDecisions,
     arrivalText,
     voiceMode,
-    voiceConfig: getVoiceConfig('home'),
+    voiceConfig: getVoiceConfig(currentRoom),
   })
 
   async function submitObservation(obs) {
