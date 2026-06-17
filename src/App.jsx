@@ -45,7 +45,7 @@ import {
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
   createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
   batchUpdateObservations,
-  createLineage,
+  createLineage, listenLineage,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -138,6 +138,7 @@ export default function App() {
   const [mediaAssets, setMediaAssets]             = useState([])
   const [doctrineCases, setDoctrineCases]         = useState([])
   const [commands, setCommands]                   = useState([])
+  const [lineage, setLineage]                     = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -304,7 +305,8 @@ export default function App() {
     const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)
     const unsubCommands   = listenCommands(user.uid, setCommands)
     const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts() }
+    const unsubLineage    = listenLineage(user.uid, setLineage)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -1196,6 +1198,7 @@ export default function App() {
             onConnectClaude={() => setShowKeyGate(true)}
             uid={user?.uid}
             isMobile={isMobile}
+            lineage={lineage}
           />
         )}
         {isOpsCore  && (

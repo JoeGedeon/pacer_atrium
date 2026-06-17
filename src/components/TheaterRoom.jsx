@@ -6,6 +6,7 @@ import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import { theaterProductionPipelineStage, mediaAssetPipelineStage } from '../lib/pipelineStage'
 import { PipelinePill } from './PipelinePill'
+import LineageChain from './LineageChain'
 
 export function videoEmbed(url) {
   if (!url) return null
@@ -2515,6 +2516,7 @@ export default function TheaterRoom({
   onCreateProduction, onUpdateProduction, onPublish,
   onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, onSendToMuse,
   apiKey, onConnectClaude, uid, isMobile,
+  lineage = [],
 }) {
   const px = isMobile ? 'px-4' : 'px-8'
   const [view, setView] = useState('office')
@@ -2610,37 +2612,41 @@ export default function TheaterRoom({
                 {productions
                   .filter(p => p.publishedAt)
                   .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
-                  .map(p => (
-                    <div key={p.id} style={{
-                      background: '#041208',
-                      border: '1px solid #10b98125',
-                      borderLeft: '3px solid #10b981',
-                      borderRadius: '0 8px 8px 0', padding: '14px 16px',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
-                        <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600 }}>
-                          {p.title || 'Untitled Production'}
+                  .map(p => {
+                    const chain = lineage.find(l => l.productionId === p.id) ?? null
+                    return (
+                      <div key={p.id} style={{
+                        background: '#041208',
+                        border: '1px solid #10b98125',
+                        borderLeft: '3px solid #10b981',
+                        borderRadius: '0 8px 8px 0', padding: '14px 16px',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                          <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600 }}>
+                            {p.title || 'Untitled Production'}
+                          </p>
+                          <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
+                            letterSpacing: '0.1em', flexShrink: 0 }}>
+                            {new Date(p.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        {p.deliveryDestination && (
+                          <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+                            Destination: {p.deliveryDestination}
+                          </p>
+                        )}
+                        {p.notes && (
+                          <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.5, marginTop: '4px' }}>
+                            {p.notes.length > 120 ? p.notes.slice(0, 120) + '…' : p.notes}
+                          </p>
+                        )}
+                        <p style={{ color: '#10b981', fontSize: '10px', marginTop: '8px', fontWeight: 600 }}>
+                          ✓ Live in OpsCore Field View
                         </p>
-                        <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
-                          letterSpacing: '0.1em', flexShrink: 0 }}>
-                          {new Date(p.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
+                        <LineageChain lineage={chain} />
                       </div>
-                      {p.deliveryDestination && (
-                        <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
-                          Destination: {p.deliveryDestination}
-                        </p>
-                      )}
-                      {p.notes && (
-                        <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.5, marginTop: '4px' }}>
-                          {p.notes.length > 120 ? p.notes.slice(0, 120) + '…' : p.notes}
-                        </p>
-                      )}
-                      <p style={{ color: '#10b981', fontSize: '10px', marginTop: '8px', fontWeight: 600 }}>
-                        ✓ Live in OpsCore Field View
-                      </p>
-                    </div>
-                  ))}
+                    )
+                  })}
               </div>
             )}
           </div>
