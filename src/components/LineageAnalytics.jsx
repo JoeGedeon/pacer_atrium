@@ -91,6 +91,7 @@ function FunnelStep({ label, count, total, accent }) {
 
 const STEP_LABEL = {
   observation: 'Observation',
+  command:     'K.E.L. Command',
   thread:      'Thread',
   muse:        'MUSE',
   production:  'Production',
@@ -99,6 +100,7 @@ const STEP_LABEL = {
 
 const STEP_ACCENT = {
   observation: '#6366f1',
+  command:     '#0ea5e9',
   thread:      '#8b5cf6',
   muse:        '#a855f7',
   production:  '#3b82f6',
@@ -107,6 +109,7 @@ const STEP_ACCENT = {
 
 const FIELD_MAP = {
   observation: 'observationId',
+  command:     'commandId',
   thread:      'threadId',
   muse:        'museWorkId',
   production:  'productionId',
@@ -221,6 +224,7 @@ export default function LineageAnalytics({ lineage = [], observations = [], mode
     const total = lineage.length
     const funnel = {
       observation: lineage.filter(l => l.observationId).length,
+      command:     lineage.filter(l => l.commandId).length,
       thread:      lineage.filter(l => l.threadId).length,
       muse:        lineage.filter(l => l.museWorkId).length,
       production:  lineage.filter(l => l.productionId).length,
@@ -275,7 +279,7 @@ export default function LineageAnalytics({ lineage = [], observations = [], mode
           No lineage records yet.
         </p>
         <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.7 }}>
-          Lineage is written when a production or asset is published from Theater.
+          Lineage is written when a production or asset is published from Theater, or when a K.E.L. command is completed successfully.
         </p>
       </div>
     )
@@ -339,6 +343,7 @@ export default function LineageAnalytics({ lineage = [], observations = [], mode
           <p style={LABEL}>Promotion Funnel</p>
           <div style={{ ...CARD, padding: '8px 18px' }}>
             <FunnelStep label="Originated from Observation" count={funnel.observation} total={total} accent="#6366f1" />
+            <FunnelStep label="Executed as K.E.L. Command" count={funnel.command}     total={total} accent="#0ea5e9" />
             <FunnelStep label="Promoted through Thread"     count={funnel.thread}      total={total} accent="#8b5cf6" />
             <FunnelStep label="Developed in MUSE Work"      count={funnel.muse}        total={total} accent="#a855f7" />
             <FunnelStep label="Packaged as Production"      count={funnel.production}  total={total} accent="#3b82f6" />

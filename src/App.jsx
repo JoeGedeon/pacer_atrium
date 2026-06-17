@@ -934,17 +934,33 @@ export default function App() {
 
   async function completeCommandRecord(id, title, proof) {
     if (!user) return
+    const cmd = commands.find(c => c.id === id)
     const approvedEvent = institutionEvents.find(e =>
       e.eventType === 'command_approved' && e.relatedEntityId === id
     )
-    await completeCommand(user.uid, id, title, { ...proof, causedByEventId: approvedEvent?.id || null })
-    // Success verdict → resolve observations that were claimed against this command's constellation.
     const isSuccess = ['Success', 'Partial Success'].includes(proof.verdict)
-    if (isSuccess) {
-      const cmd = commands.find(c => c.id === id)
+    // Build lineage once — guarded by !cmd.verdict so a second submit can't double-write
+    let lineageData = null
+    if (isSuccess && cmd && !cmd.verdict) {
+      const constellation = cmd.patternTag || null
+      const matchingObs = constellation
+        ? observations.find(o => o.constellation === constellation)
+        : null
+      lineageData = {
+        commandId:     id,
+        observationId: matchingObs?.id || null,
+        constellation,
+        path: matchingObs
+          ? ['observation', 'command', 'completed']
+          : ['command', 'completed'],
+      }
+    }
+    await completeCommand(user.uid, id, title, { ...proof, causedByEventId: approvedEvent?.id || null, lineageData })
+    // Success verdict → resolve observations that were claimed against this command's constellation.
+    if (isSuccess && cmd) {
       const toResolve = observations.filter(o =>
         o.resolutionStatus === 'claimed' &&
-        cmd?.patternTag && o.constellation === cmd.patternTag
+        cmd.patternTag && o.constellation === cmd.patternTag
       )
       if (toResolve.length > 0) {
         batchUpdateObservations(user.uid,
