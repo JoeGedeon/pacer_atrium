@@ -3,24 +3,8 @@ import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
 import { videoEmbed, audioEmbed } from './TheaterRoom'
 import { mediaAssetPipelineStage } from '../lib/pipelineStage'
 import { PipelinePill } from './PipelinePill'
-import { ATTENTION_LEVEL_META, attentionLevelRank, observationAttentionLevel, patternAttentionLevel, toMillis } from '../lib/attentionLevel'
+import { ATTENTION_LEVEL_META, SIGNAL_TYPES, matchSignal, attentionLevelRank, observationAttentionLevel, patternAttentionLevel, toMillis } from '../lib/attentionLevel'
 import RoomSubNav from './RoomSubNav'
-
-const SIGNAL_TYPES = [
-  { id: 'revenue',       label: 'Revenue Risk',       color: '#ef4444', pattern: /revenue|finance|billing|money|cost|price|budget/i },
-  { id: 'communication', label: 'Communication Risk',  color: '#f59e0b', pattern: /communication|clarity|feedback|message|signal|voice|expression/i },
-  { id: 'safety',        label: 'Safety Risk',         color: '#f97316', pattern: /safety|risk|compliance|warning|danger|liability/i },
-  { id: 'friction',      label: 'Customer Friction',   color: '#a855f7', pattern: /customer|friction|service|client|satisfaction|complaint/i },
-  { id: 'process',       label: 'Process Drift',       color: '#3b82f6', pattern: /process|workflow|system|operation|drift|procedure|efficiency/i },
-]
-
-function matchSignal(constellation) {
-  if (!constellation) return null
-  for (const sig of SIGNAL_TYPES) {
-    if (sig.pattern.test(constellation)) return sig
-  }
-  return null
-}
 
 const SECTION = {
   color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',

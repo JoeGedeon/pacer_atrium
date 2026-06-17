@@ -30,3 +30,11 @@ export function isExplicitBriefingRequest(queryText) {
 export function shouldSpeakConversationReply(queryText) {
   return isExplicitBriefingRequest(queryText)
 }
+
+// Phase 2: Approved proactive announcement phrases.
+// Exact text is institutional doctrine — do not paraphrase or "improve."
+export const PROACTIVE_ANNOUNCEMENTS = {
+  CRITICAL_ATTENTION: 'Critical attention item detected.',
+  COMMAND_APPROVED:   'Command approved. Execution authorized.',
+  BRIEFING_READY:     'Briefing ready for review.',
+}
