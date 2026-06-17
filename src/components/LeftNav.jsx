@@ -41,12 +41,12 @@ export default function LeftNav({
               key={room.id}
               onClick={() => onSelect(room.id)}
               style={{
-                flex: 1, display: 'flex', flexDirection: 'column',
+                flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: '2px',
                 background: isActive ? 'var(--bg-3)' : 'none',
                 border: 'none', cursor: 'pointer',
                 borderTop: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
-                padding: '4px 2px 6px',
+                padding: '4px 2px 6px', overflow: 'hidden',
               }}
             >
               <span style={{ fontSize: '15px', lineHeight: 1, opacity: room.infra ? 0.6 : 1 }}>
@@ -54,6 +54,7 @@ export default function LeftNav({
               </span>
               <span style={{
                 fontSize: '8px', lineHeight: 1, whiteSpace: 'nowrap',
+                overflow: 'hidden', maxWidth: '100%',
                 color: isActive ? 'var(--text-0)' : 'var(--text-4)',
               }}>
                 {room.label}

@@ -274,12 +274,12 @@ export default function LineageAnalytics({ lineage = [], observations = [], mode
 
   if (lineage.length === 0) {
     return (
-      <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-4)', fontSize: '13px', marginBottom: '6px' }}>
-          No lineage records yet.
+      <div style={{ padding: '48px 24px', maxWidth: '480px', margin: '0 auto' }}>
+        <p style={{ color: 'var(--text-4)', fontSize: '13px', marginBottom: '8px', lineHeight: 1.7 }}>
+          Your institution has not yet produced a published outcome worth preserving.
         </p>
-        <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.7 }}>
-          Lineage is written when a production or asset is published from Theater, or when a K.E.L. command is completed successfully.
+        <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.75 }}>
+          Completed commands, published productions, and documented successes become lineage records. The first finished outcome will appear here.
         </p>
       </div>
     )
