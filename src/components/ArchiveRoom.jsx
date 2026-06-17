@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { listenKELDecisions } from '../lib/db'
 import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+import LineageAnalytics from './LineageAnalytics'
 
 const ARCHIVE_TABS = [
   { id: 'timeline',  label: 'Timeline' },
   { id: 'threads',   label: 'Threads' },
   { id: 'decisions', label: 'Decisions' },
   { id: 'outcomes',  label: 'Outcomes' },
+  { id: 'lineage',   label: '◈ Lineage' },
   { id: 'search',    label: 'Search' },
 ]
 
@@ -198,7 +200,7 @@ function TimelineEntry({ entry, isLast }) {
   )
 }
 
-export default function ArchiveRoom({ observations = [], museWorks = [], institutionEvents = [], forgeThreads = [], uid, isMobile }) {
+export default function ArchiveRoom({ observations = [], museWorks = [], institutionEvents = [], forgeThreads = [], lineage = [], uid, isMobile }) {
   const [kelDecisions, setKelDecisions] = useState([])
   const [view, setView]                 = useState('timeline')
 
@@ -418,6 +420,17 @@ export default function ArchiveRoom({ observations = [], museWorks = [], institu
                 )
               })
             )}
+          </div>
+        ) : view === 'lineage' ? (
+          <div>
+            <p style={{ color: 'var(--text-0)', fontSize: '14px', fontWeight: 700,
+              letterSpacing: '-0.01em', marginBottom: '4px' }}>
+              Lineage Analytics
+            </p>
+            <p style={{ color: 'var(--text-5)', fontSize: '11px', marginBottom: '20px' }}>
+              What mattered most?
+            </p>
+            <LineageAnalytics lineage={lineage} observations={observations} mode="historical" />
           </div>
         ) : view === 'search' ? (
           <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>

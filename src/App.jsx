@@ -1162,7 +1162,7 @@ export default function App() {
             onOpenStudio={handleOpenStudio}
           />
         )}
-        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} uid={user?.uid} isMobile={isMobile} />}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} lineage={lineage} uid={user?.uid} isMobile={isMobile} />}
         {isIsles && (
           <IslesRoom
             observations={observations}
@@ -1208,6 +1208,7 @@ export default function App() {
             productions={productions}
             mediaAssets={mediaAssets}
             institutionEvents={institutionEvents}
+            lineage={lineage}
             apiKey={apiKey}
             onBuildBrief={buildArrivalText}
             isMobile={isMobile}
