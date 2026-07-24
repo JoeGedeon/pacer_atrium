@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { conversationQuery } from '../lib/claudeRouting'
 import { speakWithVoice } from '../lib/roomVoice'
+import { shouldSpeakConversationReply } from '../lib/voicePolicy'
 
 const STATE_CONFIG = {
   idle:      { color: '#1d4ed8', label: 'Tap to speak',          icon: '🎤', pulse: false },
@@ -19,6 +20,7 @@ export default function ConversationMode({
   emailContext = null,
   calendarContext = null,
   voiceConfig = null,
+  lineageContext = null,
 }) {
   const [voiceState, setVoiceState] = useState('idle')
   const [history, setHistory]       = useState([])
@@ -26,6 +28,7 @@ export default function ConversationMode({
   const [error, setError]           = useState(null)
   const recognitionRef  = useRef(null)
   const historyEndRef   = useRef(null)
+  const historyRef      = useRef([])
   const startTimeRef    = useRef(null)
   const gotResultRef    = useRef(false)
 
@@ -41,6 +44,7 @@ export default function ConversationMode({
   }, [])
 
   useEffect(() => {
+    historyRef.current = history
     historyEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [history])
 
@@ -54,17 +58,21 @@ export default function ConversationMode({
     try {
       const response = await conversationQuery(
         text,
-        { observations, institutionEvents, dateStr: today, emailContext, calendarContext },
+        { observations, institutionEvents, dateStr: today, emailContext, calendarContext, lineageContext },
         currentHistory,
         apiKey,
       )
 
       setHistory(prev => [...prev, { role: 'pacer', text: response, id: Date.now() + 1 }])
-      setVoiceState('speaking')
-      speakWithVoice(response, voiceConfig, {
-        onEnd:   () => setVoiceState('idle'),
-        onError: () => setVoiceState('idle'),
-      })
+      if (shouldSpeakConversationReply(text)) {
+        setVoiceState('speaking')
+        speakWithVoice(response, voiceConfig, {
+          onEnd:   () => setVoiceState('idle'),
+          onError: () => setVoiceState('idle'),
+        })
+      } else {
+        setVoiceState('idle')
+      }
     } catch (e) {
       setError(e.message)
       setVoiceState('idle')
@@ -114,10 +122,7 @@ export default function ConversationMode({
       if (event.results[event.results.length - 1].isFinal) {
         setLiveTranscript('')
         recognition.stop()
-        setHistory(prev => {
-          processQuery(transcript, prev)
-          return prev
-        })
+        processQuery(transcript, historyRef.current)
       }
     }
 

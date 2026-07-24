@@ -1,7 +1,7 @@
 import {
   collection, addDoc, updateDoc, doc, getDoc, setDoc,
   onSnapshot, query, orderBy,
-  serverTimestamp, Timestamp, increment,
+  serverTimestamp, Timestamp, increment, writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -111,6 +111,17 @@ export async function createObservation(uid, data) {
 export async function updateObservation(uid, id, patch) {
   const { id: _, analyzing: __, timestamp: ___, ...safe } = patch
   await updateDoc(doc(db, 'users', uid, 'observations', id), safe)
+}
+
+// Batch-update multiple observations in a single Firestore commit.
+// updates: [{ id, data }, ...]
+export async function batchUpdateObservations(uid, updates) {
+  if (!updates.length) return
+  const batch = writeBatch(db)
+  for (const { id, data } of updates) {
+    batch.update(doc(db, 'users', uid, 'observations', id), data)
+  }
+  await batch.commit()
 }
 
 // ── Muse Works ────────────────────────────────────────────────────────────────
@@ -228,14 +239,17 @@ export async function updateKELReview(uid, id, patch) {
 function eventColl(uid) { return collection(db, 'users', uid, 'institution_events') }
 
 export async function createInstitutionEvent(uid, data) {
-  await addDoc(eventColl(uid), {
+  const ref = await addDoc(eventColl(uid), {
     eventType:       data.eventType,
     title:           data.title,
     description:     data.description     || null,
     actor:           data.actor           || uid,
     relatedEntityId: data.relatedEntityId || null,
+    constellation:   data.constellation   || null,
+    causedByEventId: data.causedByEventId || null,
     createdAt:       serverTimestamp(),
   })
+  return ref.id
 }
 
 export function listenInstitutionEvents(uid, callback) {
@@ -584,6 +598,7 @@ export async function createDoctrineCase(uid, data) {
     originRoom:             data.originRoom             || '',
     triggerEvent:           data.triggerEvent           || '',
     articlesInvolved:       data.articlesInvolved       || [],
+    relatedConstellations:  data.relatedConstellations  || [],
     summary:                data.summary                || '',
     facts:                  data.facts                  || '',
     evidence:               data.evidence               || '',
@@ -627,5 +642,226 @@ export function listenDoctrineCases(uid, callback) {
       }))
     },
     err => { console.error('[listenDoctrineCases] snapshot error:', err) },
+  )
+}
+
+// ── Studio Artifacts — image generation registry ──────────────────────────────
+// Collection: users/{uid}/studio_artifacts
+
+function artifactColl(uid) { return collection(db, 'users', uid, 'studio_artifacts') }
+
+export async function createStudioArtifact(uid, data) {
+  const ref = await addDoc(artifactColl(uid), {
+    url:                  data.url,
+    title:                data.title                || 'Untitled',
+    prompt:               data.prompt               || '',
+    revisedPrompt:        data.revisedPrompt        || null,
+    model:                data.model                || 'dall-e-3',
+    creator:              'Studio',
+    sourceConstellation:  data.sourceConstellation  || null,
+    sourceDoctrine:       data.sourceDoctrine       || null,
+    sourceObservation:    data.sourceObservation     || null,
+    projectTag:           data.projectTag           || null,
+    generatedAt:          serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateStudioArtifact(uid, id, data) {
+  const ref = doc(db, 'users', uid, 'studio_artifacts', id)
+  await updateDoc(ref, data)
+}
+
+export function listenStudioArtifacts(uid, callback) {
+  const q = query(artifactColl(uid), orderBy('generatedAt', 'desc'))
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+    err  => console.error('[listenStudioArtifacts] snapshot error:', err),
+  )
+}
+
+// ── Atrium Commands — PACER command chain ─────────────────────────────────────
+// Collection: users/{uid}/atrium_commands
+// Lifecycle: drafted → pending_approval → (approved→in_progress | denied) → (completed | failed) → archived
+
+function commandColl(uid) { return collection(db, 'users', uid, 'atrium_commands') }
+
+export async function createCommand(uid, data) {
+  const ref = await addDoc(commandColl(uid), {
+    title:            data.title,
+    intent:           data.intent            || '',
+    requestedBy:      data.requestedBy       || 'human',
+    priority:         data.priority          || 'standard',
+    status:           'drafted',
+    assignedAgent:    data.assignedAgent     || 'pacer',
+    supportingAgents: data.supportingAgents  || [],
+    riskLevel:        data.riskLevel         || 'low',
+    approvalRequired: true,
+    approvalStatus:   'not_required',
+    executionMode:    data.executionMode     || 'review',
+    targetSystem:     data.targetSystem      || 'pacer_atrium',
+    requiredTools:    data.requiredTools     || [],
+    expectedOutput:   data.expectedOutput    || '',
+    successCriteria:  data.successCriteria   || [],
+    patternTag:       data.patternTag        || null,
+    completionProof:  null,
+    steps:            data.steps             || [],
+    analysis:         '',
+    result:           null,
+    failureReason:    null,
+    linkedThreads:    [],
+    linkedFiles:      [],
+    archivistLogId:   null,
+    createdAt:        serverTimestamp(),
+    updatedAt:        serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_created',
+    title:           `Command created: ${data.title}`,
+    description:     `Priority: ${data.priority || 'standard'} · Risk: ${data.riskLevel || 'low'} · Mode: ${data.executionMode || 'review'}`,
+    relatedEntityId: ref.id,
+  })
+  return ref.id
+}
+
+export async function updateCommand(uid, id, patch) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function submitCommandForApproval(uid, id) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:          'pending_approval',
+    approvalStatus:  'pending',
+    updatedAt:       serverTimestamp(),
+  })
+}
+
+export async function approveCommand(uid, id, commandTitle) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:         'in_progress',
+    approvalStatus: 'approved',
+    approvedAt:     serverTimestamp(),
+    updatedAt:      serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_approved',
+    title:           `Command approved: ${commandTitle}`,
+    description:     'Human Gate approved. K.E.L. execution authorized.',
+    relatedEntityId: id,
+  })
+}
+
+export async function denyCommand(uid, id, commandTitle, rationale) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:         'denied',
+    approvalStatus: 'denied',
+    failureReason:  rationale,
+    updatedAt:      serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_denied',
+    title:           `Command denied: ${commandTitle}`,
+    description:     rationale,
+    relatedEntityId: id,
+  })
+}
+
+export async function completeCommand(uid, id, commandTitle, { completionProof, result, verdict, criteriaAchieved, criteriaTotal, causedByEventId, lineageData }) {
+  const criteriaNote = criteriaTotal > 0 ? ` · ${criteriaAchieved}/${criteriaTotal} criteria` : ''
+  const eventId = await createInstitutionEvent(uid, {
+    eventType:       'command_completed',
+    title:           `Command completed: ${commandTitle}${verdict ? ` — ${verdict}` : ''}${criteriaNote}`,
+    description:     result || completionProof || 'Command completed.',
+    relatedEntityId: id,
+    causedByEventId: causedByEventId || null,
+  })
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:           'completed',
+    completionProof:  completionProof  || null,
+    result:           result           || null,
+    verdict:          verdict          || null,
+    criteriaAchieved: criteriaAchieved ?? null,
+    criteriaTotal:    criteriaTotal    ?? null,
+    archivistLogId:   eventId,
+    updatedAt:        serverTimestamp(),
+  })
+  if (lineageData) {
+    await createLineage(uid, lineageData)
+  }
+}
+
+export async function failCommand(uid, id, commandTitle, failureReason) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:        'failed',
+    failureReason: failureReason || null,
+    updatedAt:     serverTimestamp(),
+  })
+  await createInstitutionEvent(uid, {
+    eventType:       'command_failed',
+    title:           `Command failed: ${commandTitle}`,
+    description:     failureReason || 'Command failed without recorded reason.',
+    relatedEntityId: id,
+  })
+}
+
+export async function archiveCommand(uid, id) {
+  await updateDoc(doc(db, 'users', uid, 'atrium_commands', id), {
+    status:    'archived',
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function listenCommands(uid, callback) {
+  const q = query(commandColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          ...data,
+          id:         d.id,
+          createdAt:  data.createdAt?.toDate?.()  ?? new Date(),
+          updatedAt:  data.updatedAt?.toDate?.()  ?? new Date(),
+          approvedAt: data.approvedAt?.toDate?.() ?? null,
+        }
+      }))
+    },
+    err => { console.error('[listenCommands] snapshot error:', err) },
+  )
+}
+
+// ── Lineage ─────────────────────────────────────────────────────────────────
+// Written once at publish time. Never updated — this is a frozen historical record.
+// Fields that don't apply to a given artifact type are stored as null.
+export async function createLineage(uid, data) {
+  return addDoc(collection(db, 'users', uid, 'lineage'), {
+    commandId:     data.commandId     || null,
+    observationId: data.observationId || null,
+    threadId:      data.threadId      || null,
+    museWorkId:    data.museWorkId    || null,
+    assetId:       data.assetId       || null,
+    productionId:  data.productionId  || null,
+    publishedBy:   data.publishedBy   || null,
+    constellation: data.constellation || null,
+    path:          data.path          || [],
+    publishedAt:   serverTimestamp(),
+  })
+}
+
+export function listenLineage(uid, callback) {
+  const q = query(
+    collection(db, 'users', uid, 'lineage'),
+    orderBy('publishedAt', 'desc'),
+  )
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({
+      ...d.data(),
+      id:          d.id,
+      publishedAt: d.data().publishedAt?.toDate?.() ?? new Date(),
+    }))),
+    err => { console.error('[listenLineage] snapshot error:', err?.code, err?.message) },
   )
 }

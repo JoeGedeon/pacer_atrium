@@ -45,7 +45,7 @@ export default function AtriumDashboard({ observations, onSelectObservation }) {
         </h2>
         <p className="text-xs" style={{ color: 'var(--text-3)' }}>
           {observations.length === 0
-            ? 'No observations yet. The stream is waiting.'
+            ? 'The institution\'s problems enter here. Nothing has been named yet.'
             : `${observations.length} observation${observations.length !== 1 ? 's' : ''} in memory.`}
         </p>
       </div>

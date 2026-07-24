@@ -794,8 +794,8 @@ function ReviewTab({ doctrineCases, onCreateCase, onUpdateCase }) {
             )
           }
           {activeCases.length === 0 && !showForm && (
-            <p style={{ color: 'var(--text-6)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
-              No active cases. The constitution accumulates only as fast as operational reality produces cases.
+            <p style={{ color: 'var(--text-6)', fontSize: '12px', lineHeight: 1.75 }}>
+              Doctrine emerges when principles are tested against outcomes. No institutional principles have yet accumulated enough evidence to become precedent.
             </p>
           )}
           {activeCases.map(c => (
@@ -808,8 +808,8 @@ function ReviewTab({ doctrineCases, onCreateCase, onUpdateCase }) {
       {subview === 'precedent' && (
         <>
           {standingCases.length === 0 ? (
-            <p style={{ color: 'var(--text-6)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.7 }}>
-              No precedent established yet. A principle gains standing only after operational reality produces a case requiring interpretation.
+            <p style={{ color: 'var(--text-6)', fontSize: '12px', lineHeight: 1.75 }}>
+              Doctrine emerges when principles are tested against outcomes. No institutional principles have yet accumulated enough evidence to become precedent.
             </p>
           ) : (
             <>

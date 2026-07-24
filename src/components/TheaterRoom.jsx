@@ -4,6 +4,9 @@ import { createMultiManifestTest } from '../lib/db'
 import { uploadMediaVideo, uploadMediaAudio } from '../lib/mediaUpload'
 import RoomSubNav from './RoomSubNav'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+import { theaterProductionPipelineStage, mediaAssetPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
+import LineageChain from './LineageChain'
 
 export function videoEmbed(url) {
   if (!url) return null
@@ -342,9 +345,10 @@ function ProductionCard({ production, expanded, onToggle, onSave, onStage, onArc
               </span>
             )}
           </div>
-          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+          <p style={{ color: 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4, marginBottom: '5px' }}>
             {production.title || 'Untitled Production'}
           </p>
+          <PipelinePill {...theaterProductionPipelineStage(production)} />
         </div>
         <span style={{ color: 'var(--text-5)', fontSize: '11px', flexShrink: 0 }}>
           {expanded ? '▲' : '▼'}
@@ -1451,11 +1455,13 @@ function FeaturedBroadcast({ mediaAssets, productions }) {
 
 // ── Media Wing ────────────────────────────────────────────────────────────────
 
-function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobile }) {
+function AssetCard({ asset, productions = [], onUpdate, onPublish, onCreateProduction, onSendToMuse, expanded, onToggle, uid, isMobile }) {
   const [edit, setEdit] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [publishing, setPublishing] = useState(false)
+  const [promoting, setPromoting] = useState(null) // null | 'create' | 'attach'
+  const [attachTarget, setAttachTarget] = useState('')
   const [videoUploading, setVideoUploading] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [videoUploadError, setVideoUploadError] = useState(null)
@@ -1549,6 +1555,31 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
     finally { setPublishing(false) }
   }
 
+  async function handleCreateProduction() {
+    if (promoting || !onCreateProduction) return
+    setPromoting('create')
+    try {
+      const newId = await onCreateProduction({
+        title:      asset.title || 'Untitled Production',
+        sourceText: asset.transcript || '',
+        status:     'incoming',
+        notes:      `Promoted from media asset "${asset.title || 'Untitled Asset'}".`,
+      })
+      if (newId) await onUpdate(asset.id, { productionId: newId })
+    } finally { setPromoting(null) }
+  }
+
+  async function handleAttachToProduction() {
+    if (promoting || !attachTarget) return
+    setPromoting('attach')
+    try { await onUpdate(asset.id, { productionId: attachTarget }) }
+    finally { setPromoting(null); setAttachTarget('') }
+  }
+
+  async function handleToggleReference() {
+    await onUpdate(asset.id, { opsCoreSignal: asset.opsCoreSignal === false ? true : false })
+  }
+
   const gateColor = { pending: '#f59e0b', approved: '#10b981', denied: '#ef4444' }
 
   return (
@@ -1580,9 +1611,10 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
               <span style={{ color: '#10b981', fontSize: '10px', fontWeight: 600 }}>📡 OpsCore</span>
             )}
           </div>
-          <p style={{ color: expanded ? '#e2e8f0' : 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+          <p style={{ color: expanded ? '#e2e8f0' : 'var(--text-1)', fontSize: '12px', fontWeight: 500, lineHeight: 1.4, marginBottom: '5px' }}>
             {asset.title || 'Untitled Asset'}
           </p>
+          <PipelinePill {...mediaAssetPipelineStage(asset)} />
         </div>
         <span style={{ color: 'var(--text-5)', fontSize: '11px', flexShrink: 0 }}>
           {expanded ? '▲' : '▼'}
@@ -1845,6 +1877,95 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
                 <span style={{ color: 'var(--text-6)', fontSize: '10px' }}>
                   · {new Date(asset.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
+                {asset.opsCoreSignal === false && (
+                  <span style={{ color: 'var(--text-6)', fontSize: '10px', fontStyle: 'italic' }}>· reference only</span>
+                )}
+              </div>
+            )}
+
+            {/* Promotion — manual bridge from media asset to production. Publishing an
+                asset never creates or publishes a production; that step stays a human choice. */}
+            {asset.publishedAt && (
+              <div style={{ marginTop: '10px', paddingTop: '14px', borderTop: '1px solid #10b98118' }}>
+                <p style={{ color: 'var(--text-6)', fontSize: '9px', letterSpacing: '0.12em',
+                  textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>
+                  Promotion
+                </p>
+
+                {asset.productionId ? (
+                  <p style={{ color: '#10b981', fontSize: '11px', marginBottom: '10px' }}>
+                    ✓ Attached to production — {productions.find(p => p.id === asset.productionId)?.title || 'Untitled'}
+                  </p>
+                ) : (
+                  <>
+                    <p style={{ color: 'var(--text-5)', fontSize: '10px', lineHeight: 1.6, marginBottom: '10px' }}>
+                      Ready to attach to a production.
+                    </p>
+                    <button
+                      onClick={handleCreateProduction}
+                      disabled={!!promoting || !onCreateProduction}
+                      style={{
+                        width: '100%', marginBottom: '8px',
+                        background: promoting === 'create' ? 'var(--bg-2)' : 'var(--bg-2)',
+                        border: '1px solid var(--border-2)', borderRadius: '6px', padding: '8px 12px',
+                        color: promoting ? 'var(--text-5)' : 'var(--text-2)',
+                        fontSize: '11px', fontWeight: 600, cursor: promoting ? 'default' : 'pointer',
+                      }}
+                    >
+                      {promoting === 'create' ? 'Creating…' : '🎬 Create Production from Asset'}
+                    </button>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                      <select
+                        value={attachTarget}
+                        onChange={e => setAttachTarget(e.target.value)}
+                        style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)',
+                          borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)',
+                          fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                      >
+                        <option value="">Attach to existing production…</option>
+                        {productions.map(p => (
+                          <option key={p.id} value={p.id}>{p.title || 'Untitled'}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleAttachToProduction}
+                        disabled={!attachTarget || !!promoting}
+                        style={{
+                          flexShrink: 0, background: 'var(--bg-2)', border: '1px solid var(--border-2)',
+                          borderRadius: '6px', padding: '7px 12px',
+                          color: attachTarget && !promoting ? 'var(--text-2)' : 'var(--text-6)',
+                          fontSize: '11px', fontWeight: 600, cursor: attachTarget && !promoting ? 'pointer' : 'default',
+                        }}
+                      >
+                        {promoting === 'attach' ? '…' : 'Attach'}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                  <button
+                    onClick={() => onSendToMuse?.(asset)}
+                    disabled={!onSendToMuse}
+                    style={{
+                      flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)',
+                      borderRadius: '6px', padding: '7px 10px', color: 'var(--text-3)',
+                      fontSize: '10px', fontWeight: 600, cursor: onSendToMuse ? 'pointer' : 'default',
+                    }}
+                  >
+                    ✦ Send to MUSE for Packaging
+                  </button>
+                  <button
+                    onClick={handleToggleReference}
+                    style={{
+                      flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border-2)',
+                      borderRadius: '6px', padding: '7px 10px', color: 'var(--text-3)',
+                      fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    {asset.opsCoreSignal === false ? '📡 Restore to Broadcast' : '📎 Send to OpsCore as Reference'}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1855,7 +1976,7 @@ function AssetCard({ asset, onUpdate, onPublish, expanded, onToggle, uid, isMobi
   )
 }
 
-function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, uid, isMobile }) {
+function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, onCreateProduction, onSendToMuse, uid, isMobile }) {
   const [expandedId, setExpandedId] = useState(null)
   const [form, setForm] = useState({ title: '', videoUrl: '', audioUrl: '', transcript: '' })
   const [creating, setCreating] = useState(false)
@@ -1977,8 +2098,11 @@ function MediaWing({ mediaAssets, productions, onCreateMediaAsset, onUpdateMedia
                 <AssetCard
                   key={asset.id}
                   asset={asset}
+                  productions={productions || []}
                   onUpdate={onUpdateMediaAsset}
                   onPublish={onPublishMediaAsset}
+                  onCreateProduction={onCreateProduction}
+                  onSendToMuse={onSendToMuse}
                   expanded={expandedId === asset.id}
                   onToggle={setExpandedId}
                   uid={uid}
@@ -2390,8 +2514,9 @@ function AboutTab({ graduates, isMobile }) {
 export default function TheaterRoom({
   graduates = [], observations = [], productions = [], mediaAssets = [],
   onCreateProduction, onUpdateProduction, onPublish,
-  onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset,
+  onCreateMediaAsset, onUpdateMediaAsset, onPublishMediaAsset, onSendToMuse,
   apiKey, onConnectClaude, uid, isMobile,
+  lineage = [],
 }) {
   const px = isMobile ? 'px-4' : 'px-8'
   const [view, setView] = useState('office')
@@ -2444,6 +2569,8 @@ export default function TheaterRoom({
           onCreateMediaAsset={onCreateMediaAsset}
           onUpdateMediaAsset={onUpdateMediaAsset}
           onPublishMediaAsset={onPublishMediaAsset}
+          onCreateProduction={onCreateProduction}
+          onSendToMuse={onSendToMuse}
           uid={uid}
           isMobile={isMobile}
         />
@@ -2485,37 +2612,41 @@ export default function TheaterRoom({
                 {productions
                   .filter(p => p.publishedAt)
                   .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
-                  .map(p => (
-                    <div key={p.id} style={{
-                      background: '#041208',
-                      border: '1px solid #10b98125',
-                      borderLeft: '3px solid #10b981',
-                      borderRadius: '0 8px 8px 0', padding: '14px 16px',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
-                        <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600 }}>
-                          {p.title || 'Untitled Production'}
+                  .map(p => {
+                    const chain = lineage.find(l => l.productionId === p.id) ?? null
+                    return (
+                      <div key={p.id} style={{
+                        background: '#041208',
+                        border: '1px solid #10b98125',
+                        borderLeft: '3px solid #10b981',
+                        borderRadius: '0 8px 8px 0', padding: '14px 16px',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                          <p style={{ color: 'var(--text-0)', fontSize: '13px', fontWeight: 600 }}>
+                            {p.title || 'Untitled Production'}
+                          </p>
+                          <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
+                            letterSpacing: '0.1em', flexShrink: 0 }}>
+                            {new Date(p.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        {p.deliveryDestination && (
+                          <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
+                            Destination: {p.deliveryDestination}
+                          </p>
+                        )}
+                        {p.notes && (
+                          <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.5, marginTop: '4px' }}>
+                            {p.notes.length > 120 ? p.notes.slice(0, 120) + '…' : p.notes}
+                          </p>
+                        )}
+                        <p style={{ color: '#10b981', fontSize: '10px', marginTop: '8px', fontWeight: 600 }}>
+                          ✓ Live in OpsCore Field View
                         </p>
-                        <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 700,
-                          letterSpacing: '0.1em', flexShrink: 0 }}>
-                          {new Date(p.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
+                        <LineageChain lineage={chain} />
                       </div>
-                      {p.deliveryDestination && (
-                        <p style={{ color: 'var(--text-5)', fontSize: '11px' }}>
-                          Destination: {p.deliveryDestination}
-                        </p>
-                      )}
-                      {p.notes && (
-                        <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.5, marginTop: '4px' }}>
-                          {p.notes.length > 120 ? p.notes.slice(0, 120) + '…' : p.notes}
-                        </p>
-                      )}
-                      <p style={{ color: '#10b981', fontSize: '10px', marginTop: '8px', fontWeight: 600 }}>
-                        ✓ Live in OpsCore Field View
-                      </p>
-                    </div>
-                  ))}
+                    )
+                  })}
               </div>
             )}
           </div>

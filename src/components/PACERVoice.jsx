@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { conversationQuery } from '../lib/claudeRouting'
 import { speakWithVoice, getVoiceConfig } from '../lib/roomVoice'
+import { shouldSpeakConversationReply } from '../lib/voicePolicy'
 
 // voiceState: idle | listening | thinking | speaking
 const STATE_BORDER = {
@@ -50,12 +51,17 @@ export default function PACERVoice({ apiKey, observations, institutionEvents, em
         return
       }
       setResponse(replyText)
-      console.debug('[PACER voice-in] calling speakWithVoice, replyText length:', replyText.length)
-      speakWithVoice(replyText, getVoiceConfig('home'), {
-        onStart: () => { console.debug('[PACER voice-in] onstart'); setVoiceState('speaking') },
-        onEnd:   () => { console.debug('[PACER voice-in] onend'); setVoiceState('idle') },
-        onError: () => { console.debug('[PACER voice-in] speech error'); setVoiceState('idle') },
-      })
+      if (shouldSpeakConversationReply(text)) {
+        console.debug('[PACER voice-in] calling speakWithVoice, replyText length:', replyText.length)
+        speakWithVoice(replyText, getVoiceConfig('home'), {
+          onStart: () => { console.debug('[PACER voice-in] onstart'); setVoiceState('speaking') },
+          onEnd:   () => { console.debug('[PACER voice-in] onend'); setVoiceState('idle') },
+          onError: () => { console.debug('[PACER voice-in] speech error'); setVoiceState('idle') },
+        })
+      } else {
+        console.debug('[PACER voice-in] not a governed briefing request — staying text-only')
+        setVoiceState('idle')
+      }
     } catch (err) {
       console.error('[PACER voice-in] CRASH:', err)
       console.error('[PACER voice-in] stack:', err?.stack)

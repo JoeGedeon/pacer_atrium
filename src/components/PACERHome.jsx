@@ -162,7 +162,7 @@ function CampusAtmosphere() {
   )
 }
 
-export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile, googleStatus, onReconnectGoogle, debugUid, debugEmail, debugProjectId }) {
+export default function PACERHome({ onEnter, observationCount, onMorningBrief, campusStats, isMobile, googleStatus, onReconnectGoogle, debugUid, debugEmail, debugProjectId, institutionStatus }) {
   return (
     <div
       className="flex-1 flex flex-col items-center overflow-y-auto"
@@ -197,9 +197,15 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
         </div>
 
         <p style={{
-          color: 'var(--text-1)', fontSize: '13px', lineHeight: 1.8,
+          color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7,
+          marginBottom: '10px', marginTop: '4px',
+        }}>
+          PACER turns observations into actions, actions into outcomes, and outcomes into institutional memory.
+        </p>
+
+        <p style={{
+          color: 'var(--text-1)', fontSize: '12px', lineHeight: 1.8,
           fontStyle: 'italic', marginBottom: '40px',
-          marginTop: '4px',
         }}>
           How do we preserve what matters while moving it forward?
         </p>
@@ -246,7 +252,7 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
                 <p className="text-sm font-semibold" style={{ color: '#a5b4fc', marginBottom: '4px' }}>
                   Morning Brief
                 </p>
-                <p style={{ fontSize: '11px', color: '#3730a3' }}>
+                <p style={{ fontSize: '11px', color: '#818cf8' }}>
                   What requires your attention today
                 </p>
               </div>
@@ -270,7 +276,7 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
                 <p className="text-sm font-semibold" style={{ color: '#93c5fd', marginBottom: '4px' }}>
                   Capture Observation
                 </p>
-                <p style={{ fontSize: '11px', color: '#1d3a6a' }}>Enter the Atrium</p>
+                <p style={{ fontSize: '11px', color: '#60a5fa' }}>Enter the Atrium</p>
               </div>
             </div>
           </button>
@@ -310,6 +316,32 @@ export default function PACERHome({ onEnter, observationCount, onMorningBrief, c
           )}
 
         </div>
+
+        {/* Institution status pulse — visible when commands exist */}
+        {institutionStatus && institutionStatus.total > 0 && (
+          <div style={{
+            marginTop: '14px',
+            padding: '10px 16px',
+            background: 'var(--bg-1)',
+            border: '1px solid var(--border-0)',
+            borderRadius: '8px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', flexWrap: 'wrap',
+          }}>
+            {[
+              { label: 'Active',       value: institutionStatus.active,    color: '#3b82f6' },
+              { label: 'Pending Gate', value: institutionStatus.pending,   color: '#f59e0b' },
+              { label: 'Completed',    value: institutionStatus.completed, color: '#10b981' },
+            ].map(({ label, value, color }, i) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {i > 0 && <span style={{ color: 'var(--border-1)', fontSize: '10px' }}>·</span>}
+                <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>
+                  {label}:{' '}<span style={{ color, fontWeight: 700 }}>{value}</span>
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Creator-only beta pulse — three numbers, nothing more */}
         {campusStats && (

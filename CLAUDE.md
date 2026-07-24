@@ -141,6 +141,27 @@ No state may be skipped. No new states without a canonization decision.
 
 ---
 
+## PACER Governance Rule — Lifecycle Authority
+
+Operational lifecycle and Creative lifecycle are separate systems. Do not merge them.
+
+**Operational lifecycle** tracks custody, routing, publication state, and institutional ownership.
+Observation → Approved → Packaged → Production → Published → Archived
+Implementation: `src/lib/pipelineStage.js` (canonical mapping) + `src/components/PipelinePill.jsx` (canonical display). Answers: **"Where is this artifact?"**
+
+**Creative lifecycle** tracks maturity, refinement, narrative development, and readiness — this is the canonized PACER Object Lifecycle above (Observed → Shaping → Structured → Premiere Ready → Opening Night → Published Memory). Answers: **"How developed is this artifact?"**
+
+These questions must remain independent. A field answering both becomes a field that answers neither.
+
+All new artifact types must:
+1. Map to the shared operational lifecycle through `pipelineStage.js`.
+2. Use `PipelinePill.jsx` for operational state display.
+3. Never create room-specific status badges.
+4. Never redefine operational stages locally.
+5. Preserve doctrine-defined creative lifecycle systems where they already exist.
+
+---
+
 ## Named Systems (Do Not Rename)
 
 | Name | Role | Notes |
@@ -156,6 +177,41 @@ Prior names (JARVIS, CLAW) were never used in any patent or trademark filing. Do
 
 ---
 
+## AI Provider Rule
+
+PACER is the system.
+
+PACER's agents (MUSE, VERA, K.E.L., ARCHIVIST, and future institutional roles) are the resident-facing identities of the platform.
+
+External AI providers are infrastructure dependencies, not system identities.
+
+Claude, OpenAI, Gemini, or any future model may provide intelligence, reasoning, generation, classification, or analysis services, but they do not represent themselves directly to the resident.
+
+The resident interacts with PACER.
+
+PACER may use external intelligence providers. External intelligence providers are not PACER.
+
+System prompts, agent prompts, user-facing copy, recommendations, observations, reviews, and doctrine outputs should always present through the institutional identity of the responsible PACER agent.
+
+**Correct:**
+- "K.E.L. recommends…"
+- "VERA observed…"
+- "MUSE suggests…"
+- "ARCHIVIST recorded…"
+
+**Incorrect:**
+- "Claude recommends…"
+- "Anthropic suggests…"
+- "Gemini believes…"
+
+AI providers are replaceable infrastructure.
+
+Institutional memory, doctrine, observations, evidence, commands, reviews, and governance belong to PACER.
+
+**Rule:** PACER may use an intelligence provider, but the intelligence provider is not PACER.
+
+---
+
 ## What Claude Code Should Not Do
 
 - Rewrite doctrine text
@@ -165,3 +221,5 @@ Prior names (JARVIS, CLAW) were never used in any patent or trademark filing. Do
 - Merge inline and external theme scripts into one "universal" version
 - Rename any system listed in the Named Systems table
 - Improve the raccoon metaphor
+- Create a room-specific status badge instead of using `PipelinePill.jsx`
+- Redefine operational lifecycle stages locally, or merge operational and creative lifecycle into one field

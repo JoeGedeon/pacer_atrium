@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { createMuseWork, updateMuseWork } from '../lib/db'
 import { getManifestDecision, DECISION_META } from '../lib/museDirector'
 import { FORMATS } from '../lib/theaterEnrichment'
+import { observationPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
 const MUSE_TABS = [
@@ -58,7 +60,7 @@ function nextStatus(current) {
 
 // ── Creative Director view ────────────────────────────────────────────────────
 
-function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigate, isMobile }) {
+function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigate, isMobile, seedObs, onSeedConsumed }) {
   const px = isMobile ? '24px' : '40px'
   const [concept, setConcept]   = useState('')
   const [decision, setDecision] = useState(null)
@@ -71,6 +73,13 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
   const incoming = observations.filter(o => o.text)
   const effectiveDecision = override || decision?.decision
   const decisionMeta = effectiveDecision ? DECISION_META[effectiveDecision] : null
+
+  useEffect(() => {
+    if (seedObs) {
+      loadObservation(seedObs)
+      onSeedConsumed?.()
+    }
+  }, [seedObs]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function askMuse() {
     if (!concept.trim() || deciding) return
@@ -130,9 +139,12 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
                   <p style={{ color: 'var(--text-3)', fontSize: '11px', lineHeight: 1.5 }}>
                     {(obs.text?.length ?? 0) > 85 ? obs.text.slice(0, 85) + '…' : (obs.text || '')}
                   </p>
-                  {obs.constellation && (
-                    <p style={{ color: '#a07830', fontSize: '9px', marginTop: '3px' }}>{obs.constellation}</p>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {obs.constellation && (
+                      <p style={{ color: '#a07830', fontSize: '9px' }}>{obs.constellation}</p>
+                    )}
+                    <PipelinePill {...observationPipelineStage(obs)} />
+                  </div>
                 </button>
               ))}
             </div>
@@ -379,10 +391,20 @@ function CreativeDirectorView({ observations, apiKey, onConnectClaude, onNavigat
 
 // ── Muse Room ─────────────────────────────────────────────────────────────────
 
-export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile }) {
+export default function MuseRoom({ observations = [], works = [], uid, onSurface, apiKey, onConnectClaude, onNavigate, isMobile, externalSeed, onExternalSeedConsumed }) {
   const [mode, setMode] = useState('canvas')
 
   const [activeWork, setActiveWork] = useState(null)
+  const [activeObs, setActiveObs]   = useState(null)
+  const [inboxObs, setInboxObs]     = useState(null)
+
+  // Cross-room handoff — e.g. a Theater media asset sent in "for packaging"
+  useEffect(() => {
+    if (!externalSeed) return
+    setInboxObs(externalSeed)
+    setMode('inbox')
+    onExternalSeedConsumed?.()
+  }, [externalSeed]) // eslint-disable-line react-hooks/exhaustive-deps
   const [draft, setDraft]           = useState({ title: '', category: 'characters' })
   const [adding, setAdding]         = useState(false)
   const [surfaced, setSurfaced]     = useState(new Set())
@@ -462,6 +484,8 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
           onConnectClaude={onConnectClaude}
           onNavigate={onNavigate}
           isMobile={isMobile}
+          seedObs={inboxObs}
+          onSeedConsumed={() => setInboxObs(null)}
         />
       )}
 
@@ -554,9 +578,9 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
         <>
           <div className="flex flex-1 overflow-hidden">
 
-            {/* LEFT WING */}
+            {/* LEFT WING — hidden on mobile (signals accessible via Signals tab) */}
             <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
-              style={{ width: '210px', borderRight: '1px solid var(--border-0)' }}>
+              style={{ width: '210px', borderRight: '1px solid var(--border-0)', display: isMobile ? 'none' : 'flex' }}>
               <div className="flex items-center gap-2 mb-4 px-2">
                 <span className="animate-pulse shrink-0" style={{
                   width: '5px', height: '5px', borderRadius: '50%', background: '#10b981',
@@ -570,36 +594,62 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                 </p>
               ) : (
                 <div className="flex flex-col gap-3 px-1">
-                  {signals.map((obs, i) => (
-                    <div key={obs.id} style={{
-                      transform: `rotate(${tilt(obs.id, i)}deg)`,
-                      background: 'var(--bg-2)', border: '1px solid var(--border-1)',
-                      borderRadius: '6px', padding: '8px 10px',
-                    }}>
-                      <p style={{ color: 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
-                        {obs.text.length > 65 ? obs.text.slice(0, 65) + '…' : obs.text}
-                      </p>
-                      {obs.constellation && (
-                        <p style={{ color: '#a07830', fontSize: '9px', marginTop: '4px' }}>{obs.constellation}</p>
-                      )}
-                    </div>
-                  ))}
+                  {signals.map((obs, i) => {
+                    const isSelected = activeObs?.id === obs.id
+                    return (
+                      <button key={obs.id}
+                        onClick={() => { setActiveObs(obs); setActiveWork(null) }}
+                        style={{
+                          transform: `rotate(${tilt(obs.id, i)}deg)`,
+                          background: isSelected ? 'var(--bg-3)' : 'var(--bg-2)',
+                          border: `1px solid ${isSelected ? 'var(--border-2)' : 'var(--border-1)'}`,
+                          borderRadius: '6px', padding: '8px 10px',
+                          cursor: 'pointer', textAlign: 'left', width: '100%',
+                          outline: isSelected ? '1px solid #10b98140' : 'none',
+                          transition: 'all 0.12s',
+                        }}>
+                        <p style={{ color: isSelected ? 'var(--text-1)' : 'var(--text-2)', fontSize: '11px', lineHeight: 1.5 }}>
+                          {obs.text.length > 65 ? obs.text.slice(0, 65) + '…' : obs.text}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                          {obs.constellation && (
+                            <p style={{ color: '#a07830', fontSize: '9px' }}>{obs.constellation}</p>
+                          )}
+                          <PipelinePill {...observationPipelineStage(obs)} />
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
 
-            {/* CENTER STAGE */}
+            {/* CENTER STAGE — full width on mobile when an item is selected, hidden when nothing selected */}
             <div className="flex-1 flex flex-col overflow-hidden"
-              style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-0)' }}>
+              style={{ background: 'var(--bg-1)', borderRight: '1px solid var(--border-0)',
+                display: isMobile && !activeWork && !activeObs ? 'none' : 'flex' }}>
+              {isMobile && (activeWork || activeObs) && (
+                <button
+                  onClick={() => { setActiveWork(null); setActiveObs(null) }}
+                  style={{
+                    padding: '10px 16px', textAlign: 'left', background: 'var(--bg-0)',
+                    border: 'none', borderBottom: '1px solid var(--border-0)',
+                    color: 'var(--text-4)', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit',
+                    flexShrink: 0,
+                  }}
+                >
+                  ← Works
+                </button>
+              )}
               {activeWork ? (
-                <div className="flex flex-col flex-1 px-12 py-10 overflow-y-auto">
+                <div className="flex flex-col flex-1 overflow-y-auto" style={{ padding: isMobile ? '20px 16px' : '40px 48px' }}>
                   <div className="flex items-start justify-between mb-6">
                     <div>
                       <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                         textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
                         {activeCat?.icon} {activeCat?.label}
                       </p>
-                      <h2 style={{ fontSize: '32px', color: 'var(--text-0)', fontWeight: 700,
+                      <h2 style={{ fontSize: isMobile ? '22px' : '32px', color: 'var(--text-0)', fontWeight: 700,
                         letterSpacing: '-0.025em', lineHeight: 1.15 }}>
                         {activeWork.title}
                       </h2>
@@ -671,6 +721,47 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                     />
                   </div>
                 </div>
+              ) : activeObs ? (
+                <div className="flex flex-col flex-1 overflow-y-auto" style={{ padding: isMobile ? '20px 16px' : '40px 48px' }}>
+                  <div className="flex items-start justify-between mb-8">
+                    <div style={{ flex: 1, paddingRight: '24px' }}>
+                      <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
+                        textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+                        {activeObs.type || 'Observation'}
+                        {activeObs.constellation && (
+                          <span style={{ color: '#a07830' }}> · ◈ {activeObs.constellation}</span>
+                        )}
+                      </p>
+                      <p style={{ color: 'var(--text-1)', fontSize: '16px', lineHeight: 1.75, maxWidth: '480px' }}>
+                        {activeObs.text}
+                      </p>
+                    </div>
+                    <button onClick={() => setActiveObs(null)} style={{
+                      background: 'none', border: 'none', color: 'var(--text-5)',
+                      cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: 0, flexShrink: 0,
+                    }}>✕</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '320px' }}>
+                    <button onClick={() => { setInboxObs(activeObs); setMode('inbox') }} style={{
+                      padding: '10px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                      background: '#065f46', border: '1px solid #10b981', color: '#ecfdf5',
+                      cursor: 'pointer', textAlign: 'left',
+                    }}>
+                      🎭 Ask MUSE about this
+                    </button>
+                    <button onClick={() => {
+                      setDraft({ title: activeObs.text.slice(0, 60).trimEnd(), category: 'characters' })
+                      setAdding(true)
+                      setActiveObs(null)
+                    }} style={{
+                      padding: '10px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                      background: 'var(--bg-3)', border: '1px solid var(--border-1)', color: 'var(--text-2)',
+                      cursor: 'pointer', textAlign: 'left',
+                    }}>
+                      + Begin a Work from this
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center px-10">
                   <div style={{ maxWidth: '340px', textAlign: 'center' }}>
@@ -678,16 +769,20 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                     <p style={{ fontSize: '19px', color: 'var(--text-3)', fontWeight: 500,
                       letterSpacing: '-0.015em', marginBottom: '10px' }}>The stage is ready.</p>
                     <p style={{ fontSize: '13px', color: 'var(--text-5)', lineHeight: 1.7 }}>
-                      Select a work from the right wing<br />or press + to begin something new.
+                      Select a signal from the left wing,<br />a work from the right, or press + to begin.
                     </p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* RIGHT WING */}
+            {/* RIGHT WING — full width on mobile when no item selected; hidden when item active */}
             <div className="flex flex-col shrink-0 overflow-y-auto py-5 px-3"
-              style={{ width: '250px', background: 'var(--bg-0)' }}>
+              style={{
+                width: isMobile ? '100%' : '250px',
+                background: 'var(--bg-0)',
+                display: isMobile && (activeWork || activeObs) ? 'none' : 'flex',
+              }}>
               <div className="flex items-center justify-between mb-4 px-2">
                 <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', fontWeight: 600 }}>Works in Progress</p>
@@ -752,7 +847,7 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                         const color    = STATUS_COLORS[w.status] || 'var(--text-2)'
                         const isActive = activeWork?.id === w.id
                         return (
-                          <button key={w.id} onClick={() => setActiveWork(w)} style={{
+                          <button key={w.id} onClick={() => { setActiveWork(w); setActiveObs(null) }} style={{
                             textAlign: 'left', borderRadius: '6px', padding: '7px 10px',
                             fontSize: '12px', transition: 'all 0.15s', cursor: 'pointer',
                             background: isActive ? 'var(--bg-3)' : 'transparent',

@@ -42,6 +42,11 @@ import {
   createMediaAsset, updateMediaAsset, listenMediaAssets,
   createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
   listenCommands, updateCommand,
+  createCommand, updateCommand, submitCommandForApproval,
+  approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
+  createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
+  batchUpdateObservations,
+  createLineage, listenLineage,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -51,6 +56,10 @@ import { uploadVoiceSeed } from './lib/voiceUpload'
 import { seedCommandsIfEmpty } from './lib/seedCommands'
 import PACERVoice from './components/PACERVoice'
 import CommandWorkbench from './components/CommandWorkbench'
+import { uploadStudioArtifactImage } from './lib/imageUpload'
+import PACERVoice from './components/PACERVoice'
+import { useProactiveAnnouncements } from './lib/useProactiveAnnouncements'
+import { lineageBriefingContext } from './lib/lineageBriefingContext'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || null
 
@@ -98,6 +107,7 @@ export default function App() {
   const isMobile = useIsMobile()
 
   const [currentRoom, setCurrentRoom]             = useState('home')
+  const [museExternalSeed, setMuseExternalSeed]   = useState(null) // cross-room handoff — e.g. Theater asset sent to MUSE for packaging
   const [atriumMode, setAtriumMode]               = useState('observe') // 'observe' | 'conversation'
   const [voiceMode, setVoiceMode]                 = useState(() => localStorage.getItem('pacer_voice_mode') === 'on')
   const [observations, setObservations]           = useState([])
@@ -114,6 +124,15 @@ export default function App() {
     // v1 legacy: raw string key (migrated to encrypted on next save)
     return localStorage.getItem('pacer_api_key') || null
   })
+  const [openaiApiKey, setOpenaiApiKey]           = useState(() => {
+    try {
+      const v2 = localStorage.getItem('pacer_openai_key_v2')
+      if (v2) return JSON.parse(v2)
+    } catch {}
+    return localStorage.getItem('pacer_openai_key') || null
+  })
+  const [studioContext, setStudioContext]         = useState(null) // { prompt, sourceConstellation, sourceDoctrine, sourceObservation }
+  const [studioArtifacts, setStudioArtifacts]    = useState([])
   const [showKeyGate, setShowKeyGate]             = useState(false)
   const [kelReviews, setKelReviews]               = useState([])
   const [kelDecisions, setKelDecisions]           = useState([])
@@ -124,6 +143,7 @@ export default function App() {
   const [mediaAssets, setMediaAssets]             = useState([])
   const [doctrineCases, setDoctrineCases]         = useState([])
   const [commands, setCommands]                   = useState([])
+  const [lineage, setLineage]                     = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -148,6 +168,22 @@ export default function App() {
   const googleStateRef                      = useRef({ tokenData: null, emailData: null, calendarEvents: [] })
   const [googleReconnecting, setGoogleReconnecting]   = useState(false)
   const [googleReconnectFailed, setGoogleReconnectFailed] = useState(false)
+
+  // Institution-wide command status — three zoom levels: Atrium header (pulse), Morning Brief (operational), KEL Evidence (investigation)
+  const institutionStatus = useMemo(() => {
+    const active    = commands.filter(c => ['drafted','analyzing','planned','approved','in_progress'].includes(c.status)).length
+    const pending   = commands.filter(c => c.status === 'pending_approval').length
+    const completed = commands.filter(c => c.status === 'completed').length
+    const failed    = commands.filter(c => c.status === 'failed').length
+    const gateTotal    = commands.filter(c => ['approved','denied','in_progress','completed','failed'].includes(c.status)).length
+    const gateApproved = commands.filter(c => ['approved','in_progress','completed'].includes(c.status)).length
+    const governanceScore     = gateTotal > 0 ? Math.round((gateApproved / gateTotal) * 100) : null
+    const executionReliability = (completed + failed) > 0 ? Math.round((completed / (completed + failed)) * 100) : null
+    return { active, pending, completed, failed, governanceScore, executionReliability, total: commands.length }
+  }, [commands])
+
+  // Lineage briefing context — derived once, injected into conversation and morning brief
+  const lineageCtx = useMemo(() => lineageBriefingContext(lineage, observations), [lineage, observations])
 
   // Builder readiness derives from thread layer (primary) or kel_decisions (fallback)
   // Unlocked by Human Gate approval on any KEL recommendation — not a separate review ceremony
@@ -278,6 +314,11 @@ export default function App() {
     const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)
     const unsubCommands  = listenCommands(user.uid, setCommands)
     return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands() }
+    const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)
+    const unsubCommands   = listenCommands(user.uid, setCommands)
+    const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
+    const unsubLineage    = listenLineage(user.uid, setLineage)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -398,6 +439,7 @@ export default function App() {
             observations, productions, institutionEvents, creatorLogs, kelReviews,
             emailContext:    emailIncluded    ? emailContextString(currentEmail)    : null,
             calendarContext: calendarIncluded ? calendarContextString(currentCalendar) : null,
+            lineageContext:  lineageCtx,
           },
           apiKey
         )
@@ -412,7 +454,7 @@ export default function App() {
     const unrouted = observations.filter(o => !o.destination).length
     const pending  = productions.filter(p => p.humanGateStatus === 'pending' || (p.status === 'staged' && !p.humanGateStatus)).length
     const parts = []
-    if (observations.length === 0) parts.push('The Atrium is quiet.')
+    if (observations.length === 0) parts.push('Your institution has not yet generated sufficient signal to distinguish what matters from what does not.')
     else parts.push(`${observations.length} observation${observations.length !== 1 ? 's' : ''} in memory.`)
     if (unrouted > 0) parts.push(`${unrouted} awaiting routing.`)
     if (pending > 0) parts.push(`${pending} production${pending !== 1 ? 's' : ''} awaiting approval.`)
@@ -507,6 +549,17 @@ export default function App() {
     })
   }, [emailData, calendarEvents]) // eslint-disable-line
 
+  // Phase 2: proactive announcements — fires for the three approved system events.
+  // voiceMode gates whether PACER speaks unprompted; getVoiceConfig('home') keeps
+  // tone neutral until Phase 3 room personalities are added.
+  useProactiveAnnouncements({
+    observations,
+    kelDecisions,
+    arrivalText,
+    voiceMode,
+    voiceConfig: getVoiceConfig(currentRoom),
+  })
+
   async function submitObservation(obs) {
     if (!isCreator(user)) incrementCampusStat('observations')
     const id = await createObservation(user.uid, {
@@ -541,6 +594,16 @@ export default function App() {
 
   async function acceptConstellation(id, constellation) {
     await updateObservation(user.uid, id, { constellation })
+    if (constellation) {
+      const obs = observations.find(o => o.id === id)
+      createInstitutionEvent(user.uid, {
+        eventType:       'observation_tagged',
+        title:           `Observation tagged: ${constellation}`,
+        description:     obs?.text ? obs.text.slice(0, 100) : null,
+        relatedEntityId: id,
+        constellation,
+      }).catch(() => {}) // fire-and-forget, non-critical
+    }
   }
 
   function toggleVoiceMode() {
@@ -585,6 +648,61 @@ export default function App() {
       setApiKey(null)
       if (user) updateUserProfile(user.uid, { anthropicKeyBundle: null, anthropicApiKey: null })
     }
+  }
+
+  function handleOpenaiKeyChange(keyOrBundle) {
+    if (keyOrBundle) {
+      const isBundle = typeof keyOrBundle === 'object' && keyOrBundle.encrypted
+      if (isBundle) {
+        localStorage.setItem('pacer_openai_key_v2', JSON.stringify(keyOrBundle))
+        localStorage.removeItem('pacer_openai_key')
+      } else {
+        localStorage.setItem('pacer_openai_key', keyOrBundle)
+        localStorage.removeItem('pacer_openai_key_v2')
+      }
+      setOpenaiApiKey(keyOrBundle)
+    } else {
+      localStorage.removeItem('pacer_openai_key_v2')
+      localStorage.removeItem('pacer_openai_key')
+      setOpenaiApiKey(null)
+    }
+  }
+
+  function handleOpenStudio(prefillPromptOrContext) {
+    const ctx = typeof prefillPromptOrContext === 'string'
+      ? { prompt: prefillPromptOrContext }
+      : prefillPromptOrContext
+    setStudioContext(ctx)
+    setCurrentRoom('builderstudio')
+  }
+
+  async function saveStudioArtifact(data) {
+    if (!user) return
+    let permanentUrl = data.url
+    try {
+      permanentUrl = await uploadStudioArtifactImage(data.url, user.uid)
+    } catch (err) {
+      console.warn('[Studio] Storage upload failed, saving DALL-E URL as fallback:', err?.message)
+    }
+    const artifactId = await createStudioArtifact(user.uid, { ...data, url: permanentUrl })
+    if (data.sourceConstellation) {
+      const triggerEvent = institutionEvents.find(e =>
+        e.eventType === 'observation_tagged' && e.constellation === data.sourceConstellation
+      )
+      createInstitutionEvent(user.uid, {
+        eventType:       'artwork_created',
+        title:           `Artwork created: ${data.title || data.sourceConstellation}`,
+        description:     data.prompt ? data.prompt.slice(0, 100) : null,
+        relatedEntityId: artifactId,
+        constellation:   data.sourceConstellation,
+        causedByEventId: triggerEvent?.id || null,
+      }).catch(() => {})
+    }
+  }
+
+  async function updateStudioArtifactNotes(id, data) {
+    if (!user) return
+    await updateStudioArtifact(user.uid, id, data)
   }
 
   async function plantVoiceSeed(audioBlob) {
@@ -635,8 +753,8 @@ export default function App() {
   }
 
   async function createProductionRecord(data) {
-    if (!user) return
-    await createProduction(user.uid, data)
+    if (!user) return null
+    return await createProduction(user.uid, data)
   }
 
   async function updateProductionRecord(id, patch) {
@@ -655,6 +773,24 @@ export default function App() {
       title:           'Production Published to OpsCore',
       description:     `"${title}" survived Theater review and is now live in OpsCore Field View.`,
       relatedEntityId: productionId,
+    })
+    const prod          = productions.find(p => p.id === productionId)
+    const observationId = prod?.sourceObservationId || null
+    const thread        = observationId ? threads.find(t => t.observationIds?.includes(observationId)) : null
+    await createLineage(user.uid, {
+      observationId,
+      threadId:      thread?.id || null,
+      museWorkId:    null,
+      assetId:       null,
+      productionId,
+      publishedBy:   user.uid,
+      constellation: prod?.sourceConstellation || null,
+      path: [
+        ...(observationId ? ['observation'] : []),
+        ...(thread?.id    ? ['thread']      : []),
+        'production',
+        'published',
+      ],
     })
   }
 
@@ -680,6 +816,34 @@ export default function App() {
       description:     `"${title}" is now broadcasting in OpsCore Field View.`,
       relatedEntityId: assetId,
     })
+    const asset         = mediaAssets.find(a => a.id === assetId)
+    const observationId = asset?.sourceObservation || null
+    const productionId  = asset?.productionId      || null
+    const prod          = productionId ? productions.find(p => p.id === productionId) : null
+    const thread        = observationId ? threads.find(t => t.observationIds?.includes(observationId)) : null
+    await createLineage(user.uid, {
+      observationId,
+      threadId:      thread?.id || null,
+      museWorkId:    null,
+      assetId,
+      productionId,
+      publishedBy:   user.uid,
+      constellation: prod?.sourceConstellation || asset?.sourceConstellation || null,
+      path: [
+        ...(observationId ? ['observation'] : []),
+        ...(thread?.id    ? ['thread']      : []),
+        ...(productionId  ? ['production']  : []),
+        'asset',
+        'published',
+      ],
+    })
+  }
+
+  function sendAssetToMuse(asset) {
+    setMuseExternalSeed({
+      text: `Media asset: ${asset.title || 'Untitled Asset'}${asset.transcript ? '\n\n' + asset.transcript : ''}`,
+    })
+    setCurrentRoom('muse')
   }
 
   async function createDoctrineCaseRecord(data) {
@@ -702,7 +866,7 @@ export default function App() {
     if (!user) return
     const { observationIds, ...kelData } = decisionData
     await createKELDecision(user.uid, kelData)
-    await createThread(user.uid, {
+    const threadId = await createThread(user.uid, {
       observationIds: observationIds || [],
       recommendation: decisionData.recommendation,
       reasoning:      decisionData.reasoning      || null,
@@ -711,6 +875,14 @@ export default function App() {
       cited:          decisionData.cited          || [],
       decision:       decisionData.decision,
     })
+    // Approved decision → claim the referenced observations so K.E.L. won't re-recommend them.
+    if (decisionData.decision === 'approved' && observationIds?.length > 0) {
+      await batchUpdateObservations(user.uid,
+        observationIds
+          .filter(Boolean)
+          .map(id => ({ id, data: { resolutionStatus: 'claimed', claimedByThreadId: threadId } }))
+      ).catch(e => console.warn('[PACER] claimObservations batch failed:', e?.message))
+    }
   }
 
   async function requestBuilderReview() {
@@ -759,6 +931,82 @@ export default function App() {
       i === idx ? { ...item, verified: !item.verified } : item
     )
     await updateCommand(user.uid, command.id, { parityChecklist: updated })
+  // ── Atrium Command handlers ───────────────────────────────────────────────────
+
+  async function createCommandRecord(data) {
+    if (!user) return
+    await createCommand(user.uid, data)
+  }
+
+  async function submitCommandForGate(id) {
+    if (!user) return
+    await submitCommandForApproval(user.uid, id)
+  }
+
+  async function approveCommandRecord(id, title) {
+    if (!user) return
+    await approveCommand(user.uid, id, title)
+  }
+
+  async function denyCommandRecord(id, title, rationale) {
+    if (!user) return
+    await denyCommand(user.uid, id, title, rationale)
+  }
+
+  async function completeCommandRecord(id, title, proof) {
+    if (!user) return
+    const cmd = commands.find(c => c.id === id)
+    const approvedEvent = institutionEvents.find(e =>
+      e.eventType === 'command_approved' && e.relatedEntityId === id
+    )
+    const isSuccess = ['Success', 'Partial Success'].includes(proof.verdict)
+    // Build lineage once — guarded by !cmd.verdict so a second submit can't double-write
+    let lineageData = null
+    if (isSuccess && cmd && !cmd.verdict) {
+      const constellation = cmd.patternTag || null
+      const matchingObs = constellation
+        ? observations.find(o => o.constellation === constellation)
+        : null
+      lineageData = {
+        commandId:     id,
+        observationId: matchingObs?.id || null,
+        constellation,
+        path: matchingObs
+          ? ['observation', 'command', 'completed']
+          : ['command', 'completed'],
+      }
+    }
+    await completeCommand(user.uid, id, title, { ...proof, causedByEventId: approvedEvent?.id || null, lineageData })
+    // Success verdict → resolve observations that were claimed against this command's constellation.
+    if (isSuccess && cmd) {
+      const toResolve = observations.filter(o =>
+        o.resolutionStatus === 'claimed' &&
+        cmd.patternTag && o.constellation === cmd.patternTag
+      )
+      if (toResolve.length > 0) {
+        batchUpdateObservations(user.uid,
+          toResolve.map(o => ({
+            id: o.id,
+            data: { resolutionStatus: 'resolved', resolvedByCommandId: id },
+          }))
+        ).catch(e => console.warn('[PACER] resolveObservations batch failed:', e?.message))
+      }
+    }
+  }
+
+  async function failCommandRecord(id, title, reason) {
+    if (!user) return
+    await failCommand(user.uid, id, title, reason)
+  }
+
+  async function archiveCommandRecord(id) {
+    if (!user) return
+    await archiveCommand(user.uid, id)
+  }
+
+  async function updateCommandRecord(id, patch) {
+    if (!user) return
+    await updateCommand(user.uid, id, patch)
   }
 
   const isHome     = currentRoom === 'home'
@@ -868,6 +1116,7 @@ export default function App() {
             debugUid={user?.uid}
             debugEmail={user?.email}
             debugProjectId={import.meta.env.VITE_FIREBASE_PROJECT_ID}
+            institutionStatus={institutionStatus}
           />
         )}
 
@@ -884,6 +1133,7 @@ export default function App() {
                 emailContext={emailContextString(emailData)}
                 calendarContext={calendarContextString(calendarEvents)}
                 voiceConfig={getVoiceConfig('atrium')}
+                lineageContext={lineageCtx}
               />
             )
             : (
@@ -937,19 +1187,26 @@ export default function App() {
             onConnectClaude={() => setShowKeyGate(true)}
             onNavigate={setCurrentRoom}
             isMobile={isMobile}
+            externalSeed={museExternalSeed}
+            onExternalSeedConsumed={() => setMuseExternalSeed(null)}
           />
         )}
         {isVERA && (
           <VERARoom
             observations={observations}
             museWorks={museWorks}
+            commands={commands}
+            doctrineCases={doctrineCases}
+            institutionEvents={institutionEvents}
+            studioArtifacts={studioArtifacts}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             isMobile={isMobile}
             voiceMode={voiceMode}
+            onOpenStudio={handleOpenStudio}
           />
         )}
-        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} uid={user?.uid} isMobile={isMobile} />}
+        {isArchive  && <ArchiveRoom observations={observations} museWorks={museWorks} institutionEvents={institutionEvents} forgeThreads={threads} lineage={lineage} uid={user?.uid} isMobile={isMobile} />}
         {isIsles && (
           <IslesRoom
             observations={observations}
@@ -980,10 +1237,12 @@ export default function App() {
             onCreateMediaAsset={createMediaAssetRecord}
             onUpdateMediaAsset={updateMediaAssetRecord}
             onPublishMediaAsset={publishMediaAssetRecord}
+            onSendToMuse={sendAssetToMuse}
             apiKey={apiKey}
             onConnectClaude={() => setShowKeyGate(true)}
             uid={user?.uid}
             isMobile={isMobile}
+            lineage={lineage}
           />
         )}
         {isOpsCore  && (
@@ -993,6 +1252,7 @@ export default function App() {
             productions={productions}
             mediaAssets={mediaAssets}
             institutionEvents={institutionEvents}
+            lineage={lineage}
             apiKey={apiKey}
             onBuildBrief={buildArrivalText}
             isMobile={isMobile}
@@ -1030,6 +1290,12 @@ export default function App() {
             onNavigate={setCurrentRoom}
             onForge={forgeArtifact}
             apiKey={apiKey}
+            openaiApiKey={openaiApiKey}
+            studioContext={studioContext}
+            onContextConsumed={() => setStudioContext(null)}
+            studioArtifacts={studioArtifacts}
+            onSaveArtifact={saveStudioArtifact}
+            onUpdateArtifact={updateStudioArtifactNotes}
             onRecordOutcome={recordOutcome}
           />
         )}
@@ -1044,6 +1310,17 @@ export default function App() {
             onDenyReview={denyKELReview}
             isMobile={isMobile}
             voiceMode={voiceMode}
+            threads={threads}
+            commands={commands}
+            onCreateCommand={createCommandRecord}
+            onSubmitForGate={submitCommandForGate}
+            onApproveCommand={approveCommandRecord}
+            onDenyCommand={denyCommandRecord}
+            onCompleteCommand={completeCommandRecord}
+            onFailCommand={failCommandRecord}
+            onArchiveCommand={archiveCommandRecord}
+            onUpdateCommand={updateCommandRecord}
+            lineage={lineage}
           />
         )}
         {isSettings && (
@@ -1054,6 +1331,8 @@ export default function App() {
             onThemeChange={setTheme}
             apiKey={apiKey}
             onApiKeyChange={handleApiKeyChange}
+            openaiApiKey={openaiApiKey}
+            onOpenaiKeyChange={handleOpenaiKeyChange}
             onSignOut={signOut}
             isMobile={isMobile}
             arrivalMode={profile?.arrivalMode || 'silent'}

@@ -32,7 +32,7 @@ Return ONLY valid JSON. No markdown, no explanation:
 secondaryDestination: the next most likely destination, or null if no meaningful secondary.
 secondaryConfidence: confidence score for the secondary destination (0.0 to 1.0).`
 
-const CONVERSATION_SYSTEM = (dateStr, recentObs, recentEvents, emailContext, calendarContext) =>
+const CONVERSATION_SYSTEM = (dateStr, recentObs, recentEvents, emailContext, calendarContext, lineageContext) =>
   `You are PACER — the institutional intelligence for JPG Ventures LLC, a Georgia company.
 
 JPG Ventures has two primary divisions:
@@ -51,10 +51,11 @@ Recent Observations (newest first):
 ${recentObs || 'None recorded yet.'}
 
 Recent Institution Events:
-${recentEvents || 'None recorded yet.'}`
+${recentEvents || 'None recorded yet.'}
+${lineageContext ? `\nPublication Lineage Memory:\n${lineageContext}` : ''}`
 
 export async function generateInstitutionalPulse(context, apiKey) {
-  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], kelReviews = [], emailContext = null, calendarContext = null } = context
+  const { observations = [], productions = [], institutionEvents = [], creatorLogs = [], kelReviews = [], emailContext = null, calendarContext = null, lineageContext = null } = context
 
   // PACER institutional data always leads — Google is enrichment, not a dependency
   const museDone    = observations.filter(o => o.claude && !o.destination)
@@ -74,6 +75,8 @@ export async function generateInstitutionalPulse(context, apiKey) {
   // Google context appended only when available — omitted entirely if not connected
   if (calendarContext) lines.push(`\nGoogle Calendar: ${calendarContext}`)
   if (emailContext)    lines.push(`Gmail: ${emailContext}`)
+  // Lineage insights: what has historically worked — informs forward recommendations
+  if (lineageContext)  lines.push(`\n${lineageContext}`)
   const summary = lines.join('\n')
 
   const data = await callClaude({
@@ -87,7 +90,7 @@ export async function generateInstitutionalPulse(context, apiKey) {
 }
 
 export async function conversationQuery(userText, context, history, apiKey) {
-  const { observations = [], institutionEvents = [], dateStr = '', emailContext = null, calendarContext = null } = context
+  const { observations = [], institutionEvents = [], dateStr = '', emailContext = null, calendarContext = null, lineageContext = null } = context
 
   const recentObs = observations.slice(0, 12).map(o => {
     const date = o.timestamp instanceof Date
@@ -111,7 +114,7 @@ export async function conversationQuery(userText, context, history, apiKey) {
   const data = await callClaude({
     model: MODEL,
     max_tokens: 350,
-    system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents, emailContext, calendarContext),
+    system: CONVERSATION_SYSTEM(dateStr, recentObs, recentEvents, emailContext, calendarContext, lineageContext),
     messages: [
       ...historyMessages,
       { role: 'user', content: userText },
