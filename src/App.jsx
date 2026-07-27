@@ -41,7 +41,6 @@ import {
   createThread, listenThreads, updateThread,
   createMediaAsset, updateMediaAsset, listenMediaAssets,
   createDoctrineCase, updateDoctrineCase, listenDoctrineCases,
-  listenCommands, updateCommand,
   createCommand, updateCommand, submitCommandForApproval,
   approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,
   createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
@@ -53,9 +52,6 @@ import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isToke
 import { fetchEmailSummary, fetchTodayEvents, emailContextString, calendarContextString } from './lib/googleData'
 import { getVoiceConfig, speakWithVoice } from './lib/roomVoice'
 import { uploadVoiceSeed } from './lib/voiceUpload'
-import { seedCommandsIfEmpty } from './lib/seedCommands'
-import PACERVoice from './components/PACERVoice'
-import CommandWorkbench from './components/CommandWorkbench'
 import { uploadStudioArtifactImage } from './lib/imageUpload'
 import PACERVoice from './components/PACERVoice'
 import { useProactiveAnnouncements } from './lib/useProactiveAnnouncements'
@@ -300,7 +296,6 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     migrateLocalStorage(user.uid)
-    seedCommandsIfEmpty(user.uid)
     const unsubObs       = listenObservations(user.uid, setObservations)
     const unsubMuse      = listenMuseWorks(user.uid, setMuseWorks)
     const unsubGrad      = listenGraduates(user.uid, setGraduates)
@@ -311,9 +306,6 @@ export default function App() {
     const unsubLogs      = listenCreatorLogs(user.uid, setCreatorLogs)
     const unsubProds     = listenProductions(user.uid, setProductions)
     const unsubMedia     = listenMediaAssets(user.uid, setMediaAssets)
-    const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)
-    const unsubCommands  = listenCommands(user.uid, setCommands)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands() }
     const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)
     const unsubCommands   = listenCommands(user.uid, setCommands)
     const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
@@ -454,7 +446,7 @@ export default function App() {
     const unrouted = observations.filter(o => !o.destination).length
     const pending  = productions.filter(p => p.humanGateStatus === 'pending' || (p.status === 'staged' && !p.humanGateStatus)).length
     const parts = []
-    if (observations.length === 0) parts.push('Your institution has not yet generated sufficient signal to distinguish what matters from what does not.')
+    if (observations.length === 0) parts.push('The Atrium is quiet.')
     else parts.push(`${observations.length} observation${observations.length !== 1 ? 's' : ''} in memory.`)
     if (unrouted > 0) parts.push(`${unrouted} awaiting routing.`)
     if (pending > 0) parts.push(`${pending} production${pending !== 1 ? 's' : ''} awaiting approval.`)
@@ -918,19 +910,6 @@ export default function App() {
     })
   }
 
-  async function handleCommandStatusChange(command, newStatus) {
-    await updateCommand(user.uid, command.id, {
-      status: newStatus,
-      _prevStatus: command.status,
-      commandNumber: command.commandNumber,
-    })
-  }
-
-  async function handleParityToggle(command, idx) {
-    const updated = command.parityChecklist.map((item, i) =>
-      i === idx ? { ...item, verified: !item.verified } : item
-    )
-    await updateCommand(user.uid, command.id, { parityChecklist: updated })
   // ── Atrium Command handlers ───────────────────────────────────────────────────
 
   async function createCommandRecord(data) {
@@ -1019,7 +998,6 @@ export default function App() {
   const isArchive  = currentRoom === 'archive'
   const isIsles          = currentRoom === 'isles'
   const isKEL            = currentRoom === 'kel'
-  const isCommands       = currentRoom === 'commands'
   const isBusinessCenter = currentRoom === 'businesscenter'
   const isBuilderStudio  = currentRoom === 'builderstudio'
   const isSettings       = currentRoom === 'settings'
@@ -1368,16 +1346,7 @@ export default function App() {
           />
         )}
 
-        {isCommands && (
-          <CommandWorkbench
-            commands={commands}
-            onStatusChange={handleCommandStatusChange}
-            onParityToggle={handleParityToggle}
-            isMobile={isMobile}
-          />
-        )}
-
-        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isOpsCore && !isKEL && !isCommands && !isBusinessCenter && !isBuilderStudio && !isSettings && (
+        {!isHome && !isAtrium && !isMuse && !isVERA && !isArchive && !isIsles && !isDoctrine && !isTheater && !isOpsCore && !isKEL && !isBusinessCenter && !isBuilderStudio && !isSettings && (
           <PlaceholderRoom room={currentRoom} />
         )}
       </div>
