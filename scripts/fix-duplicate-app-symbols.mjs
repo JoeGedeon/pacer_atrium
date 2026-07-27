@@ -1,47 +1,76 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { transform } from 'esbuild'
 
 const appPath = new URL('../src/App.jsx', import.meta.url)
-let source = await readFile(appPath, 'utf8')
+const original = await readFile(appPath, 'utf8')
+const lines = original.split(/\r?\n/)
 
-const replacements = [
-  {
-    name: 'duplicate command imports',
-    from: `  listenCommands, updateCommand,\n  createCommand, updateCommand, submitCommandForApproval,\n  approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,\n`,
-    to: `  createCommand, updateCommand, submitCommandForApproval,\n  approveCommand, denyCommand, completeCommand, failCommand, archiveCommand, listenCommands,\n`,
-  },
-  {
-    name: 'duplicate PACERVoice import',
-    from: `import PACERVoice from './components/PACERVoice'\nimport CommandWorkbench from './components/CommandWorkbench'\nimport { uploadStudioArtifactImage } from './lib/imageUpload'\nimport PACERVoice from './components/PACERVoice'\n`,
-    to: `import PACERVoice from './components/PACERVoice'\nimport CommandWorkbench from './components/CommandWorkbench'\nimport { uploadStudioArtifactImage } from './lib/imageUpload'\n`,
-  },
-  {
-    name: 'duplicate Firestore listeners and unreachable cleanup',
-    from: `    const unsubDoctrine  = listenDoctrineCases(user.uid, setDoctrineCases)\n    const unsubCommands  = listenCommands(user.uid, setCommands)\n    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands() }\n    const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)\n    const unsubCommands   = listenCommands(user.uid, setCommands)\n    const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)\n    const unsubLineage    = listenLineage(user.uid, setLineage)\n    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage() }\n`,
-    to: `    const unsubDoctrine   = listenDoctrineCases(user.uid, setDoctrineCases)\n    const unsubCommands   = listenCommands(user.uid, setCommands)\n    const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)\n    const unsubLineage    = listenLineage(user.uid, setLineage)\n    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage() }\n`,
-  },
-]
+// Repair only the exact duplicated declarations already present in App.jsx.
+// This deliberately works line-by-line so it cannot swallow unrelated braces,
+// JSX, or function boundaries during Netlify's prebuild step.
+const output = []
+let pacerVoiceSeen = false
+let insideDbImport = false
+let listenerRepairStarted = false
+let listenerRepairFinished = false
 
-let changed = false
-for (const replacement of replacements) {
-  if (source.includes(replacement.from)) {
-    source = source.replace(replacement.from, replacement.to)
-    changed = true
-    console.log(`[prebuild] fixed ${replacement.name}`)
+for (let index = 0; index < lines.length; index += 1) {
+  const line = lines[index]
+
+  if (line.includes("from './lib/db'")) insideDbImport = false
+  if (line.trim() === 'import {') insideDbImport = true
+
+  if (line === "import PACERVoice from './components/PACERVoice'") {
+    if (pacerVoiceSeen) continue
+    pacerVoiceSeen = true
   }
+
+  if (insideDbImport && line.trim() === 'listenCommands, updateCommand,') {
+    continue
+  }
+
+  if (
+    line.includes('const unsubDoctrine  = listenDoctrineCases') &&
+    lines[index + 1]?.includes('const unsubCommands  = listenCommands') &&
+    lines[index + 2]?.includes('return () =>')
+  ) {
+    listenerRepairStarted = true
+    // Skip the first duplicate pair and its premature cleanup return.
+    index += 2
+    continue
+  }
+
+  if (listenerRepairStarted && line.includes('const unsubDoctrine   = listenDoctrineCases')) {
+    listenerRepairFinished = true
+  }
+
+  output.push(line)
 }
 
-const duplicateChecks = [
-  ["import PACERVoice from './components/PACERVoice'", 1],
-  ['listenCommands, updateCommand', 0],
-  ['const unsubDoctrine  =', 0],
-]
+const repaired = output.join('\n')
+const count = needle => repaired.split(needle).length - 1
 
-for (const [needle, expected] of duplicateChecks) {
-  const count = source.split(needle).length - 1
-  if (count !== expected) {
-    throw new Error(`[prebuild] App.jsx integrity check failed for "${needle}": expected ${expected}, found ${count}`)
-  }
+if (count("import PACERVoice from './components/PACERVoice'") !== 1) {
+  throw new Error('[prebuild] PACERVoice import repair failed')
+}
+if (count('listenCommands, updateCommand,') !== 0) {
+  throw new Error('[prebuild] duplicate command import repair failed')
+}
+if (!listenerRepairStarted || !listenerRepairFinished) {
+  throw new Error('[prebuild] duplicate listener block was not repaired safely')
 }
 
-if (changed) await writeFile(appPath, source)
-console.log('[prebuild] App.jsx duplicate-symbol check passed')
+// Never write malformed JSX. esbuild is already installed through Vite.
+try {
+  await transform(repaired, { loader: 'jsx', jsx: 'automatic' })
+} catch (error) {
+  const detail = error?.errors?.[0]
+  const where = detail?.location ? `${detail.location.line}:${detail.location.column}` : 'unknown location'
+  throw new Error(`[prebuild] repaired App.jsx still fails to parse at ${where}: ${detail?.text || error.message}`)
+}
+
+if (repaired !== original) {
+  await writeFile(appPath, repaired)
+  console.log('[prebuild] repaired duplicate App.jsx symbols without altering component structure')
+}
+console.log('[prebuild] App.jsx JSX integrity check passed')
