@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node scripts/fix-duplicate-app-symbols.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/fix-duplicate-app-symbols.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
