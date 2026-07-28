@@ -95,6 +95,23 @@ No consequential action without human authorization.
 
 PACER recommends. Humans decide. Systems execute after approval. This sequence is inviolable.
 
+### Institutional Intake Protocol
+
+Every artifact entering PACER follows five stages:
+
+1. **Evidence** — Preserve the original exactly as received. The original is never altered.
+2. **Interpretation** — PACER may analyze, summarize, classify, and extract information. All extracted information is proposed, not confirmed.
+3. **Verification** — Human Gate confirms or corrects the interpretation before it becomes institutional fact.
+4. **Institutionalization** — Approved knowledge becomes institutional memory.
+5. **Operational Distribution** — Approved information is delivered to FleetFlow or other connected systems.
+
+Three invariants hold across every stage:
+- PACER never overwrites an original document.
+- PACER never silently changes operational systems.
+- Every extraction, verification, and transfer leaves an auditable record.
+
+Evidence, interpretation, and operational data are never the same thing. They are three separate states separated by human authorization.
+
 ### Wednesday Protocol
 
 Wednesday is PACER's conversational interface protocol, not an agent. Wednesday introduces the work of the institutional agents but does not replace or duplicate their responsibilities.
