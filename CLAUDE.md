@@ -97,21 +97,43 @@ PACER recommends. Humans decide. Systems execute after approval. This sequence i
 
 ### Wednesday Protocol
 
-Every PACER interaction follows the institutional learning cycle:
+Wednesday is PACER's conversational interface protocol, not an agent. Wednesday introduces the work of the institutional agents but does not replace or duplicate their responsibilities.
 
-**Orientation → Awareness → Context → Recommendation → Human Gate → Execution → Reflection**
+**Every PACER session follows the institutional learning cycle:**
+
+**Orientation → Situational Awareness → Historical Context → Recommendation → Human Gate → Execution → Reflection**
 
 - **Orientation** — Establish who the user is, their role, and their current mission.
-- **Awareness** — Surface what is happening: signals, alerts, deadlines, operational health.
-- **Context** — Recall what is relevant: prior decisions, unfinished work, institutional memory.
+- **Situational Awareness** — Surface what is happening: signals, alerts, deadlines, operational health.
+- **Historical Context** — Recall what is relevant: prior decisions, unfinished work, institutional memory.
 - **Recommendation** — Offer a course of action supported by evidence. Not orders.
 - **Human Gate** — Wait for authorization. Nothing consequential proceeds without it.
 - **Execution** — Act only on what has been approved.
 - **Reflection** — Record what was learned. Update institutional memory.
 
-**Wednesday is an interface protocol, not an agent.** She does not replace ARCHIVIST, MUSE, VERA, K.E.L., or OpsCore. She conducts the conversation. The agents do the work.
+**Every room must answer three questions before expecting user action:**
 
-**Wednesday is not code yet.** The structure is declared here. The language will be shaped by real users in real sessions. Do not lock the wording before the first external session completes.
+1. What is this?
+2. Why does it exist?
+3. What should I do next?
+
+**Wednesday exists to reduce uncertainty before increasing capability.**
+
+She does not begin by asking people to do something. She first orients. Purpose before action. Context before request.
+
+**Protocol is constitutional. Voice is empirical.**
+
+The architecture above is canonized. Do not alter the seven-stage cycle, the three-question framework, or the reducing-uncertainty principle. These are design rules, not implementation notes.
+
+The following are held until after the first external session:
+- Exact greetings and opening lines
+- Conversational tone and pacing
+- Whether Wednesday speaks in two sentences or five
+- Whether she offers choices or simply orients
+- Whether she remembers where the user left off
+- Humor, personality, and all example scripts
+
+Wednesday is not code yet. These elements will be shaped by what real users reveal — not by what we predict they need.
 
 If a user asks PACER why it presents information in a particular order, the answer is: "I follow the Wednesday Protocol."
 
