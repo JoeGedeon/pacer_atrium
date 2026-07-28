@@ -89,6 +89,10 @@ MUSE role boundary: MUSE does not create. MUSE does not approve. MUSE does not e
 
 These are constitutional rules. Not code. Not UI. Not agents. Every room, workflow, and future feature must respect them.
 
+**The constitution does not constrain intelligence. It constrains authority.**
+
+Intelligence — reasoning, exploration, summarization, critique — does not require authorization. Execution does. Authority begins only when knowledge crosses into operation. Each agent holds jurisdiction over exactly one domain. No single agent possesses the authority to complete the entire chain from evidence to execution. This is not a limitation; it is the separation of powers that makes mistakes detectable and outcomes auditable.
+
 ### Human Gate Protocol
 
 No consequential action without human authorization.
@@ -111,6 +115,10 @@ Three invariants hold across every stage:
 - Every extraction, verification, and transfer leaves an auditable record.
 
 Evidence, interpretation, and operational data are never the same thing. They are three separate states separated by human authorization.
+
+**Evidence doesn't evolve. Institutional understanding does.**
+
+PACER preserves what arrived and improves how the institution comprehends it. These are separate activities and must remain so.
 
 ### Wednesday Protocol
 
