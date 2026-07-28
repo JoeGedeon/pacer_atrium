@@ -769,7 +769,7 @@ export default function MuseRoom({ observations = [], works = [], uid, onSurface
                     <p style={{ fontSize: '19px', color: 'var(--text-3)', fontWeight: 500,
                       letterSpacing: '-0.015em', marginBottom: '10px' }}>The stage is ready.</p>
                     <p style={{ fontSize: '13px', color: 'var(--text-5)', lineHeight: 1.7 }}>
-                      Select a signal from the left wing,<br />a work from the right, or press + to begin.
+                      Canvas holds what MUSE has determined is worth making.<br />Works move through their lifecycle here until they're ready for the world.
                     </p>
                   </div>
                 </div>

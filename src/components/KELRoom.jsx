@@ -820,11 +820,8 @@ function EvidenceLedger({ commands, isMobile }) {
 
         {patterns.length === 0 ? (
           <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-0)', borderRadius: '8px', padding: '20px' }}>
-            <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7, marginBottom: '8px' }}>
-              No problem has yet been named clearly enough to warrant institutional action.
-            </p>
-            <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.6 }}>
-              When commands are created and tagged with a Constellation Pattern, the ledger builds a record of how many times a pattern generated action, how many succeeded, and what the most recent outcome was.
+            <p style={{ color: 'var(--text-4)', fontSize: '12px', lineHeight: 1.7 }}>
+              The Evidence Ledger tracks what each constellation pattern has produced: how many times it generated action, how many succeeded, and what arrived last. It builds as commands are created and tagged.
             </p>
           </div>
         ) : (
@@ -1002,7 +999,7 @@ function CommandsWorkbench({
           commands.length === 0 ? (
             <div style={{ maxWidth: '540px', paddingTop: '8px' }}>
               <p style={{ color: 'var(--text-3)', fontSize: '13px', lineHeight: 1.7, marginBottom: '20px' }}>
-                No problem has yet been named clearly enough to warrant institutional action.
+                K.E.L. receives named problems and recommends the institutional actions that resolve them. When a problem is clearly enough named, it arrives here as a command.
               </p>
               <div style={{
                 background: '#020b18', border: '1px solid #1d4ed820',
@@ -1285,7 +1282,7 @@ export default function KELRoom({
           {apiKey && validObs.length < 2 && (
             <div style={{ maxWidth: '440px' }}>
               <p style={{ color: 'var(--text-4)', fontSize: '13px', lineHeight: 1.7, marginBottom: '8px' }}>
-                No problem has yet been named clearly enough to warrant institutional action.
+                K.E.L. recommends the actions most likely to move the institution forward. It reads the observation stream and identifies what needs to happen next.
               </p>
               <p style={{ color: 'var(--text-6)', fontSize: '11px', lineHeight: 1.7 }}>
                 K.E.L. reads the observation stream. Enter at least two observations in Atrium to begin.

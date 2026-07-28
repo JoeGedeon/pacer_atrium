@@ -792,10 +792,10 @@ function ProductionOffice({ observations, productions, onCreateProduction, onUpd
               alignItems: 'center', gap: '8px',
             }}>
               <p style={{ color: 'var(--text-5)', fontSize: '12px', textAlign: 'center' }}>
-                The production office is empty.
+                Theater is where evidence becomes artifact.
               </p>
               <p style={{ color: 'var(--text-6)', fontSize: '11px', textAlign: 'center' }}>
-                Route observations to Theater in Atrium, or create productions from MUSE manifests.
+                Observations that earn production arrive here to be shaped into video, image, or story — and delivered where they need to go.
               </p>
             </div>
           )

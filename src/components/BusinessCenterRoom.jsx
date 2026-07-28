@@ -392,7 +392,7 @@ function CreatorCalendar({ logs = [], onAddLog }) {
           )}
 
           {dayLogs.length === 0 && !showForm && (
-            <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>Nothing logged yet.</p>
+            <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>No entries for this day.</p>
           )}
 
           {showForm && (
@@ -806,7 +806,7 @@ export default function BusinessCenterRoom({
                   ))}
                 </div>
               ) : (
-                <p style={{ color: 'var(--text-5)', fontSize: '11px', fontStyle: 'italic' }}>No institutional events recorded yet.</p>
+                <p style={{ color: 'var(--text-5)', fontSize: '12px', lineHeight: 1.7 }}>Institutional events are recorded here as the institution acts. Approvals, closures, publications, and key decisions appear in this record.</p>
               )}
             </div>
 
