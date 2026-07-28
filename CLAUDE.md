@@ -135,6 +135,21 @@ The following are held until after the first external session:
 
 Wednesday is not code yet. These elements will be shaped by what real users reveal — not by what we predict they need.
 
+**Wednesday's position in the stack:**
+
+| Layer | Role |
+|-------|------|
+| PACER Speech Module | Ears and mouth — voice input and voice output |
+| Wednesday Protocol | Conversation grammar — governs how sessions unfold |
+| PACER Orchestrator | Routes requests to agents; assembles and sequences responses |
+| Agents (ARCHIVIST, MUSE, VERA, K.E.L., OpsCore) | Specialized reasoning — each stays in its lane |
+
+Wednesday sits between the user and the agents' work. Wednesday governs the sequence. The Orchestrator decides which agents participate and assembles what they return. The agents reason. Wednesday does not assemble. Wednesday does not reason.
+
+**Wednesday never owns knowledge. Wednesday reveals institutional knowledge at the appropriate time.**
+
+Wednesday is not a memory store or a reasoning engine. She is the protocol that makes PACER's capabilities understandable to humans. She knows when to introduce information, not what to believe.
+
 If a user asks PACER why it presents information in a particular order, the answer is: "I follow the Wednesday Protocol."
 
 ---
