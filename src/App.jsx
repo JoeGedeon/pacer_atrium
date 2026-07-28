@@ -47,6 +47,7 @@ import {
   batchUpdateObservations,
   createLineage, listenLineage,
   createContract, updateContract, listenContracts,
+  createCommitment, updateCommitment, listenCommitments,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -142,6 +143,7 @@ export default function App() {
   const [commands, setCommands]                   = useState([])
   const [lineage, setLineage]                     = useState([])
   const [contracts, setContracts]                 = useState([])
+  const [commitments, setCommitments]             = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -312,8 +314,9 @@ export default function App() {
     const unsubCommands   = listenCommands(user.uid, setCommands)
     const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
     const unsubLineage    = listenLineage(user.uid, setLineage)
-    const unsubContracts  = listenContracts(user.uid, setContracts)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage(); unsubContracts() }
+    const unsubContracts    = listenContracts(user.uid, setContracts)
+    const unsubCommitments  = listenCommitments(user.uid, setCommitments)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage(); unsubContracts(); unsubCommitments() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -867,6 +870,105 @@ export default function App() {
     await updateContract(user.uid, id, patch)
   }
 
+  // Compound: updates contract, emits CONTRACT_VERIFIED event, creates proposed commitments.
+  // Two separate audit events because contract verification and commitment authorization
+  // are different decisions — they may happen seconds apart but must carry distinct records.
+  async function handleVerifyContract(contractId, verifiedFields, proposedCommitments) {
+    if (!user) return
+    await updateContract(user.uid, contractId, {
+      status:          'verified',
+      verified:        verifiedFields,
+      humanGateStatus: 'approved',
+      humanGateAt:     new Date(),
+    })
+    await createInstitutionEvent(user.uid, {
+      eventType: 'CONTRACT_VERIFIED',
+      title: `Contract verified: ${verifiedFields.contractType || 'Agreement'}`,
+      detail: [verifiedFields.partyA, verifiedFields.partyB].filter(Boolean).join(' · ') || null,
+      sourceId: contractId,
+    })
+    const now = new Date()
+    for (const c of proposedCommitments) {
+      await createCommitment(user.uid, {
+        sourceInstitution: 'contracts',
+        sourceType:        'contract',
+        sourceId:          contractId,
+        sourceFieldIds:    c.sourceFieldIds || [],
+        type:              c.type,
+        title:             c.title,
+        description:       c.description || null,
+        maturityDate:      c.maturityDate,
+        owner:             null,
+        status:            'proposed',
+        value:             c.value || null,
+        createdBy:         user.uid,
+        auditTrail: [{
+          event:     'COMMITMENT_PROPOSED',
+          timestamp: now.toISOString(),
+          by:        user.uid,
+          payload:   { type: c.type, maturityDate: c.maturityDate, sourceId: contractId },
+        }],
+      })
+    }
+  }
+
+  // Compound: updates commitment to authorized, emits COMMITMENT_AUTHORIZED event.
+  // Distinct from CONTRACT_VERIFIED — different timestamp, eventType, and payload.
+  async function handleAuthorizeCommitment(commitment) {
+    if (!user) return
+    const now = new Date()
+    const auditEntry = {
+      event:     'COMMITMENT_AUTHORIZED',
+      timestamp: now.toISOString(),
+      by:        user.uid,
+      payload:   { type: commitment.type, maturityDate: commitment.maturityDate, title: commitment.title },
+    }
+    await updateCommitment(user.uid, commitment.id, {
+      status:      'authorized',
+      authorizedBy: user.uid,
+      authorizedAt: now,
+      auditTrail:  [...(commitment.auditTrail || []), auditEntry],
+    })
+    await createInstitutionEvent(user.uid, {
+      eventType:         'COMMITMENT_AUTHORIZED',
+      title:             `Commitment authorized: ${commitment.title}`,
+      detail:            commitment.maturityDate,
+      sourceId:          commitment.id,
+      sourceInstitution: commitment.sourceInstitution,
+    })
+  }
+
+  async function handleDismissCommitment(commitment) {
+    if (!user) return
+    await updateCommitment(user.uid, commitment.id, {
+      status: 'cancelled',
+      auditTrail: [...(commitment.auditTrail || []), {
+        event:     'COMMITMENT_CANCELLED',
+        timestamp: new Date().toISOString(),
+        by:        user.uid,
+        payload:   {},
+      }],
+    })
+  }
+
+  async function handleCreateManualCommitment(data) {
+    if (!user) return null
+    const now = new Date()
+    return createCommitment(user.uid, {
+      ...data,
+      createdBy:    user.uid,
+      authorizedBy: user.uid,
+      authorizedAt: now,
+      status:       'authorized',
+      auditTrail: [{
+        event:     'COMMITMENT_AUTHORIZED',
+        timestamp: now.toISOString(),
+        by:        user.uid,
+        payload:   { manual: true },
+      }],
+    })
+  }
+
   async function recordKELDecision(decisionData) {
     if (!user) return
     const { observationIds, ...kelData } = decisionData
@@ -1267,6 +1369,11 @@ export default function App() {
             contracts={contracts}
             onCreateContract={handleCreateContract}
             onUpdateContract={handleUpdateContract}
+            commitments={commitments}
+            onVerifyContract={handleVerifyContract}
+            onAuthorizeCommitment={handleAuthorizeCommitment}
+            onDismissCommitment={handleDismissCommitment}
+            onCreateManualCommitment={handleCreateManualCommitment}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             onAddLog={addCreatorLog}

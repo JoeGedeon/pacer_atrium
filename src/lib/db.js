@@ -847,3 +847,66 @@ export function listenContracts(uid, callback) {
     err => { console.error('[listenContracts] snapshot error:', err?.code, err?.message) },
   )
 }
+
+// ── Commitments Institution ───────────────────────────────────────────────────
+// Commitments are authorized obligations derived from institutional sources.
+// Status machine: proposed → authorized → active → completed | waived | superseded | cancelled
+// A proposed commitment is never an institutional fact.
+// Only authorized commitments enter the operational timeline.
+// auditTrail is append-only — every state transition is recorded.
+
+const commitmentColl = uid => collection(db, 'users', uid, 'commitments')
+
+export async function createCommitment(uid, data) {
+  const ref = await addDoc(commitmentColl(uid), {
+    // Source lineage — which institution, type, document, and fields produced this
+    sourceInstitution: data.sourceInstitution,
+    sourceType:        data.sourceType,
+    sourceId:          data.sourceId,
+    sourceFieldIds:    data.sourceFieldIds || [],
+    // Commitment identity
+    type:         data.type,
+    title:        data.title,
+    description:  data.description  || null,
+    maturityDate: data.maturityDate,
+    owner:        data.owner        || null,
+    // Status machine
+    status: data.status || 'proposed',
+    // Value — structured object, never a bare number
+    // { amount: number, currency: string, cadence: string, recognitionType: string }
+    value: data.value || null,
+    // Authorization
+    createdBy:    data.createdBy,
+    authorizedBy: data.authorizedBy || null,
+    authorizedAt: data.authorizedAt || null,
+    // Execution
+    executionStatus: null,
+    // Audit trail — append-only log of every state transition
+    auditTrail: data.auditTrail || [],
+    // Meta
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateCommitment(uid, id, patch) {
+  await updateDoc(doc(commitmentColl(uid), id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function listenCommitments(uid, callback) {
+  const q = query(commitmentColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({
+      ...d.data(),
+      id:          d.id,
+      authorizedAt: d.data().authorizedAt?.toDate?.() ?? null,
+      createdAt:   d.data().createdAt?.toDate?.()    ?? new Date(),
+      updatedAt:   d.data().updatedAt?.toDate?.()    ?? new Date(),
+    }))),
+    err => { console.error('[listenCommitments] snapshot error:', err?.code, err?.message) },
+  )
+}

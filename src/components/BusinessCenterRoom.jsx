@@ -3,6 +3,8 @@ import { generateInstitutionalPulse } from '../lib/claudeRouting'
 import { uploadContractFile } from '../lib/contractUpload'
 import { extractContractMetadata } from '../lib/contractExtraction'
 import { contractPipelineStage } from '../lib/pipelineStage'
+import { proposeCommitmentsFromContract, TYPE_META } from '../lib/commitmentProposer'
+import { selectCommitmentsByDate, selectProposedByDate, dailyCommitmentPulse } from '../lib/calendarSelectors'
 import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
@@ -273,7 +275,7 @@ function SystemHealth({ health, isMobile }) {
 
 // ── Creator Calendar ──────────────────────────────────────────────────────────
 
-function CreatorCalendar({ logs = [], onAddLog }) {
+function CreatorCalendar({ logs = [], onAddLog, institutionalCommitments = [] }) {
   const today    = new Date()
   const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate())
 
@@ -296,8 +298,12 @@ function CreatorCalendar({ logs = [], onAddLog }) {
     logsByDate[log.date].push(log)
   })
 
-  const dayLogs = (logsByDate[selectedDate] || []).slice()
-    .sort((a, b) => a.createdAt - b.createdAt)
+  const commitmentsByDate = selectCommitmentsByDate(institutionalCommitments)
+  const proposedByDate    = selectProposedByDate(institutionalCommitments)
+
+  const dayLogs        = (logsByDate[selectedDate] || []).slice().sort((a, b) => a.createdAt - b.createdAt)
+  const dayCommitments = commitmentsByDate[selectedDate] || []
+  const dayProposed    = proposedByDate[selectedDate] || []
 
   function prevMonth() {
     if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
@@ -346,7 +352,10 @@ function CreatorCalendar({ logs = [], onAddLog }) {
           const entries = logsByDate[dateKey] || []
           const isToday = dateKey === todayKey
           const isSel   = dateKey === selectedDate
-          const typeIds = [...new Set(entries.map(l => l.type))].slice(0, 4)
+          const typeIds         = [...new Set(entries.map(l => l.type))].slice(0, 4)
+          const dayCmts         = commitmentsByDate[dateKey] || []
+          const dayProp         = proposedByDate[dateKey] || []
+          const pulse           = dayCmts.length > 0 ? dailyCommitmentPulse(institutionalCommitments, dateKey) : null
           return (
             <div key={day} onClick={() => { setSelectedDate(dateKey); setShowForm(false) }}
               style={{
@@ -361,6 +370,12 @@ function CreatorCalendar({ logs = [], onAddLog }) {
               {typeIds.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1px', justifyContent: 'center', lineHeight: 1 }}>
                   {typeIds.map(id => { const t = ENTRY_TYPES.find(x => x.id === id); return t ? <span key={id} style={{ fontSize: '7px' }}>{t.icon}</span> : null })}
+                </div>
+              )}
+              {(dayCmts.length > 0 || dayProp.length > 0) && (
+                <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                  {dayCmts.length > 0 && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#3b82f6', flexShrink: 0 }} />}
+                  {dayProp.length > 0 && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />}
                 </div>
               )}
             </div>
@@ -381,6 +396,45 @@ function CreatorCalendar({ logs = [], onAddLog }) {
             )}
           </div>
 
+          {/* Institutional commitments — authorized only */}
+          {dayCommitments.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+              {dayCommitments.map(c => {
+                const meta = TYPE_META[c.type] || TYPE_META.compliance
+                return (
+                  <div key={c.id} style={{ borderLeft: `2px solid ${meta.color}`, paddingLeft: '9px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: meta.color, fontSize: '11px', flexShrink: 0 }}>{meta.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ color: 'var(--text-1)', fontSize: '11px', fontWeight: 600 }}>{c.title}</p>
+                      {c.description && <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>{c.description}</p>}
+                      {c.value?.amount && (
+                        <p style={{ color: 'var(--text-4)', fontSize: '10px' }}>
+                          {c.value.currency} {c.value.amount.toLocaleString()} · {c.value.cadence} · {c.value.recognitionType}
+                        </p>
+                      )}
+                    </div>
+                    <span style={{ color: 'var(--text-6)', fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>{meta.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Pending authorization — clearly separated, never presented as institutional fact */}
+          {dayProposed.length > 0 && (
+            <div style={{ borderLeft: '2px solid #f59e0b60', paddingLeft: '9px', marginBottom: '10px', paddingTop: '6px', paddingBottom: '6px' }}>
+              <p style={{ color: '#f59e0b', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '5px' }}>
+                Pending Authorization
+              </p>
+              {dayProposed.map(c => {
+                const meta = TYPE_META[c.type] || TYPE_META.compliance
+                return (
+                  <p key={c.id} style={{ color: 'var(--text-4)', fontSize: '10px', opacity: 0.7 }}>{meta.icon} {c.title}</p>
+                )
+              })}
+            </div>
+          )}
+
           {dayLogs.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: showForm ? '12px' : '0' }}>
               {dayLogs.map(log => {
@@ -396,7 +450,7 @@ function CreatorCalendar({ logs = [], onAddLog }) {
             </div>
           )}
 
-          {dayLogs.length === 0 && !showForm && (
+          {dayLogs.length === 0 && dayCommitments.length === 0 && dayProposed.length === 0 && !showForm && (
             <p style={{ color: 'var(--text-6)', fontSize: '11px', fontStyle: 'italic' }}>No entries for this day.</p>
           )}
 
@@ -426,6 +480,85 @@ function CreatorCalendar({ logs = [], onAddLog }) {
   )
 }
 
+// ── Manual Commitment Form ────────────────────────────────────────────────────
+// Proves the calendar selector is source-agnostic. Any authorized commitment
+// renders through selectCalendarCommitments regardless of sourceInstitution.
+
+const MANUAL_SOURCES = ['fleetflow', 'contracts', 'legal', 'finance', 'operations', 'personal']
+
+function ManualCommitmentForm({ onCreateManualCommitment, isMobile }) {
+  const [open, setOpen]       = useState(false)
+  const [title, setTitle]     = useState('')
+  const [type, setType]       = useState('compliance')
+  const [date, setDate]       = useState('')
+  const [source, setSource]   = useState('fleetflow')
+  const [saving, setSaving]   = useState(false)
+
+  const inputStyle = {
+    width: '100%', background: 'var(--bg-0)', border: '1px solid var(--border-1)',
+    borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)',
+    fontSize: '12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+  }
+
+  async function handleSave() {
+    if (!title.trim() || !date) return
+    setSaving(true)
+    try {
+      await onCreateManualCommitment({
+        sourceInstitution: source,
+        sourceType:        'manual',
+        sourceId:          null,
+        sourceFieldIds:    [],
+        type,
+        title:             title.trim(),
+        description:       null,
+        maturityDate:      date,
+        owner:             null,
+        value:             null,
+      })
+      setTitle(''); setDate(''); setOpen(false)
+    } finally { setSaving(false) }
+  }
+
+  if (!open) {
+    return (
+      <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={() => setOpen(true)} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', color: 'var(--text-5)', fontSize: '10px', padding: '4px 10px', cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'inherit' }}>
+          + Commitment
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: '14px', background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '16px 18px' }}>
+      <p style={{ color: 'var(--text-5)', fontSize: '9px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '12px' }}>
+        Add Commitment
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title (required)" style={inputStyle} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+          <select value={type} onChange={e => setType(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+            {Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+          </select>
+          <select value={source} onChange={e => setSource(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+            {MANUAL_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+        <div style={{ display: 'flex', gap: '7px' }}>
+          <button onClick={handleSave} disabled={!title.trim() || !date || saving} style={{ background: !title.trim() || !date || saving ? 'var(--bg-3)' : '#052e16', border: '1px solid #10b98160', borderRadius: '6px', color: !title.trim() || !date || saving ? 'var(--text-5)' : '#10b981', fontSize: '12px', fontWeight: 600, padding: '7px 14px', cursor: !title.trim() || !date || saving ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+            {saving ? 'Saving…' : 'Authorize'}
+          </button>
+          <button onClick={() => { setOpen(false); setTitle(''); setDate('') }} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '6px', color: 'var(--text-4)', fontSize: '12px', padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Contracts Institution ─────────────────────────────────────────────────────
 
 const PROPOSED_FIELDS = [
@@ -448,7 +581,7 @@ function formatBytes(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-function ContractsInstitution({ contracts, onCreateContract, onUpdateContract, apiKey, uid, isMobile }) {
+function ContractsInstitution({ contracts, commitments = [], onCreateContract, onUpdateContract, onVerifyContract, onAuthorizeCommitment, onDismissCommitment, apiKey, uid, isMobile }) {
   const [selectedId, setSelectedId]   = useState(null)
   const [uploading, setUploading]     = useState(false)
   const [uploadError, setUploadError] = useState(null)
@@ -513,12 +646,8 @@ function ContractsInstitution({ contracts, onCreateContract, onUpdateContract, a
   }
 
   async function handleVerify(contract) {
-    await onUpdateContract(contract.id, {
-      status:          'verified',
-      verified:        { ...editedFields },
-      humanGateStatus: 'approved',
-      humanGateAt:     new Date(),
-    })
+    const proposed = proposeCommitmentsFromContract({ ...contract, verified: editedFields })
+    await onVerifyContract(contract.id, { ...editedFields }, proposed)
   }
 
   async function handleReject(contract) {
@@ -562,6 +691,9 @@ function ContractsInstitution({ contracts, onCreateContract, onUpdateContract, a
   }
 
   function renderDetail(contract) {
+    const contractCommitments  = (commitments || []).filter(c => c.sourceId === contract.id)
+    const pendingCommitments   = contractCommitments.filter(c => c.status === 'proposed')
+    const authorizedCommitments = contractCommitments.filter(c => c.status === 'authorized' || c.status === 'active')
     const pill = contractPipelineStage(contract)
     const ts = contract.uploadedAt
       ? new Date(contract.uploadedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
@@ -658,33 +790,95 @@ function ContractsInstitution({ contracts, onCreateContract, onUpdateContract, a
           </div>
         )}
 
-        {/* verified: transfer */}
+        {/* verified: commitments + transfer */}
         {contract.status === 'verified' && (
-          <div style={{ background: 'var(--bg-1)', border: '1px solid #10b98130', borderRadius: '10px', padding: '18px 20px' }}>
-            <p style={{ color: '#10b981', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>Human Gate — Approved</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '16px' }}>
-              {PROPOSED_FIELDS.filter(f => contract.verified?.[f.key]).map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', gap: '10px' }}>
-                  <span style={{ color: 'var(--text-5)', fontSize: '11px', minWidth: '120px', flexShrink: 0 }}>{label}</span>
-                  <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{contract.verified[key]}</span>
-                </div>
-              ))}
+          <>
+            {/* Confirmed fields */}
+            <div style={{ background: 'var(--bg-1)', border: '1px solid #10b98130', borderRadius: '10px', padding: '18px 20px' }}>
+              <p style={{ color: '#10b981', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>Human Gate — Approved</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {PROPOSED_FIELDS.filter(f => contract.verified?.[f.key]).map(({ key, label }) => (
+                  <div key={key} style={{ display: 'flex', gap: '10px' }}>
+                    <span style={{ color: 'var(--text-5)', fontSize: '11px', minWidth: '120px', flexShrink: 0 }}>{label}</span>
+                    <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{contract.verified[key]}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p style={{ color: 'var(--text-4)', fontSize: '11px', marginBottom: '8px' }}>FleetFlow destination:</p>
-            <input
-              value={destination}
-              onChange={e => setDestination(e.target.value)}
-              placeholder="e.g. FleetFlow — Client Contracts"
-              style={{ ...inputStyle, marginBottom: '12px' }}
-            />
-            <button
-              onClick={() => handleTransfer(contract)}
-              disabled={transferring}
-              style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '8px 16px', cursor: transferring ? 'default' : 'pointer', fontFamily: 'inherit', opacity: transferring ? 0.6 : 1 }}
-            >
-              {transferring ? 'Authorizing…' : 'Authorize Transfer to FleetFlow'}
-            </button>
-          </div>
+
+            {/* Pending Authorization — commitments waiting for individual authorization */}
+            {pendingCommitments.length > 0 && (
+              <div style={{ background: 'var(--bg-1)', border: '1px solid #f59e0b40', borderRadius: '10px', padding: '18px 20px' }}>
+                <p style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Pending Authorization — {pendingCommitments.length} Commitment{pendingCommitments.length !== 1 ? 's' : ''}
+                </p>
+                <p style={{ color: 'var(--text-5)', fontSize: '10px', marginBottom: '12px' }}>
+                  These obligations will enter the Institutional Calendar when you authorize them.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {pendingCommitments.map(c => {
+                    const meta = TYPE_META[c.type] || TYPE_META.compliance
+                    return (
+                      <div key={c.id} style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '8px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ color: meta.color, fontSize: '13px', flexShrink: 0 }}>{meta.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ color: 'var(--text-1)', fontSize: '11px', fontWeight: 600 }}>{c.title}</p>
+                          <p style={{ color: 'var(--text-5)', fontSize: '10px' }}>{c.maturityDate}{c.description ? ` · ${c.description}` : ''}</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                          <button onClick={() => onAuthorizeCommitment(c)} style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '5px', color: '#10b981', fontSize: '10px', fontWeight: 600, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Authorize
+                          </button>
+                          <button onClick={() => onDismissCommitment(c)} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', color: 'var(--text-5)', fontSize: '10px', padding: '4px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Authorized commitments summary */}
+            {authorizedCommitments.length > 0 && (
+              <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '14px 18px' }}>
+                <p style={{ color: 'var(--text-5)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  {authorizedCommitments.length} Commitment{authorizedCommitments.length !== 1 ? 's' : ''} Authorized — On Calendar
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {authorizedCommitments.map(c => {
+                    const meta = TYPE_META[c.type] || TYPE_META.compliance
+                    return (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: meta.color, fontSize: '11px', flexShrink: 0 }}>{meta.icon}</span>
+                        <span style={{ color: 'var(--text-2)', fontSize: '11px', flex: 1 }}>{c.title}</span>
+                        <span style={{ color: 'var(--text-5)', fontSize: '10px', flexShrink: 0 }}>{c.maturityDate}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* FleetFlow transfer */}
+            <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '18px 20px' }}>
+              <p style={{ color: 'var(--text-4)', fontSize: '11px', marginBottom: '8px' }}>FleetFlow destination:</p>
+              <input
+                value={destination}
+                onChange={e => setDestination(e.target.value)}
+                placeholder="e.g. FleetFlow — Client Contracts"
+                style={{ ...inputStyle, marginBottom: '12px' }}
+              />
+              <button
+                onClick={() => handleTransfer(contract)}
+                disabled={transferring}
+                style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '8px 16px', cursor: transferring ? 'default' : 'pointer', fontFamily: 'inherit', opacity: transferring ? 0.6 : 1 }}
+              >
+                {transferring ? 'Authorizing…' : 'Authorize Transfer to FleetFlow'}
+              </button>
+            </div>
+          </>
         )}
 
         {/* transferred */}
@@ -823,6 +1017,7 @@ export default function BusinessCenterRoom({
   kelReviews = [], productions = [], apiKey = null,
   googleToken = null, googleStatus = 'disconnected', emailData = null, calendarEvents = [],
   contracts = [], onCreateContract, onUpdateContract,
+  commitments = [], onVerifyContract, onAuthorizeCommitment, onDismissCommitment, onCreateManualCommitment,
   onRequestBuilderReview, onEnterBuilderStudio, onAddLog, onNavigate,
   onConnectGmail, onDisconnectGmail, isMobile, uid = null,
 }) {
@@ -1061,8 +1256,12 @@ export default function BusinessCenterRoom({
               Creator Log
             </p>
             <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '18px' }}>
-              <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} />
+              <CreatorCalendar logs={creatorLogs} onAddLog={onAddLog} institutionalCommitments={commitments} />
             </div>
+
+            {onCreateManualCommitment && (
+              <ManualCommitmentForm onCreateManualCommitment={onCreateManualCommitment} isMobile={isMobile} />
+            )}
 
           </div>
         </div>
@@ -1244,8 +1443,12 @@ export default function BusinessCenterRoom({
           <div style={{ maxWidth: '700px' }}>
             <ContractsInstitution
               contracts={contracts}
+              commitments={commitments}
               onCreateContract={onCreateContract}
               onUpdateContract={onUpdateContract}
+              onVerifyContract={onVerifyContract}
+              onAuthorizeCommitment={onAuthorizeCommitment}
+              onDismissCommitment={onDismissCommitment}
               apiKey={apiKey}
               uid={uid}
               isMobile={isMobile}
