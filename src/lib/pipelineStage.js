@@ -112,6 +112,25 @@ export function theaterProductionPipelineStage(production) {
   }
 }
 
+export function contractPipelineStage(contract) {
+  switch (contract.status) {
+    case 'evidence':
+      return step({ stage: 'observation', state: 'active', nextAction: 'Extract contract details' })
+    case 'extracting':
+      return step({ stage: 'packaged', state: 'active', nextAction: 'Extraction in progress' })
+    case 'proposed':
+      return step({ stage: 'packaged', state: 'blocked', nextAction: 'Awaiting Human Gate verification' })
+    case 'verified':
+      return step({ stage: 'approved', state: 'active', nextAction: 'Authorize transfer to FleetFlow' })
+    case 'transferred':
+      return step({ stage: 'published', state: 'completed', nextAction: 'None — transferred' })
+    case 'failed':
+      return step({ stage: 'packaged', state: 'blocked', nextAction: 'Retry transfer', tone: '#ef4444' })
+    default:
+      return step({ stage: 'observation', state: 'active', nextAction: 'Upload contract' })
+  }
+}
+
 export function mediaAssetPipelineStage(asset) {
   if (asset.publishedAt) {
     return step({

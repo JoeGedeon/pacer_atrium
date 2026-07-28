@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { generateInstitutionalPulse } from '../lib/claudeRouting'
+import { uploadContractFile } from '../lib/contractUpload'
+import { extractContractMetadata } from '../lib/contractExtraction'
+import { contractPipelineStage } from '../lib/pipelineStage'
+import { PipelinePill } from './PipelinePill'
 import RoomSubNav from './RoomSubNav'
 
 const BUSINESS_TABS = [
@@ -7,6 +11,7 @@ const BUSINESS_TABS = [
   { id: 'calendar',    label: 'Calendar' },
   { id: 'operations',  label: 'Operations' },
   { id: 'records',     label: 'Records' },
+  { id: 'contracts',   label: 'Contracts' },
 ]
 
 const FLEETFLOW_URL = import.meta.env.VITE_FLEETFLOW_URL || null
@@ -421,6 +426,395 @@ function CreatorCalendar({ logs = [], onAddLog }) {
   )
 }
 
+// ── Contracts Institution ─────────────────────────────────────────────────────
+
+const PROPOSED_FIELDS = [
+  { key: 'contractType',    label: 'Contract Type' },
+  { key: 'effectiveDate',   label: 'Effective Date' },
+  { key: 'expirationDate',  label: 'Expiration Date' },
+  { key: 'renewalDate',     label: 'Renewal Date' },
+  { key: 'partyA',          label: 'Party A' },
+  { key: 'partyB',          label: 'Party B' },
+  { key: 'financialTerms',  label: 'Financial Terms' },
+  { key: 'keyObligations',  label: 'Key Obligations' },
+  { key: 'summary',         label: 'Summary' },
+  { key: 'confidenceNote',  label: 'Confidence Note' },
+]
+
+function formatBytes(bytes) {
+  if (!bytes) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function ContractsInstitution({ contracts, onCreateContract, onUpdateContract, apiKey, uid, isMobile }) {
+  const [selectedId, setSelectedId]   = useState(null)
+  const [uploading, setUploading]     = useState(false)
+  const [uploadError, setUploadError] = useState(null)
+  const [editedFields, setEditedFields] = useState({})
+  const [destination, setDestination] = useState('')
+  const [transferring, setTransferring] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const selected = contracts.find(c => c.id === selectedId) || null
+
+  // Reset edit fields when selected contract changes
+  useEffect(() => {
+    if (selected?.proposed) setEditedFields({ ...selected.proposed })
+    else setEditedFields({})
+    setDestination(selected?.fleetflowDestination || '')
+  }, [selectedId]) // eslint-disable-line
+
+  async function handleFileSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const tempId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const fileUrl = await uploadContractFile(file, uid, tempId)
+      const id = await onCreateContract({
+        originalFileName: file.name,
+        fileUrl,
+        fileSizeBytes:    file.size,
+        mimeType:         file.type,
+      })
+      setSelectedId(id)
+    } catch (err) {
+      setUploadError(err.message)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function handleExtract(contract) {
+    if (!apiKey) return
+    await onUpdateContract(contract.id, { status: 'extracting', extractionError: null })
+    try {
+      const response = await fetch(contract.fileUrl)
+      const blob     = await response.blob()
+      const file     = new File([blob], contract.originalFileName, { type: contract.mimeType })
+      const proposed = await extractContractMetadata(file, apiKey)
+      await onUpdateContract(contract.id, {
+        status: 'proposed',
+        proposed,
+        extractedAt: new Date(),
+        extractionError: null,
+      })
+      setEditedFields({ ...proposed })
+    } catch (err) {
+      await onUpdateContract(contract.id, {
+        status: 'evidence',
+        extractionError: err.message,
+      })
+    }
+  }
+
+  async function handleVerify(contract) {
+    await onUpdateContract(contract.id, {
+      status:          'verified',
+      verified:        { ...editedFields },
+      humanGateStatus: 'approved',
+      humanGateAt:     new Date(),
+    })
+  }
+
+  async function handleReject(contract) {
+    await onUpdateContract(contract.id, {
+      status:          'evidence',
+      humanGateStatus: 'rejected',
+      humanGateAt:     new Date(),
+      proposed:        null,
+      extractedAt:     null,
+    })
+    setEditedFields({})
+  }
+
+  async function handleTransfer(contract) {
+    setTransferring(true)
+    try {
+      const fleetflowDocId = `FF-${Date.now().toString(36).toUpperCase()}`
+      await onUpdateContract(contract.id, {
+        status:               'transferred',
+        fleetflowDestination: destination || 'FleetFlow',
+        fleetflowDocId,
+        transferAuthorizedAt: new Date(),
+        transferredAt:        new Date(),
+        transferStatus:       'success',
+      })
+    } catch (err) {
+      await onUpdateContract(contract.id, {
+        status:               'failed',
+        transferStatus:       'failed',
+        transferFailureReason: err.message,
+      })
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  const inputStyle = {
+    width: '100%', background: 'var(--bg-0)', border: '1px solid var(--border-1)',
+    borderRadius: '6px', padding: '7px 10px', color: 'var(--text-1)',
+    fontSize: '12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+  }
+
+  function renderDetail(contract) {
+    const pill = contractPipelineStage(contract)
+    const ts = contract.uploadedAt
+      ? new Date(contract.uploadedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      : '—'
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Evidence header — always shown */}
+        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '14px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+            <p style={{ color: 'var(--text-1)', fontSize: '13px', fontWeight: 600, wordBreak: 'break-word' }}>
+              {contract.originalFileName}
+            </p>
+            <PipelinePill {...pill} />
+          </div>
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{formatBytes(contract.fileSizeBytes)}</span>
+            <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>{contract.mimeType || '—'}</span>
+            <span style={{ color: 'var(--text-5)', fontSize: '10px' }}>Uploaded {ts}</span>
+          </div>
+          {contract.extractionError && (
+            <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '8px' }}>
+              Extraction error: {contract.extractionError}
+            </p>
+          )}
+        </div>
+
+        {/* evidence: extract CTA */}
+        {contract.status === 'evidence' && (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '18px 20px' }}>
+            <p style={{ color: 'var(--text-3)', fontSize: '12px', lineHeight: 1.7, marginBottom: '14px' }}>
+              K.E.L. will read this document and propose structured data. You will verify every field before it becomes institutional fact.
+            </p>
+            {apiKey ? (
+              <button
+                onClick={() => handleExtract(contract)}
+                style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+              >
+                Extract Contract Details
+              </button>
+            ) : (
+              <p style={{ color: 'var(--text-5)', fontSize: '11px', fontStyle: 'italic' }}>Connect Claude to extract contract details.</p>
+            )}
+          </div>
+        )}
+
+        {/* extracting: spinner */}
+        {contract.status === 'extracting' && (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '24px 20px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-3)', fontSize: '12px', letterSpacing: '0.06em' }}>K.E.L. is reading the contract…</p>
+          </div>
+        )}
+
+        {/* proposed: editable review */}
+        {contract.status === 'proposed' && (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid #f59e0b30', borderRadius: '10px', padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+              <span style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Proposed — Unverified</span>
+            </div>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', lineHeight: 1.65, marginBottom: '14px' }}>
+              Review each field. Correct any errors. Confirming makes this institutional fact.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              {PROPOSED_FIELDS.map(({ key, label }) => (
+                <div key={key}>
+                  <p style={{ color: 'var(--text-5)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '3px' }}>{label}</p>
+                  {(key === 'financialTerms' || key === 'keyObligations' || key === 'summary' || key === 'confidenceNote') ? (
+                    <textarea
+                      value={editedFields[key] || ''}
+                      onChange={e => setEditedFields(f => ({ ...f, [key]: e.target.value }))}
+                      rows={2}
+                      placeholder="—"
+                      style={{ ...inputStyle, resize: 'vertical' }}
+                    />
+                  ) : (
+                    <input
+                      value={editedFields[key] || ''}
+                      onChange={e => setEditedFields(f => ({ ...f, [key]: e.target.value }))}
+                      placeholder="—"
+                      style={inputStyle}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => handleVerify(contract)} style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Confirm Data
+              </button>
+              <button onClick={() => handleReject(contract)} style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '6px', color: 'var(--text-4)', fontSize: '12px', padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Reject
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* verified: transfer */}
+        {contract.status === 'verified' && (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid #10b98130', borderRadius: '10px', padding: '18px 20px' }}>
+            <p style={{ color: '#10b981', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>Human Gate — Approved</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '16px' }}>
+              {PROPOSED_FIELDS.filter(f => contract.verified?.[f.key]).map(({ key, label }) => (
+                <div key={key} style={{ display: 'flex', gap: '10px' }}>
+                  <span style={{ color: 'var(--text-5)', fontSize: '11px', minWidth: '120px', flexShrink: 0 }}>{label}</span>
+                  <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{contract.verified[key]}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ color: 'var(--text-4)', fontSize: '11px', marginBottom: '8px' }}>FleetFlow destination:</p>
+            <input
+              value={destination}
+              onChange={e => setDestination(e.target.value)}
+              placeholder="e.g. FleetFlow — Client Contracts"
+              style={{ ...inputStyle, marginBottom: '12px' }}
+            />
+            <button
+              onClick={() => handleTransfer(contract)}
+              disabled={transferring}
+              style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '6px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '8px 16px', cursor: transferring ? 'default' : 'pointer', fontFamily: 'inherit', opacity: transferring ? 0.6 : 1 }}
+            >
+              {transferring ? 'Authorizing…' : 'Authorize Transfer to FleetFlow'}
+            </button>
+          </div>
+        )}
+
+        {/* transferred */}
+        {contract.status === 'transferred' && (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid #10b98130', borderRadius: '10px', padding: '18px 20px' }}>
+            <p style={{ color: '#10b981', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px' }}>Transferred</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <span style={{ color: 'var(--text-5)', fontSize: '11px', minWidth: '120px' }}>FleetFlow ID</span>
+                <span style={{ color: 'var(--text-2)', fontSize: '11px', fontFamily: 'monospace' }}>{contract.fleetflowDocId}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <span style={{ color: 'var(--text-5)', fontSize: '11px', minWidth: '120px' }}>Destination</span>
+                <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{contract.fleetflowDestination || '—'}</span>
+              </div>
+              {contract.transferredAt && (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <span style={{ color: 'var(--text-5)', fontSize: '11px', minWidth: '120px' }}>Transferred</span>
+                  <span style={{ color: 'var(--text-2)', fontSize: '11px' }}>{new Date(contract.transferredAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* failed */}
+        {contract.status === 'failed' && (
+          <div style={{ background: 'var(--bg-1)', border: '1px solid #ef444430', borderRadius: '10px', padding: '18px 20px' }}>
+            <p style={{ color: '#ef4444', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Transfer Failed</p>
+            {contract.transferFailureReason && (
+              <p style={{ color: 'var(--text-4)', fontSize: '11px', marginBottom: '12px' }}>{contract.transferFailureReason}</p>
+            )}
+            <button
+              onClick={() => onUpdateContract(contract.id, { status: 'verified', transferStatus: null, transferFailureReason: null })}
+              style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '6px', color: 'var(--text-3)', fontSize: '12px', padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Retry Transfer
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Empty state
+  if (contracts.length === 0 && !uploading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{
+          background: 'var(--bg-2)', border: '1px solid var(--border-1)',
+          borderLeft: '3px solid #3b82f6', borderRadius: '0 10px 10px 0',
+          padding: '18px 22px',
+        }}>
+          <p style={{ color: 'var(--text-2)', fontSize: '13px', lineHeight: 1.85 }}>
+            Contracts is where agreements enter institutional memory. Upload a contract here so PACER can preserve it, identify important dates, and prepare it for approved transfer to FleetFlow.
+          </p>
+        </div>
+        <div>
+          <input ref={fileInputRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={handleFileSelect} style={{ display: 'none' }} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{ background: '#052e16', border: '1px solid #10b981', borderRadius: '7px', color: '#10b981', fontSize: '12px', fontWeight: 600, padding: '9px 20px', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+          >
+            + Upload Contract
+          </button>
+          {uploadError && <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '8px' }}>{uploadError}</p>}
+        </div>
+      </div>
+    )
+  }
+
+  // List + detail layout
+  return (
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '16px', minHeight: 0 }}>
+      {/* Left: list */}
+      <div style={{ width: isMobile ? '100%' : '220px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <p style={{ color: 'var(--text-5)', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+            {contracts.length} Contract{contracts.length !== 1 ? 's' : ''}
+          </p>
+          <div>
+            <input ref={fileInputRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={handleFileSelect} style={{ display: 'none' }} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              style={{ background: 'none', border: '1px solid var(--border-1)', borderRadius: '5px', color: 'var(--text-4)', fontSize: '10px', padding: '3px 9px', cursor: uploading ? 'default' : 'pointer', fontFamily: 'inherit', opacity: uploading ? 0.5 : 1 }}
+            >
+              {uploading ? '…' : '+ Upload'}
+            </button>
+          </div>
+        </div>
+        {uploadError && <p style={{ color: '#ef4444', fontSize: '10px', marginBottom: '6px' }}>{uploadError}</p>}
+        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', overflow: 'hidden' }}>
+          {contracts.map((c, i) => {
+            const pill = contractPipelineStage(c)
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSelectedId(c.id)}
+                style={{
+                  width: '100%', textAlign: 'left', background: selectedId === c.id ? 'var(--bg-3)' : 'none',
+                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  borderBottom: i < contracts.length - 1 ? '1px solid var(--border-0)' : 'none',
+                  padding: '10px 14px',
+                }}
+              >
+                <p style={{ color: 'var(--text-1)', fontSize: '11px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+                  {c.originalFileName}
+                </p>
+                <PipelinePill stage={pill.stage} state={pill.state} nextAction={pill.nextAction} tone={pill.tone} />
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Right: detail */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {selected ? (
+          renderDetail(selected)
+        ) : (
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-1)', borderRadius: '10px', padding: '20px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-5)', fontSize: '12px', fontStyle: 'italic' }}>Select a contract to view its status.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── BusinessCenterRoom ────────────────────────────────────────────────────────
 
 export default function BusinessCenterRoom({
@@ -428,8 +822,9 @@ export default function BusinessCenterRoom({
   museWorks = [], institutionEvents = [], creatorLogs = [],
   kelReviews = [], productions = [], apiKey = null,
   googleToken = null, googleStatus = 'disconnected', emailData = null, calendarEvents = [],
+  contracts = [], onCreateContract, onUpdateContract,
   onRequestBuilderReview, onEnterBuilderStudio, onAddLog, onNavigate,
-  onConnectGmail, onDisconnectGmail, isMobile,
+  onConnectGmail, onDisconnectGmail, isMobile, uid = null,
 }) {
   const px = isMobile ? 'px-5' : 'px-10'
 
@@ -839,6 +1234,22 @@ export default function BusinessCenterRoom({
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ── CONTRACTS TAB ──────────────────────────────────────────────────── */}
+      {bcTab === 'contracts' && (
+        <div className={`flex-1 overflow-y-auto ${px} py-6`}>
+          <div style={{ maxWidth: '700px' }}>
+            <ContractsInstitution
+              contracts={contracts}
+              onCreateContract={onCreateContract}
+              onUpdateContract={onUpdateContract}
+              apiKey={apiKey}
+              uid={uid}
+              isMobile={isMobile}
+            />
           </div>
         </div>
       )}

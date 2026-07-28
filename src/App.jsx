@@ -46,6 +46,7 @@ import {
   createStudioArtifact, updateStudioArtifact, listenStudioArtifacts,
   batchUpdateObservations,
   createLineage, listenLineage,
+  createContract, updateContract, listenContracts,
 } from './lib/db'
 import { CAMPUS_TEMPLATES, OUTCOME_OPTIONS } from './lib/campusTemplates'
 import { requestGoogleToken, requestGoogleTokenSilent, revokeGoogleToken, isTokenExpired } from './lib/googleAuth'
@@ -140,6 +141,7 @@ export default function App() {
   const [doctrineCases, setDoctrineCases]         = useState([])
   const [commands, setCommands]                   = useState([])
   const [lineage, setLineage]                     = useState([])
+  const [contracts, setContracts]                 = useState([])
   const [profile, setProfile]                     = useState(undefined) // undefined=loading, null=no profile, obj=exists
   const [googleTokenData, setGoogleTokenData]     = useState(() => {
     try {
@@ -310,7 +312,8 @@ export default function App() {
     const unsubCommands   = listenCommands(user.uid, setCommands)
     const unsubArtifacts  = listenStudioArtifacts(user.uid, setStudioArtifacts)
     const unsubLineage    = listenLineage(user.uid, setLineage)
-    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage() }
+    const unsubContracts  = listenContracts(user.uid, setContracts)
+    return () => { unsubObs(); unsubMuse(); unsubGrad(); unsubReviews(); unsubDecisions(); unsubThreads(); unsubEvents(); unsubLogs(); unsubProds(); unsubMedia(); unsubDoctrine(); unsubCommands(); unsubArtifacts(); unsubLineage(); unsubContracts() }
   }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Silent Google reconnect on login ─────────────────────────────────────────
@@ -854,6 +857,16 @@ export default function App() {
     await createCreatorLog(user.uid, data)
   }
 
+  async function handleCreateContract(data) {
+    if (!user) return null
+    return createContract(user.uid, data)
+  }
+
+  async function handleUpdateContract(id, patch) {
+    if (!user) return
+    await updateContract(user.uid, id, patch)
+  }
+
   async function recordKELDecision(decisionData) {
     if (!user) return
     const { observationIds, ...kelData } = decisionData
@@ -1251,6 +1264,9 @@ export default function App() {
             googleStatus={googleStatus}
             emailData={emailData}
             calendarEvents={calendarEvents}
+            contracts={contracts}
+            onCreateContract={handleCreateContract}
+            onUpdateContract={handleUpdateContract}
             onRequestBuilderReview={requestBuilderReview}
             onEnterBuilderStudio={() => setCurrentRoom('builderstudio')}
             onAddLog={addCreatorLog}
@@ -1258,6 +1274,7 @@ export default function App() {
             onConnectGmail={GOOGLE_CLIENT_ID ? handleConnectGmail : null}
             onDisconnectGmail={handleDisconnectGmail}
             isMobile={isMobile}
+            uid={user?.uid || null}
           />
         )}
         {isBuilderStudio && (

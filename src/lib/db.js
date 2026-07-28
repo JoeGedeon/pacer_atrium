@@ -781,3 +781,69 @@ export function listenLineage(uid, callback) {
     err => { console.error('[listenLineage] snapshot error:', err?.code, err?.message) },
   )
 }
+
+// ── Contracts Institution ─────────────────────────────────────────────────────
+// Evidence is preserved as immutable. All extracted fields are proposed until
+// a human verifies them through the Human Gate. Original file URL is set once
+// and never overwritten. Every status transition emits an institution event.
+
+const contractColl = uid => collection(db, 'users', uid, 'contracts')
+
+export async function createContract(uid, data) {
+  const ref = await addDoc(contractColl(uid), {
+    // Evidence (immutable after creation)
+    originalFileName: data.originalFileName,
+    fileUrl:          data.fileUrl,
+    fileSizeBytes:    data.fileSizeBytes,
+    mimeType:         data.mimeType,
+    uploadedAt:       serverTimestamp(),
+    // Status machine
+    status:           'evidence',
+    // Proposed knowledge (null until extraction runs)
+    proposed:         null,
+    extractedAt:      null,
+    extractionError:  null,
+    // Human Gate
+    humanGateStatus:  null,
+    humanGateAt:      null,
+    // Verified fields
+    verified:         null,
+    // Transfer
+    fleetflowDestination: null,
+    transferAuthorizedAt: null,
+    fleetflowDocId:       null,
+    transferredAt:        null,
+    transferStatus:       null,
+    transferFailureReason: null,
+    // Meta
+    notes:     data.notes || '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateContract(uid, id, patch) {
+  await updateDoc(doc(contractColl(uid), id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function listenContracts(uid, callback) {
+  const q = query(contractColl(uid), orderBy('createdAt', 'desc'))
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({
+      ...d.data(),
+      id:          d.id,
+      uploadedAt:  d.data().uploadedAt?.toDate?.()  ?? null,
+      extractedAt: d.data().extractedAt?.toDate?.() ?? null,
+      humanGateAt: d.data().humanGateAt?.toDate?.() ?? null,
+      transferAuthorizedAt: d.data().transferAuthorizedAt?.toDate?.() ?? null,
+      transferredAt: d.data().transferredAt?.toDate?.() ?? null,
+      createdAt:   d.data().createdAt?.toDate?.()   ?? new Date(),
+      updatedAt:   d.data().updatedAt?.toDate?.()   ?? new Date(),
+    }))),
+    err => { console.error('[listenContracts] snapshot error:', err?.code, err?.message) },
+  )
+}
