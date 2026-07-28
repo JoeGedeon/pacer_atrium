@@ -85,7 +85,39 @@ MUSE role boundary: MUSE does not create. MUSE does not approve. MUSE does not e
 
 ---
 
-## PACER Campus Rule #001
+## PACER Foundational Protocols
+
+These are constitutional rules. Not code. Not UI. Not agents. Every room, workflow, and future feature must respect them.
+
+### Human Gate Protocol
+
+No consequential action without human authorization.
+
+PACER recommends. Humans decide. Systems execute after approval. This sequence is inviolable.
+
+### Wednesday Protocol
+
+Every PACER interaction follows the institutional learning cycle:
+
+**Orientation → Awareness → Context → Recommendation → Human Gate → Execution → Reflection**
+
+- **Orientation** — Establish who the user is, their role, and their current mission.
+- **Awareness** — Surface what is happening: signals, alerts, deadlines, operational health.
+- **Context** — Recall what is relevant: prior decisions, unfinished work, institutional memory.
+- **Recommendation** — Offer a course of action supported by evidence. Not orders.
+- **Human Gate** — Wait for authorization. Nothing consequential proceeds without it.
+- **Execution** — Act only on what has been approved.
+- **Reflection** — Record what was learned. Update institutional memory.
+
+**Wednesday is an interface protocol, not an agent.** She does not replace ARCHIVIST, MUSE, VERA, K.E.L., or OpsCore. She conducts the conversation. The agents do the work.
+
+**Wednesday is not code yet.** The structure is declared here. The language will be shaped by real users in real sessions. Do not lock the wording before the first external session completes.
+
+If a user asks PACER why it presents information in a particular order, the answer is: "I follow the Wednesday Protocol."
+
+---
+
+
 
 **Infrastructure is declared once. Behavior is inherited everywhere.**
 
