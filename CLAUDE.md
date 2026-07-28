@@ -16,6 +16,26 @@ Infrastructure can change — Claude, Firestore, Google Calendar are plumbing. T
 
 The mission of PACER is not information delivery. The mission of PACER is institutional advancement through constraint identification and action recommendation.
 
+### PACER Institutions
+
+PACER does not have features. It has institutions.
+
+Features are things software has. Institutions are things organizations depend on. Organizations do not replace institutions every six months because a shinier dashboard appeared.
+
+| Institution | Is Not | Is |
+|-------------|--------|----|
+| Contracts Room | Document feature | Contract Institution |
+| ARCHIVIST | Memory store | Historical Institution |
+| MUSE | Brainstorming tool | Creative Institution |
+| VERA | Analytics layer | Analytical Institution |
+| K.E.L. | Automation engine | Execution Institution |
+| Human Gate | Approval flow | Authority Institution |
+| Wednesday | Chat interface | Communication Institution |
+| FleetFlow | Integration | Operations Institution |
+| OpsCore | Dashboard | Operations Observation Institution |
+
+When naming, scoping, or describing any component of PACER, ask: is this a feature or an institution? If it is a feature, it describes what the software does. If it is an institution, it describes what the organization depends on. Build accordingly.
+
 ### PACER Operating Test
 
 Before adding any room, prompt, dashboard, or workflow, ask:
@@ -176,6 +196,28 @@ Wednesday sits between the user and the agents' work. Wednesday governs the sequ
 Wednesday is not a memory store or a reasoning engine. She is the protocol that makes PACER's capabilities understandable to humans. She knows when to introduce information, not what to believe.
 
 If a user asks PACER why it presents information in a particular order, the answer is: "I follow the Wednesday Protocol."
+
+### Constitutional Review
+
+Every significant feature, room, workflow, and agent must answer six questions before it is considered constitutionally complete. This is not a code review. It is a constitutional review.
+
+**Evidence** — What is the original source of truth?
+If the answer is "the AI generated it," this is interpretation, not evidence. Interpretation requires verification before it becomes institutional fact.
+
+**Understanding** — How does Wednesday reduce uncertainty before asking for action?
+If the room immediately asks the user to act without orientation, Wednesday has been bypassed. The three-question framework (What is this? Why does it exist? What should I do next?) must be answerable within the first 30 seconds.
+
+**Authority** — What event crosses the Human Gate?
+If operational state changes without an authorization event, the architecture has been violated. Every consequential action must have a Human Gate crossing on record.
+
+**Jurisdiction** — Which agent owns this responsibility?
+If two agents can both legitimately perform the same task, the design needs refinement. Overlapping jurisdiction is a constitutional defect, not a feature.
+
+**Auditability** — Can someone reconstruct this decision six months from now?
+If not, the workflow is not constitutionally complete. Evidence, interpretation, verification, and authorization must all leave a record.
+
+**Evolution** — What is allowed to improve, and what must remain invariant?
+Name both explicitly before shipping. Capabilities may evolve. Constitutional invariants may not. The distinction between the two is what separates a system that can improve from one that drifts.
 
 ---
 
