@@ -603,6 +603,62 @@ Before any Firestore schema, UI, or FleetFlow API connection is designed for the
 
 No Firestore schema. No UI. No FleetFlow API call. Not until these three questions are formally answered.
 
+### Governance Decisions (Business Authority Layer — Formally Resolved)
+
+The three pre-implementation questions above have been formally answered. These decisions govern the business-authority layer. Firestore schema and implementation design may now begin against these constraints. Legal counsel must still validate consent language, privacy treatment, retention obligations, and aggregation thresholds before any cross-tenant learning capability is activated.
+
+**Constitutional direction:** FleetFlow evidence remains owned and governed by its tenant. PACER may learn only within explicit authority, preserve complete lineage, prevent unauthorized cross-tenant transfer, and unwind derived knowledge when that authority is revoked.
+
+#### Decision 1 — Authorization Authority
+
+Teaching authorization belongs to the FleetFlow tenant — not to JPG Ventures and not to PACER by default.
+
+A record may be authorized only by:
+- The verified tenant owner; or
+- A specifically delegated **Teaching Data Steward**.
+
+Authorization must be explicit, auditable, and scoped to named records or a clearly defined batch. The following may not authorize teaching unless separately assigned that role: ordinary administrators, dispatchers, field crews, customers, PACER, and Wednesday.
+
+**Consent to use FleetFlow operationally is not consent to teach PACER.** These are two distinct authorizations and must never be bundled or implied from each other.
+
+#### Decision 2 — Cross-Tenant Learning
+
+**Default: prohibited.**
+
+PACER may not expose one tenant's records, assertions, examples, embeddings, or identifiable patterns to another tenant.
+
+Future de-identified aggregate learning may be permitted only when all three conditions are simultaneously met:
+1. The contributing tenant separately and explicitly opts in — this is a different permission from tenant-local teaching and may not be hidden in general terms of service or enabled by default.
+2. Legal and privacy review approves the specific aggregation method and the contractual language governing it.
+3. A minimum aggregation threshold is established that prevents reconstruction or re-identification of the contributing tenant.
+
+Until those controls exist and are validated, PACER learns inside the authorizing tenant only.
+
+#### Decision 3 — Revocation Cascade
+
+Revocation must have operational consequences. Updating a consent flag is not revocation.
+
+When authorization is revoked, the following sequence executes in order:
+
+1. The teaching record is immediately quarantined from PACER use.
+2. Its content is removed from retrieval, search, recommendation, and active context.
+3. Associated embeddings and derived summaries are invalidated.
+4. Assertions supported exclusively by that record have their status set to `revoked_source` and disappear from verified projections.
+5. Assertions with other independent sources are recalculated and may be downgraded.
+6. Dependent relationships, timelines, recommendations, and graph edges are recalculated.
+7. Cached outputs are expired where technically controllable.
+8. An immutable audit tombstone is written, recording what was authorized, what was derived, when it was revoked, and what the cascade affected — without continuing to expose the revoked content.
+
+**Critical implementation boundary:** FleetFlow teaching records cannot be used to train an irreversible shared foundation model. The first implementation of the teaching bridge must use revocable retrieval and assertion-based learning. If PACER cannot identify and remove what a specific record taught, that record cannot enter the teaching bridge.
+
+#### Wednesday's Extended Constraints in This Subsystem
+
+Wednesday may explain authorization, revocation, and resulting uncertainty. She may not:
+- Approve a teaching record or override the authorization requirement
+- Override tenant isolation
+- Restore revoked knowledge or treat a revoked-source assertion as verified
+- Promote a derived lesson to institutional knowledge before the Human Gate acts
+
 ---
 
 ## Named Systems (Do Not Rename)
