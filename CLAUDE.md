@@ -107,6 +107,51 @@ Concept boards, demonstration videos, and AI-generated renderings are inspiratio
 
 ---
 
+## JPG Ventures Command Center
+
+**The current pacer_atrium build is the JPG Ventures Command Center, powered by PACER. It is not the standard PACER product.**
+
+This distinction governs every room, agent, schema, and workflow in this repository. The JPG Command Center is the private operating architecture where FleetFlow, PACER, Wednesday, K.E.L., the development institutions, and future JPG operations connect. It is dense, interconnected, and cinematic because the operator needs to see the full machine. Public customers receive a carefully framed interface into specific capabilities — not the internal operating model.
+
+### Four-Layer Audience Architecture
+
+| Layer | Audience | Scope |
+|-------|----------|-------|
+| JPG Command Center | JPG leadership and specifically authorized principals | Portfolio-wide control, cross-system intelligence, institutional oversight |
+| PACER Institutional Workspace | Analysts, firms, organizations | Evidence, cases, entities, timelines, citations, Human Gates |
+| PACER Focused Portals | Clients, witnesses, partners, reviewers | Narrow tasks: document submission, approvals, status, reports |
+| White-label | Licensing organizations | Their branding and permitted modules, without JPG's internal architecture |
+
+### Security Principle — Separation Is Not Navigation
+
+**Hiding navigation is not security.** A public-facing PACER product that presents the same data and agent capabilities as the JPG Command Center through a different visual design is not a separate product. It is the same system with different styling.
+
+Real separation must exist at the level of:
+- Permissions and role authorization
+- Data access and Firestore Security Rules
+- API boundaries and callable function scope
+- Tenant boundaries and cross-tenant isolation
+- Agent capabilities and execution authority
+- Audit authority — what a given role may record, review, and recalculate
+
+Every new room, agent, or schema built in this repository must declare which layer it belongs to. JPG Command Center components must not be silently included in public-facing builds.
+
+### Wednesday's Role-Scoped Authority
+
+Wednesday's constitutional protocol is constant. Her available knowledge and authority change with the user's role. The same constitutional system powers every edition; it does not share unrestricted memory across roles.
+
+| Context | Wednesday's scope |
+|---------|------------------|
+| JPG Command Center | May understand the full JPG portfolio — FleetFlow, PACER, development institutions, agent orchestration |
+| FleetFlow operator portal | Understands authorized FleetFlow operations within that operator's tenant boundary |
+| PACER institutional workspace | Understands the matters, entities, and evidence the institution is authorized to see |
+| Client or partner portal | Understands only the narrow scope the portal defines: their documents, their approvals, their status |
+| White-label organization | Understands only what the licensing organization has authorized |
+
+Wednesday's personality may be consistent across editions. Her authority is always bounded by the user's role. Expanding her scope beyond the role's authorization is a constitutional violation — not a configuration choice.
+
+---
+
 ## Locked Language — Do Not Alter
 
 These phrases are institutional doctrine. Do not rewrite, paraphrase, or "improve" them.
@@ -241,6 +286,8 @@ Wednesday sits between the user and the agents' work. Wednesday governs the sequ
 Wednesday is not a memory store or a reasoning engine. She is the protocol that makes PACER's capabilities understandable to humans. She knows when to introduce information, not what to believe.
 
 If a user asks PACER why it presents information in a particular order, the answer is: "I follow the Wednesday Protocol."
+
+**Wednesday's authority is role-bounded, not protocol-bounded.** The Wednesday Protocol is constant across every audience layer. Wednesday's available knowledge and execution authority change with the user's role and the product layer they are accessing. A JPG Command Center session may give Wednesday access to portfolio-wide intelligence. A client portal session restricts her to the narrow scope that portal authorizes. The protocol governs the conversation shape; the role governs the information boundary. Widening Wednesday's knowledge scope beyond a user's authorized role is a constitutional violation — not a configuration choice.
 
 ### Constitutional Review
 
