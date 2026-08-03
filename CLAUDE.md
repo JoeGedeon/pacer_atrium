@@ -62,6 +62,51 @@ This applies whether PACER is routing observations, diagnosing a failed function
 
 ---
 
+## JPG Ventures Portfolio Architecture
+
+### Institutional Structure
+
+JPG Ventures is the parent institution. Every system, product, and initiative described below operates within it — not beside it.
+
+| Institution | Role |
+|-------------|------|
+| JPG Ventures | Ownership, brand, capital strategy, partnerships, and long-term direction |
+| PACER | Intelligence and evidence layer — remembers, connects, analyzes, cites, and proves |
+| Wednesday | Voice — explains PACER's understanding, guides the human, never grants herself authority |
+| FleetFlow | Operational classroom — governed real-world experience from jobs, decisions, disputes, and outcomes |
+| Human Gate | Controls what becomes verified knowledge and what actions are permitted |
+| Specialized agents | Workforce — research, draft, organize, monitor, calculate, execute only within approved boundaries |
+| The Beacon Collective | Urban community-development institution — faith, housing, education, wellness, commerce, opportunity |
+| Family Compound | Land and legacy institution — family security, agriculture, retreats, rentals, and generational ownership |
+
+Wednesday and the agents operate inside this structure. They are not independent sources of truth.
+
+**PACER's position within JPG Ventures is service, not ownership.** PACER may provide evidence management, entity resolution, analysis, and governed execution services to a named JPG Ventures institution. That does not make the institution a PACER feature or subordinate its identity to PACER's internal architecture.
+
+### Strategic Sequencing Doctrine
+
+**This is a causal chain, not a ranked backlog.** Each stage must produce the evidence, capability, credibility, or capital required by the next. Later stages may be researched conceptually, but they may not be represented as operationally ready while an upstream gate remains unsatisfied.
+
+| Stage | Work | Upstream gate it satisfies |
+|-------|------|---------------------------|
+| 1 | Stabilize FleetFlow and restore confidence in production data | Economic and evidentiary engine must function before any downstream layer can run on it |
+| 2 | Continue building PACER's constitutional and evidence foundations | PACER can only learn from FleetFlow evidence after FleetFlow is stable |
+| 3 | Establish JPG Ventures as the credible parent organization presenting the portfolio | Credibility requires a functioning product and an evidence layer, not concepts alone |
+| 4 | Validate one physical-development opportunity through zoning, ownership, feasibility, capital, and professional plans | Validation requires institutional credibility and documented evidence, not concept boards |
+| 5 | Use revenue, evidence, and partnerships from earlier layers to fund the later ones | Capital follows demonstrated capability — it does not precede it |
+
+This sequencing prevents excitement around PACER, Wednesday, or physical development from pulling engineering attention away from FleetFlow's production stability — the first economic and evidentiary engine.
+
+### Governing Verification Standard
+
+> Inspiration tells us what could exist. Reconnaissance identifies how it might work. Verification determines whether JPG Ventures has earned the right to present it as real.
+
+This standard applies to every component of the portfolio — digital systems, physical development, partnerships, and financial projections.
+
+Concept boards, demonstration videos, and AI-generated renderings are inspiration until independently verified against source records: parcel data, zoning classifications, surveys, licensed professional assessments, and defensible financial models. They may be used to clarify a vision. They may not be represented as due diligence.
+
+---
+
 ## Locked Language — Do Not Alter
 
 These phrases are institutional doctrine. Do not rewrite, paraphrase, or "improve" them.
@@ -477,6 +522,23 @@ The legitimate output of this investigation is: **Which constitutional capabilit
 
 No Firestore schema. No UI. No new collection. Not until the stress test produces a documented answer.
 
+### Real Property Extension — Flagged Future Constitutional Design Task
+
+When PACER begins serving JPG Ventures physical-development institutions (The Beacon Collective, Family Compound), Canonical Entity Resolution must extend to real-property identity. A single development site may appear under different names, parcel numbers, and legal descriptions across multiple source institutions.
+
+**What real-property entity resolution must eventually cover:**
+
+- Parcels and assembled sites
+- Street addresses
+- Parcel and tax-identification numbers
+- Legal descriptions
+- Owners and ownership entities
+- Zoning districts and overlays
+- Appraisals, surveys, studies, permits, and contractor bids
+- Government agencies and licensed professionals as source institutions
+
+**This is a flagged future design task — not permission to create schemas, rooms, or workflows for physical development today.** The constitutional objects (CanonicalEntity, EntityMention, IdentityAssertion) will apply, but their mapping to real-property records requires a dedicated design session before any implementation begins. The same pre-implementation stress test requirement applies: no Firestore schema until the design is formally documented.
+
 ---
 
 ## FleetFlow Teaching Bridge (Constitutional Subsystem)
@@ -671,8 +733,21 @@ Wednesday may explain authorization, revocation, and resulting uncertainty. She 
 | KODEX | Governance layer | Ops lane |
 | OpsCore | Operations layer | |
 | K.E.L. | Knowledge Execution Layer | Formerly CLAW — rename completed May 30, 2026 |
+| The Beacon Collective | JPG Ventures urban community-development institution | Faith, housing, education, wellness, commerce, opportunity |
+| Family Compound | JPG Ventures land and legacy institution | **Working name** — confirm permanent institutional name before use in any published material, legal document, or partner communication |
 
 Prior names (JARVIS, CLAW) were never used in any patent or trademark filing. Do not reintroduce them.
+
+### PACER's Service Boundary for Named JPG Ventures Institutions
+
+PACER may provide evidence management, entity resolution, analysis, and governed execution services to The Beacon Collective, the Family Compound, and any other named JPG Ventures institution. That does not make the institution a PACER feature or subordinate its identity to PACER's architecture.
+
+**No PACER rooms, agents, schemas, or workflows may be created for The Beacon Collective or the Family Compound until:**
+
+1. The real-property identity and evidence model is constitutionally defined (see Canonical Entity Resolution — Real Property Extension, below).
+2. The institution's work has moved from concept material to verified evidence: parcel records, zoning documents, ownership history, licensed professional assessments, and defensible financial models.
+
+Concept boards, renderings, and financial projections for either institution are unverified until independently verified against source records. They may clarify the vision. They may not be treated as operationally ready material.
 
 ---
 
