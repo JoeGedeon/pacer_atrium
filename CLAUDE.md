@@ -298,6 +298,187 @@ All new artifact types must:
 
 ---
 
+## Canonical Entity Resolution (Constitutional Subsystem)
+
+**Status: Locked. No implementation may proceed until this section is read and the pre-implementation stress test is complete.**
+
+> "PACER may suggest identity. Only an auditable resolution may establish it."
+
+### Constitutional Objects
+
+Three objects. Three distinct jurisdictions. They must never be merged into one.
+
+**CanonicalEntity** — the legal or real-world subject. Represents the entity, not any document's language.
+```
+entityId
+entityType
+canonicalName
+identifiers[]
+attributes[]
+status
+createdFromResolutionId
+```
+
+**EntityMention** — exactly what appeared in a source. Immutable after creation. Never normalized away.
+```
+mentionId
+displayedText       // exactly as it appeared in the document — never altered
+normalizedText      // lowercase/cleaned form for matching — separate field
+sourceInstitution
+sourceType
+sourceId
+sourceFieldIds[]
+documentLocation
+extractedAttributes[]
+```
+
+**IdentityAssertion** — the claim that a mention refers to a canonical entity.
+```
+assertionId
+canonicalEntityId
+mentionId
+assertionType
+confidence
+reasoning
+evidence[]
+status              // proposed | verified | rejected | deferred
+proposedBy
+verifiedBy
+verifiedAt
+supersedesAssertionId
+```
+
+**RelationshipAssertion** — a sourced claim that two canonical entities are related.
+```
+relationshipId
+subjectEntityId
+predicate
+objectEntityId
+sourceLineage[]
+classification      // see required values below
+confidence
+validFrom
+validTo
+status
+reasoning
+verification
+```
+
+Relationship `classification` values — required, not collapsible into a single category:
+- `documented_fact`
+- `party_allegation`
+- `disputed_assertion`
+- `pacer_inference`
+- `contradiction`
+- `unknown`
+
+The graph must never render these as visually identical lines.
+
+### Eight Governing Rules
+
+1. **Source mentions are immutable.** PACER may interpret them, but never replace or normalize away the original language. A document that says "JPG Ventures" must always remain a document that says "JPG Ventures."
+
+2. **Extraction is not identity.** Finding two similar names does not establish that they refer to the same entity. No extraction pipeline may produce an IdentityAssertion.
+
+3. **Automated matching produces proposals only.** PACER may rank candidates using names, addresses, officers, registration numbers, dates, roles, and document context. It cannot silently merge them.
+
+4. **Every merge requires a recorded assertion.** The record must show who approved it, when, why, and what evidence was considered. No assertion without an authorizer.
+
+5. **"Not the same entity" is a durable finding.** Rejected matches must be preserved as IdentityAssertion records with `status: 'rejected'`. PACER may not re-propose a rejected match without new evidence. Deleting rejection records is a constitutional violation.
+
+6. **A merge must be reversible without destroying history.** If later evidence shows two entities were incorrectly merged, PACER splits the active representation while retaining the original assertion and issuing a superseding correction. The original decision is never erased.
+
+7. **Confidence and verification are different dimensions.** A machine can be 98% confident and still unverified. A human can verify an identity while documenting residual uncertainty. These are not the same thing. UI must not imply otherwise.
+
+8. **Relationships attach to assertions and sources — not merely nodes.** Every rendered graph edge must be reconstructable from one or more sourced relationship assertions. An edge that cannot be reconstructed must not be rendered.
+
+### Five Human Gate Decisions
+
+Before any resolution is presented for approval, the interface must answer four questions:
+- What two or more mentions might be the same?
+- Why does PACER think they match?
+- What evidence supports or weakens the match?
+- What changes downstream if the merge is approved?
+
+The five available resolution decisions:
+
+| Decision | Produces | PACER may re-propose? |
+|----------|----------|-----------------------|
+| **Same entity** | IdentityAssertion (verified) | — |
+| **Different entities** | IdentityAssertion (rejected) — durable | Only with new evidence |
+| **Related, but not identical** | RelationshipAssertion; no merge | Subject to review |
+| **Insufficient evidence** | IdentityAssertion (deferred) | Yes, when new sources arrive |
+| **Defer pending another source** | No assertion recorded | Yes, when specified condition is met |
+
+"Related, but not identical" is a first-class finding. A parent company and subsidiary, a person and their sole proprietorship, or two similarly named entities in different jurisdictions must not be collapsed because their records overlap.
+
+### Durable Findings
+
+All four finding states are permanent and queryable. None may be silently discarded.
+
+- **Positive** — `IdentityAssertion.status = 'verified'`; canonical entity absorbs the mention
+- **Negative** — `IdentityAssertion.status = 'rejected'`; never deleted; blocks re-proposal without new evidence
+- **Deferred** — `IdentityAssertion.status = 'deferred'`; awaiting additional sources
+- **Unresolved** — `EntityMention` with no associated `IdentityAssertion`; a valid permanent state, not an error
+
+### Supersession and Reversible Splitting
+
+When a prior merge is found to be incorrect:
+1. The original IdentityAssertion is **not deleted**. `status` → `superseded`.
+2. A new IdentityAssertion records the correction with `supersedesAssertionId` pointing to the prior record.
+3. If the canonical entity must split, both resulting entities carry the history of the merge and the correction.
+4. All downstream RelationshipAssertions that depended on the merged identity are flagged for human review.
+
+The audit record must always be able to answer: what did PACER believe, when did it change, and why?
+
+### Visual Graph Contract
+
+The graph is a projection of current verified assertion state — not a database of truth.
+
+Every rendered edge must expose on demand:
+- The exact relationship claim
+- Its classification and verification state
+- The documents and fields that support it
+- The identity decisions used to resolve both endpoints
+- Conflicting evidence
+- Full revision history
+
+Clicking any node or edge must reconstruct the complete source and identity lineage. An edge that cannot be reconstructed must not be rendered.
+
+### Wednesday's Constitutional Language in This Subsystem
+
+Wednesday may speak PACER's understanding. She cannot establish identity, silently merge entities, or convert an inference into verified fact.
+
+Required language patterns, by assertion state:
+
+| State | Wednesday must say |
+|-------|-------------------|
+| Proposal | "PACER proposes these may be the same entity." |
+| Verified | "A human verified this identity on [date]." |
+| Rejected | "This proposed match was rejected as different entities." |
+| Deferred / Insufficient | "The available evidence remains insufficient." |
+| Relationship | "This relationship is [documented / alleged / disputed / inferred]." |
+
+Voice, UI, automation, and confidence scores cannot expand authority. A 98% machine confidence displayed prominently in the UI is still a proposal. Wednesday's enthusiasm for a match does not change its constitutional status.
+
+> Wednesday may speak PACER's understanding. Evidence establishes the proposal. The Human Gate establishes authority. The audit record preserves the truth of how that authority was reached.
+
+### Pre-Implementation Stress Test (Required)
+
+Before any Firestore schema is designed for entity resolution, conduct a formal investigation of the existing commitment-lineage architecture against these five questions:
+
+1. Can a single record aggregate evidence from **multiple sourceIds**?
+2. Can PACER record **negative evidence** ("this document ruled this out") as a durable finding?
+3. Is **supersession** — overriding a prior assertion while preserving full history — supported?
+4. Can **entity splits** be represented without losing the original merge record?
+5. Can **unresolved mentions** — mentions with no IdentityAssertion — be represented as a valid permanent state, not a gap?
+
+The legitimate output of this investigation is: **Which constitutional capabilities can be inherited from the existing commitment-lineage architecture, and which require a dedicated entity-resolution foundation?**
+
+No Firestore schema. No UI. No new collection. Not until the stress test produces a documented answer.
+
+---
+
 ## Named Systems (Do Not Rename)
 
 | Name | Role | Notes |
