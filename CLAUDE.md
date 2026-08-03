@@ -780,6 +780,84 @@ Wednesday may explain authorization, revocation, and resulting uncertainty. She 
 
 ---
 
+## Governed Publication (Flagged Future Constitutional Design Task)
+
+**Status: Doctrine recorded. Implementation NOT authorized.**
+
+> PACER manages the truth, purpose, authority, and lifecycle of a website. A publishing provider builds and hosts the approved expression of it.
+
+This section exists to establish boundaries before anyone gets excited about building Web Studio. It is recorded for the same reason as the Real Property Extension: the constraints must exist before the capability does.
+
+### Rule 1 — Publishing-Provider Rule
+
+**PACER may use a publishing provider, but the publishing provider is not PACER.**
+
+The provider may build, preview, host, or publish approved material. It does not determine truth, authorization, institutional ownership, or the record of why publication was approved.
+
+ChatGPT Sites is one possible adapter — not an architectural dependency. Its current and future capabilities belong in reconnaissance until verified. The site brief, assets, code, approvals, and version history must remain portable so a site can move to another provider without loss of governance record.
+
+This rule is the publishing-class parallel of the AI Provider Rule. Both hold the same shape: infrastructure is replaceable; institutional authority is not.
+
+### Rule 2 — Publication Gate
+
+**Verification and publication are separate decisions. Accurate does not automatically mean publishable.**
+
+Before PACER assembles a site packet, the Human Gate must determine:
+
+- Who owns each artifact?
+- Is public-release consent documented?
+- What information must be withheld, anonymized, or redacted?
+- Which claims may be published, and with what qualifications?
+- Are image, trademark, privacy, and licensing rights established?
+- Is public release compatible with tenant and institutional boundaries?
+
+A site packet may not be assembled until every question is answered. The Publication Gate is a distinct Human Gate crossing from any verification that preceded it — a separate event, separate record, separate authorization.
+
+### Rule 3 — Deployment Reconciliation
+
+Every approved deployment must retain at minimum:
+
+```
+approvalRecordId
+institution                 // owning JPG Ventures institution
+websiteIdentity
+sitePacketVersion
+contentFingerprint          // content or build hash — basis for reconciliation
+publishingProvider
+deployedAt
+deploymentDestination
+approvedBy                  // the authorizing human
+verificationStatus
+```
+
+PACER must be able to compare what is live against what was approved. A direct edit made outside the governed workflow must create a detectable `deployment_divergence` condition.
+
+**Until divergence is reconciled and re-approved, PACER must not represent the live site as matching its approved record.** An approval record that describes a page which no longer exists is a claim about the past, not a statement about what is live. Wednesday may not describe a diverged deployment as approved.
+
+### Rule 4 — Implementation Gate
+
+Web Studio remains a future JPG Ventures Command Center room. Its five-question design review currently stands as:
+
+| Question | Current status |
+|----------|----------------|
+| Owning institution / layer | **Answered** — private JPG Ventures Command Center |
+| Intended roles / tenants | Conceptually answered; exact roles remain future work |
+| Data it may access | **Blocked** — pending Publication Gate and export-boundary design |
+| Actions it may propose or execute | **Blocked** — pending provider adapter and Human Gate rules |
+| Private, commercial, both, or neither | **Answered** — private Command Center initially |
+
+Two of five questions are blocked. Therefore:
+
+**Conceptual reconnaissance is permitted. Creating the room, schemas, agents, publishing integration, or deployment workflow is NOT authorized while FleetFlow has not cleared Stage 1 and the Publication Gate remains undefined.**
+
+### Concept Material Is Not Packet-Eligible
+
+JPG Ventures concept and brand imagery — including development renderings, portfolio boards, and generated architectural material — is strong internal vision material. It is **not** automatically eligible for a site packet.
+
+Distorted labels, inconsistent figures, generated architectural imagery, and unverified property claims are precisely why "verified" and "authorized for public release" must remain separate gates. Material may be institutionally valuable and still fail the Publication Gate.
+
+---
+
 ## Named Systems (Do Not Rename)
 
 | Name | Role | Notes |
