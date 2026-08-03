@@ -479,6 +479,132 @@ No Firestore schema. No UI. No new collection. Not until the stress test produce
 
 ---
 
+## FleetFlow Teaching Bridge (Constitutional Subsystem)
+
+**Status: Locked. No implementation may proceed until this section is read.**
+
+> "FleetFlow supplies lived operational evidence. PACER proposes lessons from it. The Human Gate determines what becomes institutional knowledge. Wednesday gives that verified knowledge a voice."
+
+### The Problem This Solves
+
+FleetFlow is where real-world operational knowledge is produced: what happened during a job, what was promised versus delivered, photos and documents and timestamps, delays and damages and disputes, what the field crew observed, what management verified, how the matter was ultimately resolved. Twenty years of moving industry experience lives there — and eventually the experience of every participating company and crew.
+
+PACER can learn from that evidence. But learning from operational records is not the same as reading them. Private job files belong to the company and crew that created them. Customer data belongs to the customer. The fact that useful patterns exist in operational history does not authorize their unrestricted use as AI training material.
+
+The teaching bridge governs how operational knowledge becomes institutional intelligence — without turning anybody's private job file into uncontrolled data.
+
+### Governing Flowchart
+
+```
+FleetFlow operations
+        ↓
+Approved teaching record
+        ↓
+Privacy and permission gate
+        ↓
+Immutable source lineage
+        ↓
+PACER proposed understanding
+        ↓
+Human verification (Human Gate)
+        ↓
+PACER institutional knowledge
+        ↓
+Wednesday explains it
+```
+
+No step may be skipped. Each arrow represents a governed transition, not a data pipe.
+
+### What FleetFlow Operational Records Contain
+
+The following categories exist in FleetFlow operational data. Each requires distinct handling at the privacy gate:
+
+- **Job facts** — dates, addresses, services performed, items moved. Generally safe for pattern learning when company-identifying information is removed.
+- **Promises and delivery records** — contracts, estimates, signed authorizations, delivery receipts. Contain PII and should be stripped before learning.
+- **Photos and documents** — field evidence. May contain faces, license plates, private property. Require explicit authorization for any PACER use.
+- **Messages and communications** — between crew, management, and customers. Highest sensitivity. May not enter PACER without per-record authorization.
+- **Delay and damage records** — operational facts with legal implications. May represent allegations, not verified outcomes. Must be classified accordingly.
+- **Dispute records** — contain allegations from multiple parties. PACER must record the classification (allegation, finding, settlement) — never collapse these into a single "truth."
+- **Payment and responsibility records** — contain PII and financial data. Strip before any PACER use.
+- **Resolution records** — how a matter was ultimately resolved. Most valuable for pattern learning; still requires source lineage and authorization.
+
+### Teaching Record Schema
+
+Every record crossing the bridge must carry:
+
+```
+teachingRecordId
+sourceInstitution           // always 'fleetflow'
+sourceCompanyId             // FleetFlow tenant — never overridden or inferred
+sourceJobId                 // exact FleetFlow job reference
+sourceFields[]              // exact field names used — immutable after creation
+authorizedBy                // who approved this record for PACER use
+authorizedAt
+privacyGateResult           // 'cleared' | 'requires_redaction' | 'blocked'
+redactedFields[]            // fields removed or anonymized before PACER sees it
+contentClassification       // 'observation' | 'allegation' | 'decision' | 'verified_outcome'
+lessonProposed              // PACER's extracted proposed understanding — not yet knowledge
+lessonVerifiedBy            // null until Human Gate acts
+lessonVerifiedAt
+lessonStatus                // 'proposed' | 'verified' | 'rejected' | 'deferred'
+supersededById              // if a later record corrects this one
+auditTrail[]                // append-only; every transition recorded
+```
+
+`contentClassification` is mandatory and non-collapsible. An allegation must never be stored as a verified outcome. A settlement must never be stored as a factual finding. PACER proposes the classification; the Human Gate confirms it.
+
+### Four Invariants
+
+These hold across every teaching record, without exception:
+
+1. **FleetFlow operational records are never altered by PACER.** The bridge is read-only toward FleetFlow. No write, no feedback loop, no update from PACER back to the source record.
+
+2. **The connection is one-way by default.** FleetFlow data may enter PACER only through an explicitly approved teaching record. PACER knowledge does not flow into FleetFlow.
+
+3. **The connection is tenant-isolated.** A teaching record from Company A cannot contribute to PACER knowledge that influences Company B. Each company's operational evidence stays within that company's institutional boundary.
+
+4. **The connection is reversible.** A teaching record may be revoked. When revoked, the proposed lesson is archived, not deleted. Any institutional knowledge derived from it is flagged for Human Gate review. PACER does not silently retain what was revoked.
+
+### Privacy Gate Requirements
+
+Before any operational content crosses the bridge, the privacy gate must answer five questions:
+
+1. **Who owns this data?** — Customer data, employee data, and company data have different owners. All three require separate authorization.
+2. **What consent exists?** — Is use of this record covered by terms of service, explicit consent, or contractual authorization?
+3. **What must be removed?** — PII, financial identifiers, contact information, and faces in images must be identified and documented before any teaching record is created.
+4. **What is the classification?** — Is this record an observation, an allegation, a decision, or a verified outcome? The answer determines what PACER is permitted to learn.
+5. **What is PACER permitted to learn?** — The authorized lesson must be stated before the record crosses. PACER may not extract lessons beyond what the authorization covers.
+
+Failure to answer any of these five questions means the record does not cross. The privacy gate is not a warning screen. It is a hard stop.
+
+### Wednesday's Role in This Subsystem
+
+Wednesday may explain what PACER has learned from FleetFlow experience. She may not describe which company or job produced the lesson, and she may not imply that a proposed lesson is verified institutional knowledge before the Human Gate has acted.
+
+Required language patterns for this subsystem:
+
+| State | Wednesday must say |
+|-------|-------------------|
+| Proposed lesson | "PACER proposes a pattern from operational experience." |
+| Verified lesson | "This has been verified as institutional knowledge." |
+| Rejected lesson | "This proposed pattern was rejected and is not institutional knowledge." |
+| Revoked record | "The source record for this lesson has been revoked and is under review." |
+| Privacy blocked | "This record requires additional authorization before PACER may learn from it." |
+
+Wednesday may not name the source company, source job, crew members, or customers in any description of a teaching record or derived lesson — regardless of whether that information is technically accessible.
+
+### Pre-Implementation Requirements
+
+Before any Firestore schema, UI, or FleetFlow API connection is designed for the teaching bridge, conduct a formal review of three questions:
+
+1. **Authorization model** — What is the exact mechanism by which a FleetFlow company authorizes a teaching record? Who within the company may grant authorization? Is authorization per-record, per-job, or per-category?
+2. **Tenant isolation** — How does the schema enforce that Company A's teaching records cannot influence Company B's PACER knowledge, even when both companies are PACER users?
+3. **Revocation propagation** — When a teaching record is revoked, what is the exact sequence of state changes? Which downstream records must be flagged? Who is notified?
+
+No Firestore schema. No UI. No FleetFlow API call. Not until these three questions are formally answered.
+
+---
+
 ## Named Systems (Do Not Rename)
 
 | Name | Role | Notes |
