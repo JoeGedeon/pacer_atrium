@@ -134,7 +134,15 @@ Real separation must exist at the level of:
 - Agent capabilities and execution authority
 - Audit authority — what a given role may record, review, and recalculate
 
-Every new room, agent, or schema built in this repository must declare which layer it belongs to. JPG Command Center components must not be silently included in public-facing builds.
+Every proposed room, agent, or schema must answer five questions before its design is approved. A proposed component that cannot answer all five fails its design review before a line of code is written:
+
+1. **Owning institution and architectural layer** — Which JPG Ventures institution does this belong to, and is it Command Center, PACER Institutional Workspace, Focused Portal, white-label, or some combination?
+2. **Intended roles and tenants** — Who is authorized to access this component, and under what tenant boundary?
+3. **Data it may access** — What collections, records, and external sources may this component read? What is explicitly out of scope?
+4. **Actions it may propose or execute** — What can this component recommend, initiate, or complete? What requires the Human Gate before execution?
+5. **Whether it belongs in the private Command Center, commercial PACER, both, or neither** — If it belongs in both, what is different between the two versions?
+
+JPG Command Center components must not be silently included in public-facing builds.
 
 ### Wednesday's Role-Scoped Authority
 
@@ -149,6 +157,8 @@ Wednesday's constitutional protocol is constant. Her available knowledge and aut
 | White-label organization | Understands only what the licensing organization has authorized |
 
 Wednesday's personality may be consistent across editions. Her authority is always bounded by the user's role. Expanding her scope beyond the role's authorization is a constitutional violation — not a configuration choice.
+
+**Role-scoping must constrain retrieval and tool routing before information reaches Wednesday's response generation.** An implementation that retrieves JPG portfolio knowledge into a client-facing session context and then instructs Wednesday not to mention it has already failed. The failure is not in Wednesday's response — it is in the retrieval. The constraint must be enforced at the Orchestrator and data-access layer, not at the language layer. Wednesday cannot be trusted as the enforcement point for information she has already received.
 
 ---
 
