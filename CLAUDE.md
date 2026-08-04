@@ -377,6 +377,36 @@ The subscription is the result of trust, not the beginning of it.
 Observed → Shaping → Structured → Premiere Ready → Opening Night → Published Memory
 No state may be skipped. No new states without a canonization decision.
 
+### K.E.L. Command Queue and Steering Model
+
+**The ten existing command states are preserved. Three states are added. No historical command record is rewritten.**
+
+Existing states (`STATUS_META` in `src/components/KELRoom.jsx`) — do not rename, do not merge, do not substitute synonyms:
+
+`drafted` · `analyzing` · `planned` · `pending_approval` · `approved` · `in_progress` · `completed` · `failed` · `denied` · `archived`
+
+`in_progress` is the canonical name for an executing command. Do not introduce `running` as a parallel term. `planned` covers accepted-but-waiting. Do not introduce `queued` as a parallel term. `pending_approval` covers waiting at the Human Gate. Do not introduce `paused_for_approval` as a parallel term. A second vocabulary for an existing state is a defect, not a feature.
+
+Three states are added:
+
+| State | Meaning |
+|-------|---------|
+| `steer_requested` | New guidance offered during execution; awaiting Human Gate decision on whether it supersedes the current mission |
+| `superseded` | Replaced by an authorized successor command; retained permanently as history |
+| `cancelled` | Terminated by authorized decision without completion or failure |
+
+**Steering is inherited supersession.** It uses the mechanics already locked in Canonical Entity Resolution — the original is never deleted, its status becomes `superseded`, and a successor record points back to it. Do not invent a parallel mechanism.
+
+When steering is authorized:
+
+1. The original command is **not** deleted or edited. Its status becomes `superseded`.
+2. A successor command is created carrying `supersedesCommandId` pointing to the original.
+3. Artifacts produced before the intervention remain attached to the original command. Artifacts produced after attach to the successor. Phase-specific artifacts are never silently re-parented.
+4. The audit record must capture: who issued the intervention, what guidance was given, when it was issued, what work had already occurred, and the Human Gate decision that authorized it.
+5. Completed, failed, and denied commands are historical records. They are never retroactively re-stated into the new vocabulary.
+
+The audit record must always answer: what was the original mission, what changed it, who authorized the change, and which work belongs to which phase.
+
 ---
 
 ## PACER Governance Rule — Lifecycle Authority
@@ -855,6 +885,44 @@ Two of five questions are blocked. Therefore:
 JPG Ventures concept and brand imagery — including development renderings, portfolio boards, and generated architectural material — is strong internal vision material. It is **not** automatically eligible for a site packet.
 
 Distorted labels, inconsistent figures, generated architectural imagery, and unverified property claims are precisely why "verified" and "authorized for public release" must remain separate gates. Material may be institutionally valuable and still fail the Publication Gate.
+
+---
+
+## Commercial PACER — Reconnaissance Desk and Multi-Tenant Collaboration (Flagged Future Design Task)
+
+**Status: Doctrine recorded. Implementation NOT authorized.**
+
+Two capabilities are held together as one design task because they depend on the same unresolved foundations: custody, organizational scope, retrieval authorization, retention, revocation, and agent authority.
+
+- **Reconnaissance Desk** — governed capture of links, screenshots, documents, videos, competitor interfaces, and observations into structured reconnaissance records carrying source, capture time, institution, extracted metadata, proposed entities, evidence strength, verification status, and recommendation.
+- **Multi-tenant collaboration** — organizations, teams, projects, shared spaces, seat-based membership, and role-scoped agents operating within organizational boundaries.
+
+### Schema Boundary (Verified)
+
+All 18 Firestore collection roots in `src/lib/db.js` are `users/{uid}/…`. There is no organization, team, or tenant in the schema.
+
+**This is correct, not a defect.** `pacer_atrium` is user-rooted because it is the single-operator JPG Ventures Command Center. **Commercial PACER must be tenant-rooted from inception and inherit PACER's constitutional rules — not `pacer_atrium`'s Firestore schema.**
+
+Consequences:
+
+- No `orgId` patch onto user-rooted documents. The path encodes ownership; adding a field does not change it.
+- No premature migration of existing collections.
+- No attempt to evolve the Command Center into the commercial product. They are different products with different roots.
+- When the second real institutional user triggers this work, it is a deliberate product and data-model design — not a field addition.
+
+### Three Unresolved Gates
+
+None may be answered by implementation. All three must be designed first.
+
+1. **Third-party reconnaissance custody and derivative-use policy** — Captured competitor interfaces, videos, and third-party sites are owned by neither the tenant nor JPG Ventures. This is a third custody class, distinct from FleetFlow evidence (tenant-owned, teaching bridge) and JPG concept material (self-owned, Publication Gate). Retention limits and permitted derivative use must be defined before any capture worker exists. Observing a public system and recording the observation is ordinary research. Storing substantial copies indefinitely and generating derivative work from them is a different activity.
+
+2. **Tenant, team, project, and record-level authorization before retrieval** — **Membership in an organization does not grant access to everything that organization stores.** This is the Wednesday retrieval constraint generalized from one agent to all retrieval: scope is resolved before queries are formed, never filtered after they return.
+
+3. **Membership revocation cascade** — Offboarding is a revocation cascade, using the mechanics already locked in the FleetFlow Teaching Bridge. Removing a person must revoke sessions, recompute agent scopes, expire cached context and derived state, and write an immutable access tombstone recording what they could reach and when it ended. Hiding a navigation button is not revocation.
+
+### Implementation Gate
+
+**Build neither Reconnaissance Desk nor multi-tenant PACER until FleetFlow has cleared Stage 1 and the second institutional-user trigger is real.** Conceptual reconnaissance is permitted. Rooms, schemas, agents, capture workers, and organizational records are not authorized.
 
 ---
 
